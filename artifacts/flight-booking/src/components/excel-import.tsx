@@ -107,32 +107,58 @@ export function ExcelImportDialog({ open, onClose, onSuccess }: Props) {
           return;
         }
 
+        // Helper: pick first non-empty value from multiple possible column keys
+        function pick(row: Record<string, unknown>, ...keys: string[]): unknown {
+          for (const key of keys) {
+            const val = row[key];
+            if (val !== undefined && val !== null && val !== "") return val;
+          }
+          // Also try case-insensitive match
+          const lowerKeys = keys.map((k) => k.toLowerCase());
+          for (const rKey of Object.keys(row)) {
+            if (lowerKeys.includes(rKey.toLowerCase())) {
+              const val = row[rKey];
+              if (val !== undefined && val !== null && val !== "") return val;
+            }
+          }
+          // Also try partial match (for bilingual headers like "Customer Name / اسم العميل")
+          for (const key of keys) {
+            for (const rKey of Object.keys(row)) {
+              if (rKey.includes(key) || key.includes(rKey)) {
+                const val = row[rKey];
+                if (val !== undefined && val !== null && val !== "") return val;
+              }
+            }
+          }
+          return "";
+        }
+
         const parsed: ImportRow[] = raw.map((r) => {
-          const costPrice = parseNumber(
-            r["Ticket Cost (system)"] ?? r["Ticket Cost"] ?? r["Cost Price"] ?? r["ticket_cost"]
-            ?? r["تكلفة التذكرة على السيستم"] ?? r["تكلفة التذكرة"]
-          );
-          const sellingPrice = parseNumber(
-            r["Selling Price to Customer"] ?? r["Selling Price"] ?? r["selling_price"]
-            ?? r["سعر البيع للعميل"] ?? r["سعر البيع"]
-          );
-          const ticketProfit = parseNumber(
-            r["Ticket Profit"] ?? r["Profit"] ?? r["profit"]
-            ?? r["ربح التذكرة"] ?? r["الربح"]
-          );
+          const costPrice = parseNumber(pick(r,
+            "Ticket Cost (system)", "Ticket Cost", "Cost Price", "ticket_cost",
+            "تكلفة التذكرة على السيستم", "تكلفة التذكرة", "التكلفة"
+          ));
+          const sellingPrice = parseNumber(pick(r,
+            "Selling Price to Customer", "Selling Price", "selling_price", "Price",
+            "سعر البيع للعميل", "سعر البيع", "السعر"
+          ));
+          const ticketProfit = parseNumber(pick(r,
+            "Ticket Profit", "Profit", "profit",
+            "ربح التذكرة", "الربح"
+          ));
           return {
-            fullName: String(r["Customer Name"] ?? r["Name"] ?? r["اسم العميل"] ?? r["الاسم"] ?? ""),
-            phone: String(r["Customer Phone"] ?? r["Phone"] ?? r["تليفون العميل"] ?? r["التليفون"] ?? r["رقم الهاتف"] ?? ""),
-            passportNumber: String(r["Passport No."] ?? r["Passport Number"] ?? r["Passport"] ?? r["رقم الجواز"] ?? r["جواز السفر"] ?? r["رقم جواز السفر"] ?? ""),
-            flightRoute: String(r["Travel Destination"] ?? r["Destination"] ?? r["وجهة السفر"] ?? r["الوجهة"] ?? ""),
-            travelDate: parseDate(r["Travel Date"] ?? r["Departure Date"] ?? r["تاريخ السفر"] ?? r["تاريخ المغادرة"] ?? ""),
-            pnr: String(r["PNR"] ?? r["pnr"] ?? ""),
-            airline: String(r["Airline"] ?? r["airline"] ?? r["شركة الطيران"] ?? r["الطيران"] ?? ""),
+            fullName: String(pick(r, "Customer Name", "Name", "اسم العميل", "الاسم", "client name", "client")),
+            phone: String(pick(r, "Customer Phone", "Phone", "تليفون العميل", "التليفون", "رقم الهاتف", "Mobile", "mobile")),
+            passportNumber: String(pick(r, "Passport No.", "Passport No", "Passport Number", "Passport", "passport", "رقم الجواز", "جواز السفر", "رقم جواز السفر", "الجواز")),
+            flightRoute: String(pick(r, "Travel Destination", "Destination", "Flight Route", "Route", "وجهة السفر", "الوجهة", "الرحلة")),
+            travelDate: parseDate(pick(r, "Travel Date", "Departure Date", "تاريخ السفر", "تاريخ المغادرة", "تاريخ الرحلة")),
+            pnr: String(pick(r, "PNR", "pnr", "Booking Reference", "Confirmation Number")),
+            airline: String(pick(r, "Airline", "airline", "شركة الطيران", "الطيران", "Carrier")),
             costPrice,
             price: sellingPrice,
             ticketProfit,
-            paymentMethod: String(r["Payment Method"] ?? r["payment_method"] ?? r["طريقة السداد"] ?? r["طريقة الدفع"] ?? ""),
-            bookingDate: parseDate(r["Booking Date"] ?? r["booking_date"] ?? r["تاريخ الحجز"] ?? ""),
+            paymentMethod: String(pick(r, "Payment Method", "payment_method", "طريقة السداد", "طريقة الدفع", "Payment")),
+            bookingDate: parseDate(pick(r, "Booking Date", "booking_date", "تاريخ الحجز", "تاريخ الحجز / Booking Date")),
           };
         }).filter((r) => r.fullName.trim() !== "");
 

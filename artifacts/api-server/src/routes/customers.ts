@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { eq, ilike, or, sql, and, desc } from "drizzle-orm";
 import { db, customersTable, ticketsTable, insertCustomerSchema, insertTicketSchema, updateCustomerSchema } from "@workspace/db";
-import { requireAuth, requireAdmin } from "../middlewares/auth.js";
+import { requireAuth, requireAdmin, getSessionFromRequest } from "../middlewares/auth.js";
 
 const router = Router();
 
@@ -121,6 +121,9 @@ router.post("/customers/import", requireAuth, async (req, res) => {
     return;
   }
 
+  const session = getSessionFromRequest(req);
+  const importerEmployeeId = session?.employeeId ?? null;
+
   const results: Array<{ customerName: string; success: boolean; error?: string }> = [];
 
   for (const row of rows) {
@@ -135,28 +138,42 @@ router.post("/customers/import", requireAuth, async (req, res) => {
 
       if (row.phone?.trim()) {
         const existing = await db
-          .select({ id: customersTable.id })
+          .select({ id: customersTable.id, assignedEmployeeId: customersTable.assignedEmployeeId })
           .from(customersTable)
           .where(eq(customersTable.phone, row.phone.trim()))
           .limit(1);
         if (existing.length > 0) {
           customerId = existing[0]!.id;
-          if (passportNumber) {
-            await db.update(customersTable)
-              .set({ passportNumber })
-              .where(eq(customersTable.id, customerId));
+          const updates: Record<string, unknown> = {};
+          if (passportNumber) updates.passportNumber = passportNumber;
+          if (importerEmployeeId && !existing[0]!.assignedEmployeeId) {
+            updates.assignedEmployeeId = importerEmployeeId;
+          }
+          if (Object.keys(updates).length > 0) {
+            await db.update(customersTable).set(updates).where(eq(customersTable.id, customerId));
           }
         } else {
           const [newCustomer] = await db
             .insert(customersTable)
-            .values({ fullName: row.fullName.trim(), phone: row.phone.trim(), passportNumber, status: "booked" })
+            .values({
+              fullName: row.fullName.trim(),
+              phone: row.phone.trim(),
+              passportNumber,
+              status: "booked",
+              ...(importerEmployeeId ? { assignedEmployeeId: importerEmployeeId } : {}),
+            })
             .returning({ id: customersTable.id });
           customerId = newCustomer!.id;
         }
       } else {
         const [newCustomer] = await db
           .insert(customersTable)
-          .values({ fullName: row.fullName.trim(), passportNumber, status: "booked" })
+          .values({
+            fullName: row.fullName.trim(),
+            passportNumber,
+            status: "booked",
+            ...(importerEmployeeId ? { assignedEmployeeId: importerEmployeeId } : {}),
+          })
           .returning({ id: customersTable.id });
         customerId = newCustomer!.id;
       }
@@ -166,6 +183,7 @@ router.post("/customers/import", requireAuth, async (req, res) => {
         ticketStatus: "issued",
         paymentStatus: row.price != null ? "paid" : "unpaid",
         currency: "KWD",
+        ...(importerEmployeeId ? { employeeId: importerEmployeeId } : {}),
       };
       if (row.flightRoute) ticketData.flightRoute = row.flightRoute;
       if (row.pnr) ticketData.pnr = row.pnr;
@@ -180,13 +198,26 @@ router.post("/customers/import", requireAuth, async (req, res) => {
       if (row.paymentMethod) ticketData.notes = `Payment method: ${row.paymentMethod}`;
 
       let ticketParsed = insertTicketSchema.safeParse(ticketData);
-      if (!ticketParsed.success && ticketData.bookingDate) {
-        const { bookingDate: _bd, ...ticketDataWithoutBookingDate } = ticketData;
-        ticketParsed = insertTicketSchema.safeParse(ticketDataWithoutBookingDate);
-        if (ticketParsed.success && _bd) {
-          const inserted = await db.insert(ticketsTable).values(ticketParsed.data).returning({ id: ticketsTable.id });
-          if (inserted[0] && typeof _bd === "string") {
-            await db.update(ticketsTable).set({ bookingDate: _bd }).where(eq(ticketsTable.id, inserted[0].id));
+      if (!ticketParsed.success) {
+        const { bookingDate: _bd, departureDatetime: _dep, ...minimalData } = ticketData;
+        const fallback1 = insertTicketSchema.safeParse({ ...minimalData, ...(typeof _dep !== "undefined" ? { departureDatetime: _dep } : {}) });
+        if (fallback1.success) {
+          const inserted = await db.insert(ticketsTable).values(fallback1.data).returning({ id: ticketsTable.id });
+          if (inserted[0]) {
+            if (typeof _bd === "string" && _bd) {
+              await db.update(ticketsTable).set({ bookingDate: _bd }).where(eq(ticketsTable.id, inserted[0].id));
+            }
+          }
+          results.push({ customerName: row.fullName, success: true });
+          continue;
+        }
+        const fallback2 = insertTicketSchema.safeParse(minimalData);
+        if (fallback2.success) {
+          const inserted = await db.insert(ticketsTable).values(fallback2.data).returning({ id: ticketsTable.id });
+          if (inserted[0]) {
+            if (typeof _bd === "string" && _bd) {
+              await db.update(ticketsTable).set({ bookingDate: _bd }).where(eq(ticketsTable.id, inserted[0].id));
+            }
           }
           results.push({ customerName: row.fullName, success: true });
           continue;

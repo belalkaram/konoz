@@ -1,12 +1,17 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useSearch } from "wouter";
-import { Tag, Plus, Search, Plane, UserCheck } from "lucide-react";
+import { Tag, Plus, Search, Plane, UserCheck, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency, formatShortDate } from "@/lib/formatters";
 import {
@@ -15,6 +20,7 @@ import {
 } from "@/lib/ticket-constants";
 import { useCurrentEmployee, useEmployee } from "@/contexts/employee-context";
 import { authFetch, BASE } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface Ticket {
   id: number;
@@ -47,6 +53,13 @@ async function fetchTickets(employeeId?: number): Promise<{ tickets: Ticket[] }>
   return res.json();
 }
 
+async function deleteTicket(id: number): Promise<{ success?: boolean; message?: string }> {
+  const res = await authFetch(`${BASE}/api/tickets/${id}`, { method: "DELETE" });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) return { message: (json as { message?: string }).message || "Failed to delete" };
+  return { success: true };
+}
+
 export default function Tickets() {
   const [, navigate] = useLocation();
   const search_params = useSearch();
@@ -56,8 +69,15 @@ export default function Tickets() {
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [employeeFilter, setEmployeeFilter] = useState(initialEmployeeId);
   const [myTickets, setMyTickets] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const currentEmployee = useCurrentEmployee();
   const { employees } = useEmployee();
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const isAdmin = currentEmployee.role === "Administrator";
 
   const activeEmployeeId = myTickets
     ? currentEmployee.id
@@ -97,20 +117,75 @@ export default function Tickets() {
     if (val !== "all") setMyTickets(false);
   }
 
+  function toggleSelect(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === tickets.length && tickets.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(tickets.map((t) => t.id)));
+    }
+  }
+
+  async function handleBulkDelete() {
+    setIsDeleting(true);
+    const ids = Array.from(selectedIds);
+    const results = await Promise.all(ids.map((id) => deleteTicket(id)));
+    const succeeded = results.filter((r) => r.success).length;
+    const failed = results.filter((r) => !r.success).length;
+    setIsDeleting(false);
+    setConfirmDeleteOpen(false);
+    setSelectedIds(new Set());
+    qc.invalidateQueries({ queryKey: ["tickets"] });
+    qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+
+    if (failed === 0) {
+      toast({ title: `${succeeded} ticket${succeeded !== 1 ? "s" : ""} deleted` });
+    } else {
+      toast({
+        title: `${succeeded} deleted, ${failed} failed`,
+        variant: "destructive",
+      });
+    }
+  }
+
+  const allSelected = tickets.length > 0 && selectedIds.size === tickets.length;
+  const someSelected = selectedIds.size > 0 && selectedIds.size < tickets.length;
   const selectValue = myTickets ? String(currentEmployee.id) : employeeFilter;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Tickets</h1>
           <p className="text-muted-foreground mt-1 text-sm">Manage all customer flight tickets.</p>
         </div>
-        <Link href="/tickets/new">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" /> Add Ticket
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2 flex-wrap">
+          {isAdmin && selectedIds.size > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setConfirmDeleteOpen(true)}
+              disabled={isDeleting}
+              className="gap-1.5"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Selected ({selectedIds.size})
+            </Button>
+          )}
+          <Link href="/tickets/new">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" /> Add Ticket
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Card>
@@ -200,10 +275,23 @@ export default function Tickets() {
 
           {!isLoading && !isError && tickets.length > 0 && (
             <>
+              {/* Desktop table */}
               <div className="hidden md:block overflow-x-auto -mx-4 px-4">
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      {isAdmin && (
+                        <TableHead className="w-10">
+                          <Checkbox
+                            checked={allSelected}
+                            ref={(el) => {
+                              if (el) (el as HTMLButtonElement & { indeterminate?: boolean }).indeterminate = someSelected;
+                            }}
+                            onCheckedChange={toggleSelectAll}
+                            aria-label="Select all"
+                          />
+                        </TableHead>
+                      )}
                       <TableHead>Customer</TableHead>
                       <TableHead>Route</TableHead>
                       <TableHead>Airline</TableHead>
@@ -216,51 +304,67 @@ export default function Tickets() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {tickets.map((t) => (
-                      <TableRow
-                        key={t.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => navigate(`/tickets/${t.id}`)}
-                      >
-                        <TableCell className="font-medium">
-                          {t.customerName ?? <span className="text-muted-foreground">—</span>}
-                        </TableCell>
-                        <TableCell>
-                          {t.flightRoute ? (
-                            <span className="flex items-center gap-1 text-sm">
-                              <Plane className="h-3 w-3 text-muted-foreground" /> {t.flightRoute}
+                    {tickets.map((t) => {
+                      const selected = selectedIds.has(t.id);
+                      return (
+                        <TableRow
+                          key={t.id}
+                          className={`cursor-pointer ${selected ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-muted/50"}`}
+                          onClick={() => navigate(`/tickets/${t.id}`)}
+                        >
+                          {isAdmin && (
+                            <TableCell
+                              onClick={(e) => { e.stopPropagation(); toggleSelect(t.id); }}
+                              className="w-10"
+                            >
+                              <Checkbox
+                                checked={selected}
+                                onCheckedChange={() => toggleSelect(t.id)}
+                                aria-label={`Select ticket ${t.id}`}
+                              />
+                            </TableCell>
+                          )}
+                          <TableCell className="font-medium">
+                            {t.customerName ?? <span className="text-muted-foreground">—</span>}
+                          </TableCell>
+                          <TableCell>
+                            {t.flightRoute ? (
+                              <span className="flex items-center gap-1 text-sm">
+                                <Plane className="h-3 w-3 text-muted-foreground" /> {t.flightRoute}
+                              </span>
+                            ) : "—"}
+                          </TableCell>
+                          <TableCell>{t.airline ?? "—"}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {t.departureDatetime ? formatShortDate(t.departureDatetime) : "—"}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">{t.pnr ?? "—"}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {t.employeeId
+                              ? (employees.find((e) => e.id === t.employeeId)?.name ?? `#${t.employeeId}`)
+                              : <span className="text-muted-foreground/50">—</span>}
+                          </TableCell>
+                          <TableCell>
+                            <span className={`inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${TICKET_STATUS_COLORS[t.ticketStatus] ?? "bg-gray-100 text-gray-700"}`}>
+                              {TICKET_STATUS_LABELS[t.ticketStatus] ?? t.ticketStatus}
                             </span>
-                          ) : "—"}
-                        </TableCell>
-                        <TableCell>{t.airline ?? "—"}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {t.departureDatetime ? formatShortDate(t.departureDatetime) : "—"}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">{t.pnr ?? "—"}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {t.employeeId
-                            ? (employees.find((e) => e.id === t.employeeId)?.name ?? `#${t.employeeId}`)
-                            : <span className="text-muted-foreground/50">—</span>}
-                        </TableCell>
-                        <TableCell>
-                          <span className={`inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${TICKET_STATUS_COLORS[t.ticketStatus] ?? "bg-gray-100 text-gray-700"}`}>
-                            {TICKET_STATUS_LABELS[t.ticketStatus] ?? t.ticketStatus}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className={`inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${PAYMENT_STATUS_COLORS[t.paymentStatus] ?? ""}`}>
-                            {PAYMENT_STATUS_LABELS[t.paymentStatus] ?? t.paymentStatus}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {t.price ? formatCurrency(t.price, t.currency) : "—"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell>
+                            <span className={`inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${PAYMENT_STATUS_COLORS[t.paymentStatus] ?? ""}`}>
+                              {PAYMENT_STATUS_LABELS[t.paymentStatus] ?? t.paymentStatus}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {t.price ? formatCurrency(t.price, t.currency) : "—"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
 
+              {/* Mobile cards */}
               <div className="md:hidden space-y-2">
                 {tickets.map((t) => (
                   <Link key={t.id} href={`/tickets/${t.id}`}>
@@ -286,15 +390,41 @@ export default function Tickets() {
                 ))}
               </div>
 
-              <div className="text-sm text-muted-foreground pt-1">
-                {tickets.length} ticket{tickets.length !== 1 ? "s" : ""}
-                {tickets.length !== allTickets.length && ` (filtered from ${allTickets.length})`}
-                {myTickets && <span className="ml-2 text-xs font-medium text-primary">· My Tickets only</span>}
+              <div className="text-sm text-muted-foreground pt-1 flex items-center gap-3">
+                <span>
+                  {tickets.length} ticket{tickets.length !== 1 ? "s" : ""}
+                  {tickets.length !== allTickets.length && ` (filtered from ${allTickets.length})`}
+                  {myTickets && <span className="ml-2 text-xs font-medium text-primary">· My Tickets only</span>}
+                </span>
+                {isAdmin && selectedIds.size > 0 && (
+                  <span className="text-primary font-medium">{selectedIds.size} selected</span>
+                )}
               </div>
             </>
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} ticket{selectedIds.size !== 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action is permanent and cannot be undone. All ticket data, payment records, and status history will be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

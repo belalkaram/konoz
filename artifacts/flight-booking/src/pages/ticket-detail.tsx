@@ -3,7 +3,7 @@ import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft, Edit, XCircle, CreditCard, Clock, User, Plane,
-  History, FileText, ChevronRight,
+  History, FileText, ChevronRight, Trash2,
 } from "lucide-react";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,7 @@ import {
   TICKET_STATUSES, PAYMENT_STATUSES, CURRENCIES, PAYMENT_METHODS, PAYMENT_METHOD_LABELS,
 } from "@/lib/ticket-constants";
 import { authFetch, BASE } from "@/lib/api";
+import { useCurrentEmployee } from "@/contexts/employee-context";
 
 interface Ticket {
   id: number;
@@ -97,6 +98,14 @@ async function cancelTicket(id: number): Promise<void> {
     body: JSON.stringify({ ticketStatus: "cancelled" }),
   });
   if (!res.ok) throw new Error("Failed to cancel ticket");
+}
+
+async function deleteTicketRequest(id: number): Promise<void> {
+  const res = await authFetch(`${BASE}/api/tickets/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error((json as { message?: string }).message || "Failed to delete ticket");
+  }
 }
 
 async function addPayment(ticketId: number, data: Record<string, unknown>): Promise<void> {
@@ -246,8 +255,11 @@ export default function TicketDetail() {
   const qc = useQueryClient();
 
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [statusValue, setStatusValue] = useState("");
+  const currentEmployee = useCurrentEmployee();
+  const isAdmin = currentEmployee.role === "Administrator";
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["ticket", id],
@@ -288,6 +300,20 @@ export default function TicketDetail() {
     onError: (e: Error) => {
       toast({ title: "Error", description: e.message, variant: "destructive" });
       setCancelOpen(false);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteTicketRequest(id),
+    onSuccess: () => {
+      toast({ title: `Ticket #${id} deleted` });
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      navigate("/tickets");
+    },
+    onError: (e: Error) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+      setDeleteOpen(false);
     },
   });
 
@@ -357,6 +383,16 @@ export default function TicketDetail() {
           >
             <XCircle className="h-4 w-4 mr-1.5" /> Cancel Ticket
           </Button>
+          {isAdmin && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setDeleteOpen(true)}
+              disabled={deleteMutation.isPending}
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" /> Delete Ticket
+            </Button>
+          )}
         </div>
       </div>
 
@@ -561,6 +597,27 @@ export default function TicketDetail() {
               disabled={cancelMutation.isPending}
             >
               {cancelMutation.isPending ? "Cancelling..." : "Cancel Ticket"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Ticket #{id}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action is permanent and cannot be undone. All ticket data, payment records, and status history will be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete Ticket"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

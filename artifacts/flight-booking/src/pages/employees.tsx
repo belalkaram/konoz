@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Users, Plus, Pencil, UserX, UserCheck, Tag } from "lucide-react";
+import { Users, Plus, Pencil, UserX, UserCheck, Tag, ShieldAlert, LogOut, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,28 @@ const EMPTY_FORM: EmployeeFormData = {
   username: "",
   pin: "",
 };
+
+interface ActiveSession {
+  token: string;
+  employeeId: number;
+  name: string;
+  role: string;
+  createdAt: string;
+  expiresAt: number;
+}
+
+async function fetchActiveSessions(): Promise<ActiveSession[]> {
+  const res = await authFetch(`${BASE}/api/admin/sessions`);
+  if (!res.ok) throw new Error("Failed to fetch sessions");
+  const data = await res.json() as { sessions: ActiveSession[] };
+  return data.sessions;
+}
+
+async function revokeSession(token: string): Promise<void> {
+  const res = await authFetch(`${BASE}/api/admin/sessions/${encodeURIComponent(token)}`, { method: "DELETE" });
+  const json = await res.json();
+  if (!res.ok) throw new Error((json as { message?: string }).message || "Failed to revoke session");
+}
 
 async function fetchAllEmployees(): Promise<EmployeeRow[]> {
   const res = await fetch(`${BASE}/api/employees?includeInactive=true`, {
@@ -223,6 +245,9 @@ export default function EmployeesPage() {
   const [confirmDeactivate, setConfirmDeactivate] = useState<EmployeeRow | null>(null);
   const [allEmployees, setAllEmployees] = useState<EmployeeRow[] | null>(null);
   const [showInactive, setShowInactive] = useState(false);
+  const [activeSessions, setActiveSessions] = useState<ActiveSession[] | null>(null);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [confirmRevoke, setConfirmRevoke] = useState<ActiveSession | null>(null);
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -236,9 +261,22 @@ export default function EmployeesPage() {
     }
   }
 
+  const loadSessions = useCallback(async () => {
+    setSessionsLoading(true);
+    try {
+      const rows = await fetchActiveSessions();
+      setActiveSessions(rows);
+    } catch {
+      toast({ title: "Error", description: "Failed to load sessions", variant: "destructive" });
+    } finally {
+      setSessionsLoading(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
     if (isAdmin) {
       loadAll();
+      loadSessions();
     }
   }, [isAdmin]);
 
@@ -271,6 +309,15 @@ export default function EmployeesPage() {
       await refreshEmployees();
       await loadAll();
       qc.invalidateQueries({ queryKey: ["employees"] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const revokeSessionMutation = useMutation({
+    mutationFn: (token: string) => revokeSession(token),
+    onSuccess: async () => {
+      toast({ title: "Session revoked", description: "The user has been logged out." });
+      await loadSessions();
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -416,12 +463,106 @@ export default function EmployeesPage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+              Active Sessions
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={loadSessions}
+              disabled={sessionsLoading}
+              className="flex items-center gap-1.5 text-xs"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${sessionsLoading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {activeSessions === null || sessionsLoading ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">Loading sessions…</div>
+          ) : activeSessions.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">No active sessions found.</div>
+          ) : (
+            <div>
+              {activeSessions.map((session) => {
+                const isCurrentSession = session.employeeId === currentEmployee.id;
+                const loginTime = new Date(session.createdAt);
+                const expiresTime = new Date(session.expiresAt);
+                return (
+                  <div
+                    key={session.token}
+                    className="flex items-center gap-4 px-6 py-3 border-b last:border-0"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm flex items-center gap-2">
+                        {session.name}
+                        {isCurrentSession && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                            You
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground">{session.role}</div>
+                    </div>
+                    <div className="text-right text-xs text-muted-foreground flex-shrink-0 hidden sm:block">
+                      <div>Logged in {loginTime.toLocaleString()}</div>
+                      <div>Expires {expiresTime.toLocaleString()}</div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      title="Force logout"
+                      onClick={() => setConfirmRevoke(session)}
+                      className="flex items-center gap-1.5 text-xs text-destructive hover:text-destructive flex-shrink-0"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      Revoke
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <EmployeeFormSheet
         open={showSheet}
         editing={editing}
         onClose={() => setShowSheet(false)}
         onSuccess={handleFormSuccess}
       />
+
+      <Dialog open={!!confirmRevoke} onOpenChange={(o) => { if (!o) setConfirmRevoke(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revoke Session</DialogTitle>
+            <DialogDescription>
+              This will immediately log out <strong>{confirmRevoke?.name}</strong>. They will need to sign in again.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmRevoke(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={revokeSessionMutation.isPending}
+              onClick={() => {
+                if (confirmRevoke) {
+                  revokeSessionMutation.mutate(confirmRevoke.token);
+                  setConfirmRevoke(null);
+                }
+              }}
+            >
+              {revokeSessionMutation.isPending ? "Revoking…" : "Force Logout"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!confirmDeactivate} onOpenChange={(o) => { if (!o) setConfirmDeactivate(null); }}>
         <DialogContent>

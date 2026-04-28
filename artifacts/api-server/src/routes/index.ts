@@ -11,12 +11,14 @@ import remindersRouter from "./reminders";
 import dashboardRouter from "./dashboard";
 import authRouter from "./auth";
 import employeesRouter from "./employees";
+import adminSessionsRouter from "./admin-sessions";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
 router.use(employeesRouter);
+router.use(adminSessionsRouter);
 router.use(offersRouter);
 router.use(ordersRouter);
 router.use(statsRouter);

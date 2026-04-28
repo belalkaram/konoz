@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import { eq, lt } from "drizzle-orm";
+import { eq, lt, gt, desc } from "drizzle-orm";
 import { db, sessionsTable } from "@workspace/db";
 
 export interface Session {
@@ -46,6 +46,31 @@ export async function getCsrfToken(sessionToken: string): Promise<string | null>
 
 export async function deleteSession(token: string): Promise<void> {
   await db.delete(sessionsTable).where(eq(sessionsTable.token, token));
+}
+
+export interface ActiveSessionRow {
+  token: string;
+  employeeId: number;
+  name: string;
+  role: string;
+  createdAt: Date;
+  expiresAt: number;
+}
+
+export async function getAllActiveSessions(): Promise<ActiveSessionRow[]> {
+  const rows = await db
+    .select({
+      token: sessionsTable.token,
+      employeeId: sessionsTable.employeeId,
+      name: sessionsTable.name,
+      role: sessionsTable.role,
+      createdAt: sessionsTable.createdAt,
+      expiresAt: sessionsTable.expiresAt,
+    })
+    .from(sessionsTable)
+    .where(gt(sessionsTable.expiresAt, Date.now()))
+    .orderBy(desc(sessionsTable.createdAt));
+  return rows;
 }
 
 export const SESSION_COOKIE_NAME = "aeroops_sid";

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { Users, Plus, Search, ChevronRight, Phone, Mail, UserCheck } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -99,9 +99,11 @@ export function CustomerFormSheet({
 }
 
 export default function Customers() {
+  const search_params = useSearch();
+  const initialEmployeeId = new URLSearchParams(search_params).get("assignedEmployeeId") ?? "all";
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [employeeFilter, setEmployeeFilter] = useState("all");
+  const [employeeFilter, setEmployeeFilter] = useState(initialEmployeeId);
   const [myCustomers, setMyCustomers] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const currentEmployee = useCurrentEmployee();

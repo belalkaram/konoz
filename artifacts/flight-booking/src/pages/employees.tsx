@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Users, Plus, Pencil, UserX, UserCheck, Shield } from "lucide-react";
+import { useLocation } from "wouter";
+import { Users, Plus, Pencil, UserX, UserCheck, Shield, Tag } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,8 @@ interface EmployeeRow {
   role: string;
   username: string;
   isActive: boolean;
+  activeCustomers?: number;
+  openTickets?: number;
 }
 
 interface EmployeeFormData {
@@ -230,6 +233,7 @@ function EmployeeFormSheet({ open, editing, token, onClose, onSuccess }: Employe
 export default function EmployeesPage() {
   const { employees, refreshEmployees, sessionToken } = useEmployee();
   const currentEmployee = useCurrentEmployee();
+  const [, navigate] = useLocation();
   const token = sessionToken ?? "";
   const [showSheet, setShowSheet] = useState(false);
   const [editing, setEditing] = useState<EmployeeRow | null>(null);
@@ -248,6 +252,12 @@ export default function EmployeesPage() {
     } catch {
     }
   }
+
+  useEffect(() => {
+    if (isAdmin && token) {
+      loadAll();
+    }
+  }, [isAdmin, token]);
 
   function handleToggleShowInactive(show: boolean) {
     setShowInactive(show);
@@ -361,6 +371,26 @@ export default function EmployeesPage() {
                     </div>
                     <div className="text-xs text-muted-foreground">{emp.role} · @{emp.username}</div>
                   </div>
+                  {emp.activeCustomers !== undefined && (
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => navigate(`/customers?assignedEmployeeId=${emp.id}`)}
+                        title="Active customers"
+                        className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900 transition-colors font-medium"
+                      >
+                        <Users className="h-3 w-3" />
+                        {emp.activeCustomers}
+                      </button>
+                      <button
+                        onClick={() => navigate(`/tickets?employeeId=${emp.id}`)}
+                        title="Open tickets"
+                        className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900 transition-colors font-medium"
+                      >
+                        <Tag className="h-3 w-3" />
+                        {emp.openTickets}
+                      </button>
+                    </div>
+                  )}
                   {emp.id !== currentEmployee.id ? (
                     <div className="flex items-center gap-2">
                       <Button

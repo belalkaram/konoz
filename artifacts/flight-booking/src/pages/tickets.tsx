@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { Tag, Plus, Search, Plane, UserCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,10 +50,12 @@ async function fetchTickets(employeeId?: number): Promise<{ tickets: Ticket[] }>
 
 export default function Tickets() {
   const [, navigate] = useLocation();
+  const search_params = useSearch();
+  const initialEmployeeId = new URLSearchParams(search_params).get("employeeId") ?? "all";
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
-  const [employeeFilter, setEmployeeFilter] = useState("all");
+  const [employeeFilter, setEmployeeFilter] = useState(initialEmployeeId);
   const [myTickets, setMyTickets] = useState(false);
   const currentEmployee = useCurrentEmployee();
   const { employees } = useEmployee();

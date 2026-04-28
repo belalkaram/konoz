@@ -1,7 +1,7 @@
 import { Router, type RequestHandler } from "express";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, sql } from "drizzle-orm";
 import { createHash } from "crypto";
-import { db, employeesTable } from "@workspace/db";
+import { db, employeesTable, customersTable, ticketsTable } from "@workspace/db";
 import { validateSession } from "../lib/sessions.js";
 
 const router = Router();
@@ -95,6 +95,16 @@ router.get("/employees", async (req, res) => {
           username: employeesTable.username,
           isActive: employeesTable.isActive,
           createdAt: employeesTable.createdAt,
+          activeCustomers: sql<number>`(
+            SELECT COUNT(*)::int FROM ${customersTable}
+            WHERE ${customersTable.assignedEmployeeId} = ${employeesTable.id}
+            AND ${customersTable.status} NOT IN ('cancelled', 'lost')
+          )`,
+          openTickets: sql<number>`(
+            SELECT COUNT(*)::int FROM ${ticketsTable}
+            WHERE ${ticketsTable.employeeId} = ${employeesTable.id}
+            AND ${ticketsTable.ticketStatus} NOT IN ('cancelled', 'refunded', 'issued')
+          )`,
         })
         .from(employeesTable)
         .orderBy(asc(employeesTable.name));

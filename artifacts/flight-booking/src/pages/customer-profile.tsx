@@ -167,6 +167,7 @@ function AddNoteForm({
   autoFocus?: boolean;
 }) {
   const [noteText, setNoteText] = useState("");
+  const [noteError, setNoteError] = useState("");
   const [followUpDate, setFollowUpDate] = useState("");
   const [followUpStatus, setFollowUpStatus] = useState("pending");
   const [ticketId, setTicketId] = useState("");
@@ -194,9 +195,10 @@ function AddNoteForm({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!noteText.trim()) {
-      toast({ title: "Note text is required", variant: "destructive" });
+      setNoteError("Note text is required.");
       return;
     }
+    setNoteError("");
     const data: { note: string; followUpDate?: string; followUpStatus?: string; ticketId?: number } = {
       note: noteText.trim(),
     };
@@ -225,11 +227,13 @@ function AddNoteForm({
         <Label>Note *</Label>
         <Textarea
           value={noteText}
-          onChange={(e) => setNoteText(e.target.value)}
+          onChange={(e) => { setNoteText(e.target.value); if (noteError) setNoteError(""); }}
           placeholder="Write a note about this customer..."
           rows={3}
           autoFocus
+          className={noteError ? "border-destructive focus-visible:ring-destructive" : ""}
         />
+        {noteError && <p className="text-xs text-destructive">{noteError}</p>}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">

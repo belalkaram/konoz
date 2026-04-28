@@ -3,13 +3,22 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Flight Booking Management API powered by Duffel
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: offers
+    description: Search and browse flight offers
+  - name: orders
+    description: Manage flight orders/bookings
+  - name: passengers
+    description: Manage passenger information
+  - name: stats
+    description: Dashboard statistics
+
 paths:
   /healthz:
     get:
@@ -24,6 +33,170 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /offers/search:
+    post:
+      operationId: searchOffers
+      tags: [offers]
+      summary: Search for flight offers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchOffersBody"
+      responses:
+        "200":
+          description: List of offers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchOffersResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /offers/{offerId}:
+    get:
+      operationId: getOffer
+      tags: [offers]
+      summary: Get a specific offer by ID
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Offer details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Offer"
+        "404":
+          description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /orders:
+    get:
+      operationId: listOrders
+      tags: [orders]
+      summary: List all orders
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: after
+          in: query
+          schema:
+            type: string
+        - name: before
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListOrdersResponse"
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Create a new order (book a flight)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderBody"
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /orders/{orderId}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Get a specific order by ID
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /orders/{orderId}/cancel:
+    post:
+      operationId: cancelOrder
+      tags: [orders]
+      summary: Cancel an order
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cancellation confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancellationResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stats/summary:
+    get:
+      operationId: getStatsSummary
+      tags: [stats]
+      summary: Get dashboard statistics summary
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatsSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +207,373 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+        - message
+
+    SearchOffersBody:
+      type: object
+      properties:
+        origin:
+          type: string
+          description: IATA airport code for origin
+        destination:
+          type: string
+          description: IATA airport code for destination
+        departureDate:
+          type: string
+          format: date
+          description: Departure date (YYYY-MM-DD)
+        returnDate:
+          type: string
+          format: date
+          description: Return date for round trips (YYYY-MM-DD)
+        passengers:
+          type: array
+          items:
+            $ref: "#/components/schemas/PassengerInput"
+        cabinClass:
+          type: string
+          enum: [economy, premium_economy, business, first]
+          default: economy
+      required:
+        - origin
+        - destination
+        - departureDate
+        - passengers
+
+    PassengerInput:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [adult, child, infant_without_seat]
+        age:
+          type: integer
+      required:
+        - type
+
+    SearchOffersResponse:
+      type: object
+      properties:
+        offerRequestId:
+          type: string
+        offers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Offer"
+        slices:
+          type: array
+          items:
+            type: object
+      required:
+        - offerRequestId
+        - offers
+
+    Offer:
+      type: object
+      properties:
+        id:
+          type: string
+        totalAmount:
+          type: string
+        totalCurrency:
+          type: string
+        baseAmount:
+          type: string
+        taxAmount:
+          type: string
+        expiresAt:
+          type: string
+        cabinClass:
+          type: string
+        slices:
+          type: array
+          items:
+            $ref: "#/components/schemas/Slice"
+        passengers:
+          type: array
+          items:
+            type: object
+        owner:
+          $ref: "#/components/schemas/Airline"
+      required:
+        - id
+        - totalAmount
+        - totalCurrency
+        - slices
+
+    Slice:
+      type: object
+      properties:
+        id:
+          type: string
+        origin:
+          $ref: "#/components/schemas/Airport"
+        destination:
+          $ref: "#/components/schemas/Airport"
+        departureDateTime:
+          type: string
+        arrivalDateTime:
+          type: string
+        duration:
+          type: string
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Segment"
+      required:
+        - id
+        - origin
+        - destination
+        - departureDateTime
+        - arrivalDateTime
+
+    Segment:
+      type: object
+      properties:
+        id:
+          type: string
+        origin:
+          $ref: "#/components/schemas/Airport"
+        destination:
+          $ref: "#/components/schemas/Airport"
+        departureDateTime:
+          type: string
+        arrivalDateTime:
+          type: string
+        duration:
+          type: string
+        flightNumber:
+          type: string
+        marketingCarrier:
+          $ref: "#/components/schemas/Airline"
+        operatingCarrier:
+          $ref: "#/components/schemas/Airline"
+        aircraft:
+          type: object
+          properties:
+            iataCode:
+              type: string
+            name:
+              type: string
+      required:
+        - id
+        - origin
+        - destination
+        - departureDateTime
+        - arrivalDateTime
+
+    Airport:
+      type: object
+      properties:
+        iataCode:
+          type: string
+        name:
+          type: string
+        cityName:
+          type: string
+        countryName:
+          type: string
+      required:
+        - iataCode
+        - name
+
+    Airline:
+      type: object
+      properties:
+        iataCode:
+          type: string
+        name:
+          type: string
+        logoSymbolUrl:
+          type: string
+        logotypeLockupImageUrl:
+          type: string
+      required:
+        - iataCode
+        - name
+
+    CreateOrderBody:
+      type: object
+      properties:
+        selectedOfferId:
+          type: string
+        passengers:
+          type: array
+          items:
+            $ref: "#/components/schemas/PassengerDetails"
+        type:
+          type: string
+          enum: [instant, hold]
+          default: instant
+      required:
+        - selectedOfferId
+        - passengers
+
+    PassengerDetails:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+          enum: [mr, ms, mrs, miss, dr]
+        givenName:
+          type: string
+        familyName:
+          type: string
+        gender:
+          type: string
+          enum: [m, f]
+        bornOn:
+          type: string
+          format: date
+        email:
+          type: string
+        phoneNumber:
+          type: string
+        passportNumber:
+          type: string
+        passportExpiryDate:
+          type: string
+          format: date
+        nationalityIataCountryCode:
+          type: string
+      required:
+        - id
+        - givenName
+        - familyName
+        - gender
+        - bornOn
+        - email
+        - phoneNumber
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+        bookingReference:
+          type: string
+        status:
+          type: string
+        totalAmount:
+          type: string
+        totalCurrency:
+          type: string
+        createdAt:
+          type: string
+        passengers:
+          type: array
+          items:
+            type: object
+        slices:
+          type: array
+          items:
+            $ref: "#/components/schemas/Slice"
+        owner:
+          $ref: "#/components/schemas/Airline"
+        documents:
+          type: array
+          items:
+            type: object
+        paymentStatus:
+          type: object
+          properties:
+            awaitingPayment:
+              type: boolean
+            paymentRequiredBy:
+              type: string
+      required:
+        - id
+        - bookingReference
+        - status
+        - totalAmount
+        - totalCurrency
+        - createdAt
+
+    ListOrdersResponse:
+      type: object
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+        meta:
+          type: object
+          properties:
+            limit:
+              type: integer
+            before:
+              type: string
+            after:
+              type: string
+      required:
+        - orders
+        - meta
+
+    CancellationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        orderId:
+          type: string
+        refundAmount:
+          type: string
+        refundCurrency:
+          type: string
+        refundTo:
+          type: string
+        confirmedAt:
+          type: string
+        expiresAt:
+          type: string
+      required:
+        - id
+        - orderId
+
+    StatsSummary:
+      type: object
+      properties:
+        totalOrders:
+          type: integer
+        confirmedOrders:
+          type: integer
+        cancelledOrders:
+          type: integer
+        totalRevenue:
+          type: string
+        currency:
+          type: string
+        recentOrders:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+        topRoutes:
+          type: array
+          items:
+            type: object
+            properties:
+              origin:
+                type: string
+              destination:
+                type: string
+              count:
+                type: integer
+      required:
+        - totalOrders
+        - confirmedOrders
+        - cancelledOrders
+        - totalRevenue
+        - currency
+        - recentOrders
+        - topRoutes

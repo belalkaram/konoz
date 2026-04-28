@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Flight Booking Manager"
+version = "1.0.0"
+id = "artifacts/flight-booking"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21049
+
+[services.development]
+run = "pnpm --filter @workspace/flight-booking run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/flight-booking", "run", "build" ]
+publicDir = "artifacts/flight-booking/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21049"
+BASE_PATH = "/"

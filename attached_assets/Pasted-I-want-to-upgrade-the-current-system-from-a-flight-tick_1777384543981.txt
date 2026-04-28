@@ -1,0 +1,330 @@
+I want to upgrade the current system from a flight-ticket booking system only into a full internal employee CRM + ticket management system for a travel agency.
+
+Main goal:
+Each employee in the company should be able to manage customers, add customer details, follow up with them, track previous tickets, add notes, and see all related data in the main dashboard.
+
+Important rules:
+- No dummy data.
+- No fake buttons.
+- Every button must have a real route and a real API action.
+- Every form must save data correctly.
+- All pages must be connected properly.
+- Keep the existing booking/search functionality, but expand the system around it.
+
+Required new modules/pages:
+
+1. Customers Management
+Create a full Customers page where employees can:
+- Add a new customer
+- Edit customer data
+- Delete customer if allowed
+- View customer profile
+- Search/filter customers
+
+Customer fields:
+- Full name
+- Phone number
+- WhatsApp number
+- Email
+- Nationality
+- Passport number
+- National ID
+- Address
+- Source: Facebook / WhatsApp / Walk-in / Referral / Other
+- Assigned employee
+- Customer status: New / Interested / Follow-up / Booked / Cancelled / Lost
+- Created date
+- Last contacted date
+
+2. Customer Profile Page
+Each customer must have a detailed profile page containing:
+- Customer basic information
+- All previous tickets/bookings
+- All follow-up notes
+- Upcoming reminders
+- Customer status history
+- Quick actions:
+  - Add ticket
+  - Add note
+  - Add reminder
+  - Change status
+  - Call/WhatsApp link if phone exists
+
+3. Customer Notes & Follow-up System
+Create a notes system for each customer.
+
+Each note should include:
+- Note text
+- Created date
+- Created by employee
+- Follow-up date
+- Follow-up status: Pending / Done / Missed
+- Related ticket if available
+
+Example:
+If the customer said yesterday: “I will buy on Saturday”, the employee should add a note with Saturday as the follow-up date.
+On Saturday, the employee contacts the customer and adds another note saying what happened.
+
+The system should allow:
+- Add daily notes
+- View notes timeline
+- Filter notes by date/status
+- Mark follow-up as done
+- Show today’s follow-ups in the dashboard
+
+4. Ticket Management
+Create a Tickets page to manage all customer tickets.
+
+Ticket fields:
+- Customer ID
+- Flight route
+- Airline
+- Flight number
+- Departure date/time
+- Arrival date/time
+- Ticket price
+- Currency
+- Booking reference / PNR
+- Ticket status:
+  - Quoted
+  - Reserved
+  - Confirmed
+  - Paid
+  - Issued
+  - Cancelled
+  - Refunded
+- Payment status:
+  - Unpaid
+  - Partially paid
+  - Paid
+  - Refunded
+- Baggage details
+- Employee responsible
+- Notes
+- Created date
+
+5. Ticket Details Page
+Each ticket should have its own page with:
+- Ticket full details
+- Linked customer information
+- Payment status
+- Ticket status timeline
+- Notes related to this ticket
+- Actions:
+  - Edit ticket
+  - Change status
+  - Add payment
+  - Add note
+  - Cancel/refund if applicable
+
+6. Reminders / Follow-ups Page
+Create a page for all follow-ups.
+
+It should show:
+- Today’s follow-ups
+- Upcoming follow-ups
+- Missed follow-ups
+- Done follow-ups
+
+Filters:
+- Employee
+- Date
+- Customer status
+- Follow-up status
+
+7. Dashboard Integration
+Update the main dashboard to include CRM and ticket statistics.
+
+Dashboard cards:
+- Total customers
+- New customers today
+- Customers needing follow-up today
+- Missed follow-ups
+- Total tickets
+- Confirmed tickets
+- Issued tickets
+- Cancelled tickets
+- Total revenue
+- Unpaid tickets
+- Top employees by tickets
+- Top destinations
+- Top airlines
+
+Dashboard charts:
+- Customers by status
+- Tickets by status
+- Revenue over time
+- Follow-ups per employee
+- Bookings per day/month
+
+Dashboard tables:
+- Today’s follow-ups
+- Recent customers
+- Recent tickets
+- Pending payments
+- Missed follow-ups
+
+8. Employee-Based Access
+Each employee should see and manage their own assigned customers and tickets.
+Admins should see everything.
+
+Roles:
+- Admin
+- Manager
+- Employee
+
+Permissions:
+Admin:
+- Full access
+- Manage employees
+- View all data
+
+Manager:
+- View team data
+- Review reports
+
+Employee:
+- Manage assigned customers
+- Manage own tickets
+- Add notes/follow-ups
+
+9. Forms & Validation
+Every form must have:
+- Required fields validation
+- Clear error messages
+- Loading state
+- Success message
+- API error handling
+- No empty submit
+- Proper date format: Day / Month / Year
+
+10. API & Routes
+Create real backend routes for all actions.
+
+Suggested API routes:
+- GET /api/customers
+- POST /api/customers
+- GET /api/customers/:id
+- PUT /api/customers/:id
+- DELETE /api/customers/:id
+
+- GET /api/customers/:id/notes
+- POST /api/customers/:id/notes
+- PUT /api/notes/:id
+- DELETE /api/notes/:id
+
+- GET /api/tickets
+- POST /api/tickets
+- GET /api/tickets/:id
+- PUT /api/tickets/:id
+- DELETE /api/tickets/:id
+
+- GET /api/followups
+- PUT /api/followups/:id/status
+
+- GET /api/dashboard/stats
+- GET /api/dashboard/charts
+- GET /api/dashboard/today-followups
+- GET /api/dashboard/recent-activity
+
+11. Database Tables
+Add or update database tables:
+
+customers:
+- id
+- full_name
+- phone
+- whatsapp
+- email
+- nationality
+- passport_number
+- national_id
+- address
+- source
+- status
+- assigned_employee_id
+- created_at
+- updated_at
+- last_contacted_at
+
+customer_notes:
+- id
+- customer_id
+- employee_id
+- ticket_id nullable
+- note
+- follow_up_date
+- follow_up_status
+- created_at
+- updated_at
+
+tickets:
+- id
+- customer_id
+- employee_id
+- flight_route
+- airline
+- flight_number
+- departure_datetime
+- arrival_datetime
+- price
+- currency
+- pnr
+- ticket_status
+- payment_status
+- baggage_details
+- notes
+- created_at
+- updated_at
+
+ticket_status_history:
+- id
+- ticket_id
+- old_status
+- new_status
+- changed_by
+- created_at
+
+payments:
+- id
+- ticket_id
+- customer_id
+- amount
+- currency
+- payment_method
+- payment_status
+- payment_date
+- notes
+- created_at
+
+reminders:
+- id
+- customer_id
+- employee_id
+- note_id nullable
+- reminder_date
+- status
+- title
+- description
+- created_at
+- updated_at
+
+12. Extra Useful Pages
+Also add these pages if possible:
+- Payments page
+- Reports page
+- Employee performance page
+- Recent activity log
+- Customer sources report
+- Pending payments page
+
+Final requirement:
+After implementation, review the whole system and make sure:
+- All pages are linked in the sidebar/navbar.
+- All forms save real data.
+- All buttons work.
+- All APIs are connected.
+- No dummy data remains.
+- Dashboard reads from real database data.
+- URL routes are clean and meaningful.
+- The system works as a complete CRM + ticket management platform for a travel agency.

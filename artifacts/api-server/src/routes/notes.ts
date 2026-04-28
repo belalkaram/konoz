@@ -1,23 +1,9 @@
-import { Router, type RequestHandler } from "express";
+import { Router } from "express";
 import { eq, desc } from "drizzle-orm";
 import { db, customerNotesTable, customersTable, insertCustomerNoteSchema, updateCustomerNoteSchema } from "@workspace/db";
-import { validateSession } from "../lib/sessions.js";
+import { requireAuth, requireAdmin } from "../middlewares/auth.js";
 
 const router = Router();
-
-const requireAuth: RequestHandler = (req, res, next) => {
-  const auth = req.headers["authorization"];
-  if (!auth?.startsWith("Bearer ")) {
-    res.status(401).json({ error: "unauthorized", message: "Authentication required" });
-    return;
-  }
-  const session = validateSession(auth.slice(7));
-  if (!session) {
-    res.status(401).json({ error: "unauthorized", message: "Session expired or invalid. Please log in again." });
-    return;
-  }
-  next();
-};
 
 function coerceDates(body: Record<string, unknown>, ...fields: string[]) {
   const result = { ...body };
@@ -121,7 +107,7 @@ router.put("/notes/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.delete("/notes/:id", requireAuth, async (req, res) => {
+router.delete("/notes/:id", requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "validation_error", message: "Invalid note ID" });

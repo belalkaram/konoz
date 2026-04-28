@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell, CheckCircle2, Clock, AlertCircle, Calendar, ChevronRight, Filter, UserCheck } from "lucide-react";
+import { Bell, CheckCircle2, Clock, AlertCircle, Calendar, ChevronRight, Filter, UserCheck, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,10 +50,19 @@ async function markNoteDone(id: number): Promise<void> {
   if (!res.ok) throw new Error("Failed to mark as done");
 }
 
-function NoteItem({ note, showMarkDone }: { note: FollowUpNote; showMarkDone?: boolean }) {
+async function deleteNote(id: number): Promise<void> {
+  const res = await authFetch(`${BASE}/api/notes/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message || "Failed to delete reminder");
+  }
+}
+
+function NoteItem({ note, showMarkDone, isAdmin }: { note: FollowUpNote; showMarkDone?: boolean; isAdmin?: boolean }) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const { employees } = useEmployee();
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const markDone = useMutation({
     mutationFn: () => markNoteDone(note.id),
@@ -63,6 +72,19 @@ function NoteItem({ note, showMarkDone }: { note: FollowUpNote; showMarkDone?: b
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const remove = useMutation({
+    mutationFn: () => deleteNote(note.id),
+    onSuccess: () => {
+      toast({ title: "Reminder deleted" });
+      qc.invalidateQueries({ queryKey: ["followups"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+      setConfirmDelete(false);
+    },
   });
 
   const agentName = note.employeeId
@@ -107,6 +129,39 @@ function NoteItem({ note, showMarkDone }: { note: FollowUpNote; showMarkDone?: b
             </Button>
           </Link>
         )}
+        {isAdmin && !confirmDelete && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-xs px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        )}
+        {isAdmin && confirmDelete && (
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-muted-foreground">Delete?</span>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-6 text-xs px-2"
+              disabled={remove.isPending}
+              onClick={() => remove.mutate()}
+            >
+              Yes
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 text-xs px-2"
+              disabled={remove.isPending}
+              onClick={() => setConfirmDelete(false)}
+            >
+              No
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -130,7 +185,7 @@ function groupByCustomer(notes: FollowUpNote[]): CustomerGroup[] {
   return Array.from(map.values());
 }
 
-function NoteGroupList({ notes, showMarkDone }: { notes: FollowUpNote[]; showMarkDone?: boolean }) {
+function NoteGroupList({ notes, showMarkDone, isAdmin }: { notes: FollowUpNote[]; showMarkDone?: boolean; isAdmin?: boolean }) {
   const groups = groupByCustomer(notes);
   return (
     <div className="space-y-6">
@@ -152,7 +207,7 @@ function NoteGroupList({ notes, showMarkDone }: { notes: FollowUpNote[]; showMar
           </div>
           <div className="space-y-2 pl-3 border-l-2 border-border">
             {group.notes.map((note) => (
-              <NoteItem key={note.id} note={note} showMarkDone={showMarkDone} />
+              <NoteItem key={note.id} note={note} showMarkDone={showMarkDone} isAdmin={isAdmin} />
             ))}
           </div>
         </div>
@@ -196,6 +251,7 @@ export default function Reminders() {
   const [myReminders, setMyReminders] = useState(false);
   const currentEmployee = useCurrentEmployee();
   const { employees } = useEmployee();
+  const isAdmin = currentEmployee.role === "Administrator";
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["followups"],
@@ -360,16 +416,16 @@ export default function Reminders() {
           </TabsList>
 
           <TabsContent value="today">
-            {filtered.today.length === 0 ? <EmptyTab label="today's" /> : <NoteGroupList notes={filtered.today} showMarkDone />}
+            {filtered.today.length === 0 ? <EmptyTab label="today's" /> : <NoteGroupList notes={filtered.today} showMarkDone isAdmin={isAdmin} />}
           </TabsContent>
           <TabsContent value="upcoming">
-            {filtered.upcoming.length === 0 ? <EmptyTab label="upcoming" /> : <NoteGroupList notes={filtered.upcoming} showMarkDone />}
+            {filtered.upcoming.length === 0 ? <EmptyTab label="upcoming" /> : <NoteGroupList notes={filtered.upcoming} showMarkDone isAdmin={isAdmin} />}
           </TabsContent>
           <TabsContent value="missed">
-            {filtered.missed.length === 0 ? <EmptyTab label="missed" /> : <NoteGroupList notes={filtered.missed} showMarkDone />}
+            {filtered.missed.length === 0 ? <EmptyTab label="missed" /> : <NoteGroupList notes={filtered.missed} showMarkDone isAdmin={isAdmin} />}
           </TabsContent>
           <TabsContent value="done">
-            {filtered.done.length === 0 ? <EmptyTab label="done" /> : <NoteGroupList notes={filtered.done} />}
+            {filtered.done.length === 0 ? <EmptyTab label="done" /> : <NoteGroupList notes={filtered.done} isAdmin={isAdmin} />}
           </TabsContent>
         </Tabs>
       )}

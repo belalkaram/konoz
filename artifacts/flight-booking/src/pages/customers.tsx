@@ -1,19 +1,31 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Users, Plus, Search, ChevronRight, Phone, FileSpreadsheet, TrendingUp, TrendingDown } from "lucide-react";
+import { Users, Plus, Search, ChevronRight, Phone, FileSpreadsheet, TrendingUp, TrendingDown, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { formatShortDate } from "@/lib/formatters";
 import { CustomerForm, EMPTY_CUSTOMER_FORM } from "@/components/customer-form";
 import { ExcelImportDialog } from "@/components/excel-import";
 import { STATUS_COLORS, STATUS_LABELS, CUSTOMER_STATUSES } from "@/lib/customer-constants";
 import { authFetch, BASE } from "@/lib/api";
+import { useCurrentEmployee } from "@/contexts/employee-context";
 
 interface Customer {
   id: number;
@@ -52,6 +64,13 @@ async function createCustomer(data: Record<string, unknown>): Promise<{ customer
   const json = await res.json();
   if (!res.ok) throw new Error(json.message || "Failed to create customer");
   return json;
+}
+
+async function deleteCustomer(id: number): Promise<{ success?: boolean; error?: string; message?: string }> {
+  const res = await authFetch(`${BASE}/api/customers/${id}`, { method: "DELETE" });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) return { error: "failed", message: (json as { message?: string }).message || "Failed to delete" };
+  return { success: true };
 }
 
 function netProfit(c: Customer): number | null {
@@ -109,7 +128,13 @@ export default function Customers() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const qc = useQueryClient();
+  const { toast } = useToast();
+  const currentEmployee = useCurrentEmployee();
+  const isAdmin = currentEmployee.role === "Administrator";
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["customers"],
@@ -131,6 +156,51 @@ export default function Customers() {
     return matchesSearch && matchesStatus;
   });
 
+  function toggleSelect(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === customers.length && customers.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(customers.map((c) => c.id)));
+    }
+  }
+
+  async function handleBulkDelete() {
+    setIsDeleting(true);
+    const ids = Array.from(selectedIds);
+    const results = await Promise.all(ids.map((id) => deleteCustomer(id)));
+    const succeeded = results.filter((r) => r.success).length;
+    const failed = results.filter((r) => !r.success);
+    setIsDeleting(false);
+    setConfirmDeleteOpen(false);
+    setSelectedIds(new Set());
+    qc.invalidateQueries({ queryKey: ["customers"] });
+
+    if (failed.length === 0) {
+      toast({ title: `${succeeded} customer${succeeded !== 1 ? "s" : ""} deleted` });
+    } else {
+      const blockedMsg = failed.some((r) => r.message?.includes("ticket"))
+        ? " Some couldn't be deleted because they have existing tickets."
+        : "";
+      toast({
+        title: `${succeeded} deleted, ${failed.length} failed`,
+        description: `${blockedMsg}`,
+        variant: "destructive",
+      });
+    }
+  }
+
+  const allSelected = customers.length > 0 && selectedIds.size === customers.length;
+  const someSelected = selectedIds.size > 0 && selectedIds.size < customers.length;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -139,6 +209,17 @@ export default function Customers() {
           <p className="text-muted-foreground mt-1 text-sm">Manage all your customer bookings and travel records.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {isAdmin && selectedIds.size > 0 && (
+            <Button
+              variant="destructive"
+              onClick={() => setConfirmDeleteOpen(true)}
+              className="flex items-center gap-2"
+              disabled={isDeleting}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Selected ({selectedIds.size})
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => setImportOpen(true)}
@@ -211,81 +292,115 @@ export default function Customers() {
 
           {!isLoading && customers.length > 0 && (
             <>
-              <div className="hidden md:grid grid-cols-[2fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_0.9fr_auto] gap-3 px-6 py-2 border-b bg-muted/30 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                <span>Name</span>
-                <span>Phone</span>
-                <span>Status</span>
-                <span>Passport No.</span>
-                <span>PNR</span>
-                <span>Booking Date</span>
-                <span>Net Profit (KWD)</span>
-                <span className="w-4" />
+              {/* Header row */}
+              <div className="hidden md:flex items-center border-b bg-muted/30">
+                {isAdmin && (
+                  <div className="pl-5 pr-2 flex-shrink-0">
+                    <Checkbox
+                      checked={allSelected}
+                      ref={(el) => {
+                        if (el) (el as HTMLButtonElement & { indeterminate?: boolean }).indeterminate = someSelected;
+                      }}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Select all"
+                    />
+                  </div>
+                )}
+                <div className="flex-1 grid grid-cols-[2fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_0.9fr_auto] gap-3 px-6 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  <span>Name</span>
+                  <span>Phone</span>
+                  <span>Status</span>
+                  <span>Passport No.</span>
+                  <span>PNR</span>
+                  <span>Booking Date</span>
+                  <span>Net Profit (KWD)</span>
+                  <span className="w-4" />
+                </div>
               </div>
 
+              {/* Rows */}
               <div className="divide-y">
                 {customers.map((c) => {
                   const profit = netProfit(c);
+                  const selected = selectedIds.has(c.id);
                   return (
-                    <Link key={c.id} href={`/customers/${c.id}`}>
-                      <div className="grid md:grid-cols-[2fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_0.9fr_auto] grid-cols-1 gap-2 md:gap-3 px-6 py-3.5 hover:bg-muted/30 transition-colors cursor-pointer group items-center">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                            style={{ background: "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)", color: "#022c22" }}>
-                            {c.fullName.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="font-semibold truncate group-hover:text-primary transition-colors text-sm">{c.fullName}</div>
-                          </div>
+                    <div
+                      key={c.id}
+                      className={`flex items-center transition-colors ${selected ? "bg-primary/5" : "hover:bg-muted/30"}`}
+                    >
+                      {isAdmin && (
+                        <div
+                          className="pl-5 pr-2 flex-shrink-0 self-stretch flex items-center"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Checkbox
+                            checked={selected}
+                            onCheckedChange={() => toggleSelect(c.id)}
+                            aria-label={`Select ${c.fullName}`}
+                          />
                         </div>
-
-                        <div className="hidden md:block min-w-0">
-                          {c.phone && (
-                            <div className="flex items-center gap-1 text-sm truncate">
-                              <Phone className="h-3 w-3 flex-shrink-0 text-muted-foreground" /> {c.phone}
+                      )}
+                      <Link href={`/customers/${c.id}`} className="flex-1 min-w-0">
+                        <div className="grid md:grid-cols-[2fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_0.9fr_auto] grid-cols-1 gap-2 md:gap-3 px-6 py-3.5 cursor-pointer group items-center">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                              style={{ background: "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)", color: "#022c22" }}>
+                              {c.fullName.charAt(0).toUpperCase()}
                             </div>
-                          )}
-                        </div>
+                            <div className="min-w-0">
+                              <div className="font-semibold truncate group-hover:text-primary transition-colors text-sm">{c.fullName}</div>
+                            </div>
+                          </div>
 
-                        <div>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[c.status] ?? "bg-gray-100 text-gray-600"}`}>
-                            {STATUS_LABELS[c.status] ?? c.status}
-                          </span>
-                        </div>
+                          <div className="hidden md:block min-w-0">
+                            {c.phone && (
+                              <div className="flex items-center gap-1 text-sm truncate">
+                                <Phone className="h-3 w-3 flex-shrink-0 text-muted-foreground" /> {c.phone}
+                              </div>
+                            )}
+                          </div>
 
-                        <div className="hidden md:block text-sm text-muted-foreground font-mono">
-                          {c.passportNumber || "—"}
-                        </div>
+                          <div>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[c.status] ?? "bg-gray-100 text-gray-600"}`}>
+                              {STATUS_LABELS[c.status] ?? c.status}
+                            </span>
+                          </div>
 
-                        <div className="hidden md:block text-sm font-mono font-medium">
-                          {c.pnr || "—"}
-                        </div>
+                          <div className="hidden md:block text-sm text-muted-foreground font-mono">
+                            {c.passportNumber || "—"}
+                          </div>
 
-                        <div className="hidden md:block text-sm text-muted-foreground">
-                          {c.bookingDate ? formatShortDate(c.bookingDate) : "—"}
-                        </div>
+                          <div className="hidden md:block text-sm font-mono font-medium">
+                            {c.pnr || "—"}
+                          </div>
 
-                        <div className="hidden md:flex items-center gap-1">
-                          {profit != null ? (
-                            <>
-                              {profit >= 0 ? (
-                                <TrendingUp className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
-                              ) : (
-                                <TrendingDown className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
-                              )}
-                              <span className={`text-sm font-semibold ${profit >= 0 ? "text-green-600" : "text-red-500"}`}>
-                                {profit.toFixed(3)}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">—</span>
-                          )}
-                        </div>
+                          <div className="hidden md:block text-sm text-muted-foreground">
+                            {c.bookingDate ? formatShortDate(c.bookingDate) : "—"}
+                          </div>
 
-                        <div className="hidden md:flex justify-end">
-                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <div className="hidden md:flex items-center gap-1">
+                            {profit != null ? (
+                              <>
+                                {profit >= 0 ? (
+                                  <TrendingUp className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                                ) : (
+                                  <TrendingDown className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                                )}
+                                <span className={`text-sm font-semibold ${profit >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                  {profit.toFixed(3)}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">—</span>
+                            )}
+                          </div>
+
+                          <div className="hidden md:flex justify-end">
+                            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                          </div>
                         </div>
-                      </div>
-                    </Link>
+                      </Link>
+                    </div>
                   );
                 })}
               </div>
@@ -294,6 +409,9 @@ export default function Customers() {
                 <span>{customers.length} customer{customers.length !== 1 ? "s" : ""}</span>
                 {customers.length !== allCustomers.length && (
                   <span className="text-muted-foreground/70">(filtered from {allCustomers.length})</span>
+                )}
+                {isAdmin && selectedIds.size > 0 && (
+                  <span className="text-primary font-medium">{selectedIds.size} selected</span>
                 )}
               </div>
             </>
@@ -312,6 +430,27 @@ export default function Customers() {
         onClose={() => setImportOpen(false)}
         onSuccess={() => qc.invalidateQueries({ queryKey: ["customers"] })}
       />
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} customer{selectedIds.size !== 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. Customers with existing tickets cannot be deleted — those will be skipped and reported.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -20,9 +20,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/customers", label: "Customers", icon: Users },
     { href: "/tickets", label: "Tickets", icon: Tag },
     { href: "/reminders", label: "Reminders", icon: Bell },
-    { href: "/search", label: "Flight Search", icon: Search },
-    { href: "/orders", label: "Orders", icon: ListFilter },
-    ...(isAdmin ? [{ href: "/employees", label: "Employees", icon: UserCog }] : []),
+    ...(isAdmin ? [
+      { href: "/search", label: "Flight Search", icon: Search },
+      { href: "/orders", label: "Orders", icon: ListFilter },
+      { href: "/employees", label: "Employees", icon: UserCog },
+    ] : []),
   ];
 
   const isActive = (href: string) =>

@@ -52,9 +52,9 @@ function Router() {
     <Layout>
       <Switch>
         <Route path="/" component={Dashboard} />
-        <Route path="/search" component={Search} />
-        <Route path="/search/:offerRequestId" component={Search} />
-        <Route path="/offers/:offerId" component={OfferDetail} />
+        <Route path="/search">{() => <AdminRoute component={Search} />}</Route>
+        <Route path="/search/:offerRequestId">{() => <AdminRoute component={Search} />}</Route>
+        <Route path="/offers/:offerId">{() => <AdminRoute component={OfferDetail} />}</Route>
         <Route path="/customers" component={Customers} />
         <Route path="/customers/:id" component={CustomerProfile} />
         <Route path="/tickets/new" component={TicketForm} />
@@ -63,9 +63,9 @@ function Router() {
         <Route path="/tickets" component={Tickets} />
         <Route path="/reminders" component={Reminders} />
         <Route path="/employees">{() => <AdminRoute component={EmployeesPage} />}</Route>
-        <Route path="/orders" component={Orders} />
-        <Route path="/orders/new" component={Checkout} />
-        <Route path="/orders/:orderId" component={OrderDetail} />
+        <Route path="/orders">{() => <AdminRoute component={Orders} />}</Route>
+        <Route path="/orders/new">{() => <AdminRoute component={Checkout} />}</Route>
+        <Route path="/orders/:orderId">{() => <AdminRoute component={OrderDetail} />}</Route>
         <Route component={NotFound} />
       </Switch>
     </Layout>

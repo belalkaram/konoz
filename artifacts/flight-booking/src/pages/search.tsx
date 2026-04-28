@@ -498,7 +498,16 @@ export default function Search() {
                               )}
                             </div>
                           </div>
-                          <Button size="sm" className="w-full sm:w-auto" onClick={() => setLocation(`/offers/${offer.id}`)}>
+                          <Button
+                            size="sm"
+                            className="w-full sm:w-auto"
+                            onClick={() => {
+                              try {
+                                sessionStorage.setItem(`offer_${offer.id}`, JSON.stringify(offer));
+                              } catch {}
+                              setLocation(`/offers/${offer.id}`);
+                            }}
+                          >
                             Select
                             <ArrowRight className="h-4 w-4 ml-1" />
                           </Button>

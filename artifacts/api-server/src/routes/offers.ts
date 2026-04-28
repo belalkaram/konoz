@@ -51,6 +51,42 @@ function mapAvailableBaggageServices(
     });
 }
 
+function extractDuffelError(err: unknown): { message: string; code: string; httpStatus: number } {
+  if (err && typeof err === "object") {
+    const duffelErr = err as {
+      errors?: Array<{ code?: string; title?: string; message?: string; type?: string }>;
+      meta?: { status?: number };
+    };
+    if (Array.isArray(duffelErr.errors) && duffelErr.errors.length > 0) {
+      const first = duffelErr.errors[0];
+      const apiStatus = duffelErr.meta?.status ?? 500;
+      let httpStatus = 500;
+      const code = first.code ?? first.type ?? "unknown";
+      if (
+        apiStatus === 404 ||
+        code === "offer_no_longer_available" ||
+        code === "not_found" ||
+        code === "offer_expired"
+      ) {
+        httpStatus = 404;
+      } else if (first.type === "airline_error" || apiStatus >= 500) {
+        httpStatus = 502;
+      } else if (apiStatus >= 400) {
+        httpStatus = apiStatus;
+      }
+      return {
+        message: first.message || first.title || "Airline error",
+        code,
+        httpStatus,
+      };
+    }
+  }
+  if (err instanceof Error) {
+    return { message: err.message, code: "server_error", httpStatus: 500 };
+  }
+  return { message: "Unknown error", code: "unknown", httpStatus: 500 };
+}
+
 const router = Router();
 
 router.post("/offers/search", async (req, res) => {
@@ -282,9 +318,8 @@ router.get("/offers/:offerId", async (req, res) => {
     });
   } catch (err: unknown) {
     req.log.error({ err }, "Error getting offer");
-    const message =
-      err instanceof Error ? err.message : "Offer not found";
-    res.status(404).json({ error: "not_found", message });
+    const { message, code, httpStatus } = extractDuffelError(err);
+    res.status(httpStatus).json({ error: code, message });
   }
 });
 

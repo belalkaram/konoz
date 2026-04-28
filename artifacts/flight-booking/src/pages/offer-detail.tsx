@@ -1,27 +1,68 @@
+import { useMemo } from "react";
 import { useRoute, useLocation } from "wouter";
-import { useGetOffer, getGetOfferQueryKey } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDuration, formatDateTime } from "@/lib/formatters";
-import { Plane, ArrowRight, Info, AlertCircle, Luggage, ShoppingBag, X, ExternalLink } from "lucide-react";
+import { Plane, ArrowRight, Info, AlertCircle, Luggage, ShoppingBag, X, ExternalLink, RefreshCw, WifiOff } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getAirlineWebsite } from "@/lib/airlines";
+
+async function fetchOffer(offerId: string) {
+  const res = await fetch(`/api/offers/${offerId}`);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = Object.assign(
+      new Error(body.message || "Failed to load offer"),
+      { status: res.status, code: body.error }
+    );
+    throw err;
+  }
+  return body;
+}
+
+function getSessionOffer(offerId: string) {
+  try {
+    const raw = sessionStorage.getItem(`offer_${offerId}`);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return null;
+}
 
 export default function OfferDetail() {
   const [, params] = useRoute("/offers/:offerId");
   const [, setLocation] = useLocation();
-  const offerId = params?.offerId;
+  const offerId = params?.offerId ?? "";
 
-  const { data: offer, isLoading, isError } = useGetOffer(offerId || "", {
-    query: {
-      enabled: !!offerId,
-      queryKey: getGetOfferQueryKey(offerId || "")
-    }
+  const cachedOffer = useMemo(() => getSessionOffer(offerId), [offerId]);
+
+  const {
+    data: freshOffer,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["offer", offerId],
+    queryFn: () => fetchOffer(offerId),
+    enabled: !!offerId,
+    retry: (count, err: unknown) => {
+      const e = err as { status?: number };
+      if (e?.status === 404 || e?.status === 410 || e?.status === 502) return false;
+      return count < 2;
+    },
+    staleTime: 5 * 60 * 1000,
   });
 
-  if (isLoading) {
+  const offer = freshOffer ?? (isError ? cachedOffer : null);
+  const usingCache = !freshOffer && isError && !!cachedOffer;
+  const apiError = error as { status?: number; message?: string } | null;
+  const isAirlineError = apiError?.status === 502;
+  const isExpired = apiError?.status === 404;
+
+  if (isLoading && !cachedOffer) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-64" />
@@ -36,18 +77,61 @@ export default function OfferDetail() {
     );
   }
 
-  if (isError || !offer) {
+  if (isError && !cachedOffer) {
     return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Error</AlertTitle>
-        <AlertDescription>Failed to load offer details. The offer may have expired.</AlertDescription>
-      </Alert>
+      <div className="space-y-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{isAirlineError ? "Airline System Error" : isExpired ? "Offer Expired" : "Error"}</AlertTitle>
+          <AlertDescription>
+            {isAirlineError
+              ? "The airline's system returned an error. This is a temporary issue on the airline's side. Please go back and try selecting the flight again."
+              : isExpired
+              ? "This offer is no longer available. It may have expired. Please search again for updated results."
+              : apiError?.message || "Failed to load offer details."}
+          </AlertDescription>
+        </Alert>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => setLocation("/search")}>
+            ← Back to Search
+          </Button>
+          {isAirlineError && (
+            <Button onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          )}
+        </div>
+      </div>
     );
   }
 
+  if (!offer) return null;
+
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
+      {usingCache && (
+        <Alert className="border-amber-200 bg-amber-50 text-amber-800">
+          <WifiOff className="h-4 w-4" />
+          <AlertTitle className="text-amber-900">
+            {isAirlineError ? "Airline system temporarily unavailable" : "Using cached pricing"}
+          </AlertTitle>
+          <AlertDescription className="text-amber-700">
+            {isAirlineError
+              ? "The airline's system returned an error — showing the pricing from your search. Confirm live pricing before booking."
+              : "Could not refresh offer pricing. Showing data from your search results."}
+            <Button
+              variant="link"
+              size="sm"
+              className="ml-2 h-auto p-0 text-amber-800 underline"
+              onClick={() => refetch()}
+            >
+              Try refreshing
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
           {offer.owner?.logoSymbolUrl && (
@@ -81,7 +165,7 @@ export default function OfferDetail() {
 
       <div className="grid gap-6 md:grid-cols-3">
         <div className="md:col-span-2 space-y-6">
-          {offer.slices.map((slice, i) => (
+          {offer.slices.map((slice: typeof offer.slices[0]) => (
             <Card key={slice.id}>
               <CardHeader className="bg-muted/50 border-b border-border pb-4">
                 <CardTitle className="text-lg flex items-center justify-between">
@@ -97,23 +181,21 @@ export default function OfferDetail() {
               </CardHeader>
               <CardContent className="p-0">
                 <div className="flex flex-col">
-                  {slice.segments?.map((segment, j) => (
+                  {slice.segments?.map((segment: typeof slice.segments[0]) => (
                     <div key={segment.id} className="relative p-6 border-b border-border last:border-0">
                       <div className="flex gap-6">
                         <div className="flex flex-col items-center min-w-12">
                           <div className="text-sm font-bold">{new Date(segment.departureDateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
                           <div className="text-xs text-muted-foreground">{segment.origin.iataCode}</div>
-                          
                           <div className="w-px h-full bg-border my-2 flex-1"></div>
-                          
                           <div className="text-sm font-bold">{new Date(segment.arrivalDateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
                           <div className="text-xs text-muted-foreground">{segment.destination.iataCode}</div>
                         </div>
-                        
+
                         <div className="flex-1 pt-1">
                           <div className="font-medium">{segment.origin.name}</div>
                           <div className="text-sm text-muted-foreground mb-4">{formatDateTime(segment.departureDateTime)}</div>
-                          
+
                           <div className="flex items-center gap-2 text-sm bg-muted/50 w-fit px-3 py-1.5 rounded-md mb-3">
                             <Plane className="h-3 w-3" />
                             <span>{segment.operatingCarrier?.name || segment.marketingCarrier?.name} {segment.flightNumber}</span>
@@ -130,7 +212,7 @@ export default function OfferDetail() {
                           {/* Baggage allowance */}
                           <div className="flex flex-wrap gap-2 mb-4">
                             {(segment.baggages && segment.baggages.length > 0) ? (
-                              segment.baggages.map((bag, bi) => (
+                              segment.baggages.map((bag: typeof segment.baggages[0], bi: number) => (
                                 <Badge key={bi} variant="secondary" className="gap-1.5 text-xs py-1">
                                   {bag.type === "checked" ? (
                                     <Luggage className="h-3.5 w-3.5" />
@@ -149,7 +231,7 @@ export default function OfferDetail() {
                               </Badge>
                             )}
                           </div>
-                          
+
                           <div className="font-medium">{segment.destination.name}</div>
                           <div className="text-sm text-muted-foreground">{formatDateTime(segment.arrivalDateTime)}</div>
                         </div>
@@ -187,7 +269,7 @@ export default function OfferDetail() {
               </Button>
             </CardFooter>
           </Card>
-          
+
           {offer.availableBaggageServices && offer.availableBaggageServices.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
@@ -197,7 +279,7 @@ export default function OfferDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 pt-0">
-                {offer.availableBaggageServices.map((svc) => (
+                {offer.availableBaggageServices.map((svc: typeof offer.availableBaggageServices[0]) => (
                   <div key={svc.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       {svc.type === "checked" ? (

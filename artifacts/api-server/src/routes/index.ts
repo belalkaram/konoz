@@ -3,6 +3,7 @@ import healthRouter from "./health";
 import offersRouter from "./offers";
 import ordersRouter from "./orders";
 import statsRouter from "./stats";
+import airportsRouter from "./airports";
 
 const router: IRouter = Router();
 
@@ -10,5 +11,6 @@ router.use(healthRouter);
 router.use(offersRouter);
 router.use(ordersRouter);
 router.use(statsRouter);
+router.use(airportsRouter);
 
 export default router;

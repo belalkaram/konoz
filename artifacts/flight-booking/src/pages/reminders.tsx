@@ -84,7 +84,7 @@ function NoteItem({ note, showMarkDone }: { note: FollowUpNote; showMarkDone?: b
         </div>
       </div>
       <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-        {showMarkDone && (
+        {showMarkDone && note.followUpStatus !== "done" && (
           <Button
             size="sm"
             variant="outline"

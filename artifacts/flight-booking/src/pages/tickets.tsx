@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Tag, Plus, Search, Plane } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,7 @@ async function fetchTickets(): Promise<{ tickets: Ticket[] }> {
 }
 
 export default function Tickets() {
+  const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
@@ -166,7 +167,7 @@ export default function Tickets() {
                       <TableRow
                         key={t.id}
                         className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => (window.location.href = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/tickets/${t.id}`)}
+                        onClick={() => navigate(`/tickets/${t.id}`)}
                       >
                         <TableCell className="font-medium">
                           {t.customerName ?? <span className="text-muted-foreground">—</span>}

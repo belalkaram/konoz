@@ -273,7 +273,10 @@ export default function TicketDetail() {
       qc.invalidateQueries({ queryKey: ["tickets"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error, _newStatus, _ctx) => {
+      setStatusValue(data?.ticket?.ticketStatus ?? "");
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    },
   });
 
   const cancelMutation = useMutation({

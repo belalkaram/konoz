@@ -158,6 +158,10 @@ export default function TicketForm() {
   function validate() {
     const errs: Record<string, string> = {};
     if (!form.customerId) errs.customerId = "Customer is required.";
+    if (!form.flightRoute.trim()) errs.flightRoute = "Flight route is required.";
+    if (!form.airline.trim()) errs.airline = "Airline is required.";
+    if (!form.departureDatetime) errs.departureDatetime = "Departure date/time is required.";
+    if (form.price && isNaN(parseFloat(form.price))) errs.price = "Price must be a valid number.";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -295,20 +299,24 @@ export default function TicketForm() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Flight Route</Label>
+                <Label>Flight Route <span className="text-destructive">*</span></Label>
                 <Input
                   placeholder="e.g. CAI → DXB"
                   value={form.flightRoute}
                   onChange={(e) => setField("flightRoute", e.target.value)}
+                  className={cn(errors.flightRoute && "border-destructive")}
                 />
+                {errors.flightRoute && <p className="text-xs text-destructive">{errors.flightRoute}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label>Airline</Label>
+                <Label>Airline <span className="text-destructive">*</span></Label>
                 <Input
                   placeholder="e.g. EgyptAir"
                   value={form.airline}
                   onChange={(e) => setField("airline", e.target.value)}
+                  className={cn(errors.airline && "border-destructive")}
                 />
+                {errors.airline && <p className="text-xs text-destructive">{errors.airline}</p>}
               </div>
             </div>
 
@@ -334,13 +342,15 @@ export default function TicketForm() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Departure</Label>
+                <Label>Departure <span className="text-destructive">*</span></Label>
                 <Input
                   type="datetime-local"
                   value={form.departureDatetime}
                   onChange={(e) => setField("departureDatetime", e.target.value)}
+                  className={cn(errors.departureDatetime && "border-destructive")}
                 />
-                {form.departureDatetime && (
+                {errors.departureDatetime && <p className="text-xs text-destructive">{errors.departureDatetime}</p>}
+                {form.departureDatetime && !errors.departureDatetime && (
                   <p className="text-xs text-muted-foreground">{formatShortDate(form.departureDatetime)}</p>
                 )}
               </div>

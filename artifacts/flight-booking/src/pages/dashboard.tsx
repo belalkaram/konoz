@@ -3,7 +3,7 @@ import { useGetStatsSummary } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { formatCurrency, formatShortDate, formatDateTime } from "@/lib/formatters";
 import {
   Users, Tag, TrendingUp, Plane, CheckCircle2, XCircle, AlertCircle,
@@ -114,6 +114,7 @@ function SectionSkeleton() {
 }
 
 export default function Dashboard() {
+  const [, navigate] = useLocation();
   const { data: crmData, isLoading: crmLoading, isError: crmError } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: fetchDashboardStats,
@@ -227,7 +228,7 @@ export default function Dashboard() {
                         </TableHeader>
                         <TableBody>
                           {crmData.recentCustomers.map((c) => (
-                            <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => window.location.assign(`${BASE}/customers/${c.id}`)}>
+                            <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/customers/${c.id}`)}>
                               <TableCell className="font-medium text-sm truncate max-w-[120px]">{c.fullName}</TableCell>
                               <TableCell className="text-xs text-muted-foreground">{formatShortDate(c.createdAt)}</TableCell>
                               <TableCell>
@@ -268,7 +269,7 @@ export default function Dashboard() {
                         </TableHeader>
                         <TableBody>
                           {crmData.recentTickets.map((t) => (
-                            <TableRow key={t.id} className="cursor-pointer hover:bg-muted/50" onClick={() => window.location.assign(`${BASE}/tickets/${t.id}`)}>
+                            <TableRow key={t.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/tickets/${t.id}`)}>
                               <TableCell className="font-medium text-sm truncate max-w-[110px]">{t.customerName ?? `#${t.id}`}</TableCell>
                               <TableCell className="text-xs text-muted-foreground">{t.flightRoute ?? "—"}</TableCell>
                               <TableCell>

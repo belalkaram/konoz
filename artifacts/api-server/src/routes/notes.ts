@@ -5,6 +5,10 @@ import { requireAuth, requireAdmin } from "../middlewares/auth.js";
 
 const router = Router();
 
+function isAdmin(req: import("express").Request): boolean {
+  return req.employee?.role === "Administrator";
+}
+
 function coerceDates(body: Record<string, unknown>, ...fields: string[]) {
   const result = { ...body };
   for (const field of fields) {
@@ -22,6 +26,17 @@ router.get("/customers/:customerId/notes", requireAuth, async (req, res) => {
     return;
   }
   try {
+    if (!isAdmin(req)) {
+      const [customer] = await db
+        .select({ assignedEmployeeId: customersTable.assignedEmployeeId })
+        .from(customersTable)
+        .where(eq(customersTable.id, customerId));
+      if (!customer || customer.assignedEmployeeId !== req.employee!.employeeId) {
+        res.status(404).json({ error: "not_found", message: "Customer not found" });
+        return;
+      }
+    }
+
     const notes = await db
       .select()
       .from(customerNotesTable)
@@ -52,9 +67,19 @@ router.post("/customers/:customerId/notes", requireAuth, async (req, res) => {
     res.status(400).json({ error: "validation_error", message: "Invalid customer ID" });
     return;
   }
-  const employeeId = req.headers["x-employee-id"]
-    ? Number(req.headers["x-employee-id"])
-    : 1;
+
+  if (!isAdmin(req)) {
+    const [customer] = await db
+      .select({ assignedEmployeeId: customersTable.assignedEmployeeId })
+      .from(customersTable)
+      .where(eq(customersTable.id, customerId));
+    if (!customer || customer.assignedEmployeeId !== req.employee!.employeeId) {
+      res.status(404).json({ error: "not_found", message: "Customer not found" });
+      return;
+    }
+  }
+
+  const employeeId = req.employee!.employeeId;
   const body = coerceDates({ ...req.body, customerId, employeeId }, "followUpDate");
   const parsed = insertCustomerNoteSchema.safeParse(body);
   if (!parsed.success) {
@@ -85,6 +110,20 @@ router.put("/notes/:id", requireAuth, async (req, res) => {
     res.status(400).json({ error: "validation_error", message: "Invalid note ID" });
     return;
   }
+
+  const [existing] = await db
+    .select({ employeeId: customerNotesTable.employeeId })
+    .from(customerNotesTable)
+    .where(eq(customerNotesTable.id, id));
+  if (!existing) {
+    res.status(404).json({ error: "not_found", message: "Note not found" });
+    return;
+  }
+  if (!isAdmin(req) && existing.employeeId !== req.employee!.employeeId) {
+    res.status(404).json({ error: "not_found", message: "Note not found" });
+    return;
+  }
+
   const parsed = updateCustomerNoteSchema.safeParse(coerceDates(req.body as Record<string, unknown>, "followUpDate"));
   if (!parsed.success) {
     res.status(400).json({ error: "validation_error", message: parsed.error.message });

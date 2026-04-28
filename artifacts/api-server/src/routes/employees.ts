@@ -1,47 +1,42 @@
 import { Router } from "express";
 import { eq, asc, sql } from "drizzle-orm";
-import { createHash } from "crypto";
+import { z } from "zod";
+import bcrypt from "bcryptjs";
 import { db, employeesTable, customersTable, ticketsTable } from "@workspace/db";
 import { requireAdmin, getSessionFromRequest } from "../middlewares/auth.js";
 
+const CreateEmployeeSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+  initials: z.string().min(1, "Initials are required").max(5),
+  role: z.enum(["Administrator", "Agent"], { errorMap: () => ({ message: "Role must be Administrator or Agent" }) }),
+  username: z
+    .string()
+    .min(1, "Username is required")
+    .max(50)
+    .regex(/^[a-z0-9_]+$/, "Username must be lowercase alphanumeric or underscore"),
+  pin: z
+    .string()
+    .regex(/^\d{4,8}$/, "PIN must be 4–8 digits"),
+});
+
+const UpdateEmployeeSchema = z
+  .object({
+    name: z.string().min(1).max(100).optional(),
+    initials: z.string().min(1).max(5).optional(),
+    role: z
+      .enum(["Administrator", "Agent"], { errorMap: () => ({ message: "Role must be Administrator or Agent" }) })
+      .optional(),
+    username: z
+      .string()
+      .min(1)
+      .max(50)
+      .regex(/^[a-z0-9_]+$/, "Username must be lowercase alphanumeric or underscore")
+      .optional(),
+    pin: z.string().regex(/^\d{4,8}$/, "PIN must be 4–8 digits").optional(),
+  })
+  .strict();
+
 const router = Router();
-
-function hashPin(pin: string): string {
-  return createHash("sha256").update(pin).digest("hex");
-}
-
-interface CreateEmployeeBody {
-  name?: string;
-  initials?: string;
-  role?: string;
-  username?: string;
-  pin?: string;
-}
-
-interface UpdateEmployeeBody {
-  name?: string;
-  initials?: string;
-  role?: string;
-  username?: string;
-  pin?: string;
-}
-
-function validateCreate(body: CreateEmployeeBody): string | null {
-  if (!body.name?.trim()) return "Name is required";
-  if (!body.initials?.trim()) return "Initials are required";
-  if (!body.role?.trim()) return "Role is required";
-  if (!body.username?.trim()) return "Username is required";
-  if (!/^[a-z0-9_]+$/.test(body.username)) return "Username must be lowercase alphanumeric or underscore";
-  if (!body.pin) return "PIN is required";
-  if (!/^\d{4,8}$/.test(body.pin)) return "PIN must be 4–8 digits";
-  return null;
-}
-
-function validateUpdate(body: UpdateEmployeeBody): string | null {
-  if (body.username !== undefined && !/^[a-z0-9_]+$/.test(body.username)) return "Username must be lowercase alphanumeric or underscore";
-  if (body.pin !== undefined && !/^\d{4,8}$/.test(body.pin)) return "PIN must be 4–8 digits";
-  return null;
-}
 
 router.get("/employees", async (req, res) => {
   try {
@@ -50,8 +45,7 @@ router.get("/employees", async (req, res) => {
     if (includeInactive === "true") {
       const session = getSessionFromRequest(req);
       if (!session) {
-        const hasBearer = req.headers["authorization"]?.startsWith("Bearer ");
-        res.status(401).json({ error: "unauthorized", message: hasBearer ? "Session expired or invalid. Please log in again." : "Authentication required" });
+        res.status(401).json({ error: "unauthorized", message: "Authentication required" });
         return;
       }
       if (session.role !== "Administrator") {
@@ -103,14 +97,12 @@ router.get("/employees", async (req, res) => {
 });
 
 router.post("/employees", requireAdmin, async (req, res) => {
-  const body = req.body as CreateEmployeeBody;
-  const validationError = validateCreate(body);
-  if (validationError) {
-    res.status(400).json({ error: "validation_error", message: validationError });
+  const parsed = CreateEmployeeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "validation_error", message: parsed.error.errors[0]?.message ?? "Invalid input" });
     return;
   }
-
-  const { name, initials, role, username, pin } = body as Required<CreateEmployeeBody>;
+  const { name, initials, role, username, pin } = parsed.data;
 
   try {
     const [existing] = await db
@@ -123,6 +115,8 @@ router.post("/employees", requireAdmin, async (req, res) => {
       return;
     }
 
+    const pinHashValue = await bcrypt.hash(pin, 12);
+
     const [employee] = await db
       .insert(employeesTable)
       .values({
@@ -130,7 +124,7 @@ router.post("/employees", requireAdmin, async (req, res) => {
         initials: initials.toUpperCase(),
         role,
         username: username.toLowerCase().trim(),
-        pinHash: hashPin(pin),
+        pinHash: pinHashValue,
         isActive: true,
       })
       .returning({
@@ -143,6 +137,7 @@ router.post("/employees", requireAdmin, async (req, res) => {
         createdAt: employeesTable.createdAt,
       });
 
+    req.log.info({ event: "security:employee_created", actorId: req.employee?.employeeId, targetId: employee?.id, ip: req.ip }, "Employee created");
     res.status(201).json({ employee });
   } catch (err) {
     req.log.error({ err }, "Error creating employee");
@@ -157,18 +152,17 @@ router.put("/employees/:id", requireAdmin, async (req, res) => {
     return;
   }
 
-  const body = req.body as UpdateEmployeeBody;
-  const validationError = validateUpdate(body);
-  if (validationError) {
-    res.status(400).json({ error: "validation_error", message: validationError });
+  const parsed = UpdateEmployeeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "validation_error", message: parsed.error.errors[0]?.message ?? "Invalid input" });
     return;
   }
 
-  const { pin, username, ...rest } = body;
+  const { pin, username, ...rest } = parsed.data;
   const updates: Record<string, unknown> = { ...rest, updatedAt: new Date() };
 
   if (pin) {
-    updates.pinHash = hashPin(pin);
+    updates.pinHash = await bcrypt.hash(pin, 12);
   }
 
   if (username) {
@@ -204,6 +198,7 @@ router.put("/employees/:id", requireAdmin, async (req, res) => {
       return;
     }
 
+    req.log.info({ event: "security:employee_updated", actorId: req.employee?.employeeId, targetId: id, ip: req.ip }, "Employee updated");
     res.json({ employee });
   } catch (err) {
     req.log.error({ err }, "Error updating employee");
@@ -230,6 +225,7 @@ router.patch("/employees/:id/deactivate", requireAdmin, async (req, res) => {
       return;
     }
 
+    req.log.info({ event: "security:employee_deactivated", actorId: req.employee?.employeeId, targetId: id, ip: req.ip }, "Employee deactivated");
     res.json({ employee });
   } catch (err) {
     req.log.error({ err }, "Error deactivating employee");

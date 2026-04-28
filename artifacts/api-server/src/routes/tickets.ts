@@ -5,6 +5,10 @@ import { requireAuth, requireAdmin } from "../middlewares/auth.js";
 
 const router = Router();
 
+function isAdmin(req: import("express").Request): boolean {
+  return req.employee?.role === "Administrator";
+}
+
 function coerceDates(body: Record<string, unknown>, ...fields: string[]) {
   const result = { ...body };
   for (const field of fields) {
@@ -23,7 +27,11 @@ router.get("/tickets", requireAuth, async (req, res) => {
     if (customerId) conditions.push(eq(ticketsTable.customerId, Number(customerId)));
     if (ticketStatus) conditions.push(eq(ticketsTable.ticketStatus, ticketStatus as typeof ticketsTable.ticketStatus._.data));
     if (paymentStatus) conditions.push(eq(ticketsTable.paymentStatus, paymentStatus as typeof ticketsTable.paymentStatus._.data));
-    if (employeeId) conditions.push(eq(ticketsTable.employeeId, Number(employeeId)));
+    if (!isAdmin(req)) {
+      conditions.push(eq(ticketsTable.employeeId, req.employee!.employeeId));
+    } else if (employeeId) {
+      conditions.push(eq(ticketsTable.employeeId, Number(employeeId)));
+    }
 
     const rows = await db
       .select({
@@ -50,7 +58,11 @@ router.get("/tickets", requireAuth, async (req, res) => {
 });
 
 router.post("/tickets", requireAuth, async (req, res) => {
-  const parsed = insertTicketSchema.safeParse(coerceDates(req.body as Record<string, unknown>, "departureDatetime", "arrivalDatetime"));
+  const body = coerceDates(req.body as Record<string, unknown>, "departureDatetime", "arrivalDatetime");
+  const serverControlled = isAdmin(req)
+    ? body
+    : { ...body, employeeId: req.employee!.employeeId };
+  const parsed = insertTicketSchema.safeParse(serverControlled);
   if (!parsed.success) {
     res.status(400).json({ error: "validation_error", message: parsed.error.message });
     return;
@@ -65,6 +77,7 @@ router.post("/tickets", requireAuth, async (req, res) => {
       changedBy: req.employee?.name ?? "system",
     });
 
+    req.log.info({ event: "security:ticket_created", actorId: req.employee?.employeeId, targetId: ticket?.id, ip: req.ip }, "Ticket created");
     res.status(201).json({ ticket });
   } catch (err) {
     req.log.error({ err }, "Error creating ticket");
@@ -91,6 +104,11 @@ router.get("/tickets/:id", requireAuth, async (req, res) => {
       .where(eq(ticketsTable.id, id));
 
     if (!row) {
+      res.status(404).json({ error: "not_found", message: "Ticket not found" });
+      return;
+    }
+
+    if (!isAdmin(req) && row.ticket.employeeId !== req.employee!.employeeId) {
       res.status(404).json({ error: "not_found", message: "Ticket not found" });
       return;
     }
@@ -144,9 +162,17 @@ router.put("/tickets/:id", requireAuth, async (req, res) => {
       return;
     }
 
+    if (!isAdmin(req) && existing.employeeId !== req.employee!.employeeId) {
+      res.status(404).json({ error: "not_found", message: "Ticket not found" });
+      return;
+    }
+
+    const updateData = isAdmin(req)
+      ? parsed.data
+      : (({ employeeId: _eid, ...rest }) => rest)(parsed.data as Record<string, unknown>) as typeof parsed.data;
     const [ticket] = await db
       .update(ticketsTable)
-      .set({ ...parsed.data, updatedAt: new Date() })
+      .set({ ...updateData, updatedAt: new Date() })
       .where(eq(ticketsTable.id, id))
       .returning();
 
@@ -181,6 +207,7 @@ router.delete("/tickets/:id", requireAdmin, async (req, res) => {
       res.status(404).json({ error: "not_found", message: "Ticket not found" });
       return;
     }
+    req.log.info({ event: "security:ticket_deleted", actorId: req.employee?.employeeId, targetId: id, ip: req.ip }, "Ticket deleted");
     res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Error deleting ticket");
@@ -188,7 +215,13 @@ router.delete("/tickets/:id", requireAdmin, async (req, res) => {
   }
 });
 
-async function handleAddPayment(ticketId: number, body: Record<string, unknown>, res: import("express").Response, log: import("pino").Logger) {
+async function handleAddPayment(
+  ticketId: number,
+  body: Record<string, unknown>,
+  req: import("express").Request,
+  res: import("express").Response,
+  log: import("pino").Logger
+) {
   const parsed = insertPaymentSchema.safeParse({ ...body, ticketId });
   if (!parsed.success) {
     res.status(400).json({ error: "validation_error", message: parsed.error.message });
@@ -197,6 +230,11 @@ async function handleAddPayment(ticketId: number, body: Record<string, unknown>,
   try {
     const [existing] = await db.select().from(ticketsTable).where(eq(ticketsTable.id, ticketId));
     if (!existing) {
+      res.status(404).json({ error: "not_found", message: "Ticket not found" });
+      return;
+    }
+
+    if (!isAdmin(req) && existing.employeeId !== req.employee!.employeeId) {
       res.status(404).json({ error: "not_found", message: "Ticket not found" });
       return;
     }
@@ -225,6 +263,7 @@ async function handleAddPayment(ticketId: number, body: Record<string, unknown>,
       .set({ paymentStatus: newPaymentStatus, updatedAt: new Date() })
       .where(eq(ticketsTable.id, ticketId));
 
+    log.info({ event: "security:payment_created", actorId: req.employee?.employeeId, ticketId, ip: req.ip }, "Payment created");
     res.status(201).json({ payment, paymentStatus: newPaymentStatus });
   } catch (err) {
     log.error({ err }, "Error adding payment");
@@ -238,7 +277,7 @@ router.post("/payments", requireAuth, async (req, res) => {
     res.status(400).json({ error: "validation_error", message: "ticketId is required" });
     return;
   }
-  await handleAddPayment(ticketId, req.body as Record<string, unknown>, res, req.log);
+  await handleAddPayment(ticketId, req.body as Record<string, unknown>, req, res, req.log);
 });
 
 router.post("/tickets/:id/payments", requireAuth, async (req, res) => {
@@ -247,7 +286,7 @@ router.post("/tickets/:id/payments", requireAuth, async (req, res) => {
     res.status(400).json({ error: "validation_error", message: "Invalid ticket ID" });
     return;
   }
-  await handleAddPayment(ticketId, req.body as Record<string, unknown>, res, req.log);
+  await handleAddPayment(ticketId, req.body as Record<string, unknown>, req, res, req.log);
 });
 
 

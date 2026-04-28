@@ -1,23 +1,9 @@
-import { Router, type RequestHandler } from "express";
+import { Router } from "express";
 import { eq, gte, lt, and, isNotNull, count, sql } from "drizzle-orm";
 import { db, customersTable, customerNotesTable, ticketsTable, paymentsTable } from "@workspace/db";
-import { validateSession } from "../lib/sessions.js";
+import { requireAuth } from "../middlewares/auth.js";
 
 const router = Router();
-
-const requireAuth: RequestHandler = (req, res, next) => {
-  const auth = req.headers["authorization"];
-  if (!auth?.startsWith("Bearer ")) {
-    res.status(401).json({ error: "unauthorized", message: "Authentication required" });
-    return;
-  }
-  const session = validateSession(auth.slice(7));
-  if (!session) {
-    res.status(401).json({ error: "unauthorized", message: "Session expired or invalid. Please log in again." });
-    return;
-  }
-  next();
-};
 
 router.get("/dashboard/stats", requireAuth, async (req, res) => {
   try {

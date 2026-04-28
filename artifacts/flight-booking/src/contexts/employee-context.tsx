@@ -29,19 +29,16 @@ const EmployeeContext = createContext<EmployeeContextValue>({
   refreshEmployees: async () => {},
 });
 
-const SESSION_KEY = "aeroops_employee";
-const TOKEN_KEY = "aeroops_token";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadEmployees = useCallback(async () => {
     try {
-      const res = await fetch(`${BASE}/api/employees`);
+      const res = await fetch(`${BASE}/api/employees`, { credentials: "include" });
       if (res.ok) {
         const data = await res.json() as { employees: Employee[] };
         setEmployees(data.employees);
@@ -54,16 +51,12 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     async function init() {
       try {
-        const stored = localStorage.getItem(SESSION_KEY);
-        const storedToken = localStorage.getItem(TOKEN_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored) as Employee;
-          if (parsed?.id && parsed?.name) {
-            setCurrentEmployee(parsed);
+        const res = await fetch(`${BASE}/api/auth/me`, { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json() as { employee: Employee };
+          if (!cancelled && data.employee?.id) {
+            setCurrentEmployee(data.employee);
           }
-        }
-        if (storedToken) {
-          setSessionToken(storedToken);
         }
       } catch {
       }
@@ -82,6 +75,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, pin }),
+        credentials: "include",
       });
 
       if (!res.ok) {
@@ -89,13 +83,8 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: (body as { message?: string }).message ?? "Invalid credentials" };
       }
 
-      const body = (await res.json()) as { employee: Employee; sessionToken?: string };
+      const body = (await res.json()) as { employee: Employee };
       setCurrentEmployee(body.employee);
-      localStorage.setItem(SESSION_KEY, JSON.stringify(body.employee));
-      if (body.sessionToken) {
-        setSessionToken(body.sessionToken);
-        localStorage.setItem(TOKEN_KEY, body.sessionToken);
-      }
       return { success: true };
     } catch {
       return { success: false, error: "Unable to connect. Please try again." };
@@ -103,21 +92,15 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (token) {
-      fetch(`${BASE}/api/auth/logout`, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${token}` },
-      }).catch(() => {});
-    }
+    fetch(`${BASE}/api/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    }).catch(() => {});
     setCurrentEmployee(null);
-    setSessionToken(null);
-    localStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(TOKEN_KEY);
   }, []);
 
   return (
-    <EmployeeContext.Provider value={{ currentEmployee, employees, sessionToken, isLoading, login, logout, refreshEmployees: loadEmployees }}>
+    <EmployeeContext.Provider value={{ currentEmployee, employees, sessionToken: null, isLoading, login, logout, refreshEmployees: loadEmployees }}>
       {children}
     </EmployeeContext.Provider>
   );

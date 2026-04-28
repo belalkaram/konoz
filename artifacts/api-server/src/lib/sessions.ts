@@ -37,3 +37,14 @@ export function validateSession(token: string): Session | null {
 export function deleteSession(token: string): void {
   store.delete(token);
 }
+
+export const SESSION_COOKIE_NAME = "aeroops_sid";
+
+export const COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  signed: true,
+  maxAge: SESSION_TTL_MS,
+  path: "/",
+};

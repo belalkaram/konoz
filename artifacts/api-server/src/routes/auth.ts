@@ -1,49 +1,69 @@
 import { Router } from "express";
 import { eq } from "drizzle-orm";
-import { createHash } from "crypto";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
 import { db, employeesTable } from "@workspace/db";
-import { createSession, deleteSession } from "../lib/sessions.js";
+import { createSession, deleteSession, SESSION_COOKIE_NAME, COOKIE_OPTIONS } from "../lib/sessions.js";
+import { requireAuth } from "../middlewares/auth.js";
+
+const LoginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  pin: z.string().min(1, "PIN is required"),
+});
 
 const router = Router();
 
-function hashPin(pin: string): string {
-  return createHash("sha256").update(pin).digest("hex");
-}
-
 router.post("/auth/login", async (req, res) => {
-  const { username, pin } = req.body as { username?: string; pin?: string };
-
-  if (!username || !pin) {
-    res.status(400).json({ error: "validation_error", message: "Username and PIN are required" });
+  const ip = req.ip ?? "unknown";
+  const parsed = LoginSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "validation_error", message: parsed.error.errors[0]?.message ?? "Invalid input" });
     return;
   }
+  const { username, pin } = parsed.data;
+  const normalizedUsername = username.toLowerCase().trim();
 
   try {
     const [employee] = await db
       .select()
       .from(employeesTable)
-      .where(eq(employeesTable.username, username.toLowerCase().trim()));
+      .where(eq(employeesTable.username, normalizedUsername));
 
-    if (!employee) {
+    if (!employee || !employee.isActive) {
+      req.log.warn({ event: "security:login_failure", username: normalizedUsername, ip, reason: employee ? "inactive" : "not_found" }, "Login failed");
       res.status(401).json({ error: "unauthorized", message: "Invalid username or PIN" });
       return;
     }
 
-    if (!employee.isActive) {
-      res.status(401).json({ error: "unauthorized", message: "Account is inactive. Please contact an administrator." });
-      return;
+    const pinHash = employee.pinHash;
+    let valid = false;
+
+    if (pinHash.startsWith("$2")) {
+      valid = await bcrypt.compare(pin, pinHash);
+    } else {
+      const { createHash } = await import("crypto");
+      const sha256Hash = createHash("sha256").update(pin).digest("hex");
+      if (sha256Hash === pinHash) {
+        valid = true;
+        const newHash = await bcrypt.hash(pin, 12);
+        await db.update(employeesTable).set({ pinHash: newHash }).where(eq(employeesTable.id, employee.id));
+        req.log.info({ event: "security:pin_upgraded", actorId: employee.id }, "Upgraded PIN hash from SHA-256 to bcrypt");
+      }
     }
 
-    const pinHash = hashPin(pin);
-    if (pinHash !== employee.pinHash) {
+    if (!valid) {
+      req.log.warn({ event: "security:login_failure", username: normalizedUsername, ip, reason: "wrong_pin" }, "Login failed");
       res.status(401).json({ error: "unauthorized", message: "Invalid username or PIN" });
       return;
     }
 
     const sessionToken = createSession(employee.id, employee.role, employee.name);
 
+    res.cookie(SESSION_COOKIE_NAME, sessionToken, COOKIE_OPTIONS);
+
+    req.log.info({ event: "security:login_success", actorId: employee.id, ip }, "Login successful");
+
     res.json({
-      sessionToken,
       employee: {
         id: employee.id,
         name: employee.name,
@@ -59,11 +79,39 @@ router.post("/auth/login", async (req, res) => {
 });
 
 router.post("/auth/logout", (req, res) => {
-  const auth = req.headers["authorization"];
-  if (auth?.startsWith("Bearer ")) {
-    deleteSession(auth.slice(7));
+  const token = req.signedCookies?.[SESSION_COOKIE_NAME] as string | undefined | false;
+  if (token) {
+    deleteSession(token);
   }
+  res.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
+  req.log.info({ event: "security:logout", ip: req.ip }, "User logged out");
   res.json({ ok: true });
+});
+
+router.get("/auth/me", requireAuth, async (req, res) => {
+  try {
+    const [employee] = await db
+      .select({
+        id: employeesTable.id,
+        name: employeesTable.name,
+        initials: employeesTable.initials,
+        role: employeesTable.role,
+        username: employeesTable.username,
+      })
+      .from(employeesTable)
+      .where(eq(employeesTable.id, req.employee!.employeeId));
+
+    if (!employee) {
+      res.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
+      res.status(401).json({ error: "unauthorized", message: "Session invalid" });
+      return;
+    }
+
+    res.json({ employee });
+  } catch (err) {
+    req.log.error({ err }, "Error fetching /auth/me");
+    res.status(500).json({ error: "server_error", message: "Failed to get session" });
+  }
 });
 
 router.get("/auth/employees", async (req, res) => {
@@ -86,5 +134,4 @@ router.get("/auth/employees", async (req, res) => {
   }
 });
 
-export { hashPin };
 export default router;

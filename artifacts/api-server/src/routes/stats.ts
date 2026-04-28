@@ -1,22 +1,8 @@
-import { Router, type RequestHandler } from "express";
+import { Router } from "express";
 import { duffel } from "../lib/duffel";
-import { validateSession } from "../lib/sessions.js";
+import { requireAuth } from "../middlewares/auth.js";
 
 const router = Router();
-
-const requireAuth: RequestHandler = (req, res, next) => {
-  const auth = req.headers["authorization"];
-  if (!auth?.startsWith("Bearer ")) {
-    res.status(401).json({ error: "unauthorized", message: "Authentication required" });
-    return;
-  }
-  const session = validateSession(auth.slice(7));
-  if (!session) {
-    res.status(401).json({ error: "unauthorized", message: "Session expired or invalid. Please log in again." });
-    return;
-  }
-  next();
-};
 
 function formatOrder(order: Record<string, unknown>) {
   const o = order as {
@@ -134,8 +120,7 @@ router.get("/stats/summary", requireAuth, async (req, res) => {
     });
   } catch (err: unknown) {
     req.log.error({ err }, "Error getting stats summary");
-    const message = err instanceof Error ? err.message : "Failed to get stats";
-    res.status(500).json({ error: "duffel_error", message });
+    res.status(500).json({ error: "duffel_error", message: "Failed to get stats" });
   }
 });
 

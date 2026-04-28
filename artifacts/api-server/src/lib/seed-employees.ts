@@ -1,11 +1,7 @@
-import { createHash } from "crypto";
+import bcrypt from "bcryptjs";
 import { db, employeesTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { logger } from "./logger";
-
-function hashPin(pin: string): string {
-  return createHash("sha256").update(pin).digest("hex");
-}
 
 const DEFAULT_EMPLOYEES = [
   { name: "James Smith", initials: "JS", role: "Administrator", username: "james", pin: "1234" },
@@ -26,17 +22,18 @@ export async function seedEmployees() {
       return;
     }
 
-    await db.insert(employeesTable).values(
-      DEFAULT_EMPLOYEES.map((e) => ({
+    const values = await Promise.all(
+      DEFAULT_EMPLOYEES.map(async (e) => ({
         name: e.name,
         initials: e.initials,
         role: e.role,
         username: e.username,
-        pinHash: hashPin(e.pin),
+        pinHash: await bcrypt.hash(e.pin, 12),
       }))
     );
 
-    logger.info("Seeded default employees");
+    await db.insert(employeesTable).values(values);
+    logger.info("Seeded default employees with bcrypt hashed PINs");
   } catch (err) {
     logger.error({ err }, "Failed to seed employees");
   }

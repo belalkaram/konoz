@@ -1,8 +1,8 @@
-import { Router, type RequestHandler } from "express";
+import { Router } from "express";
 import { duffel } from "../lib/duffel";
 import type { OfferAvailableServiceBaggage } from "@duffel/api";
 import { SearchOffersBody } from "@workspace/api-zod";
-import { validateSession } from "../lib/sessions.js";
+import { requireAuth } from "../middlewares/auth.js";
 
 function extractBaggageWeightMap(
   availableServices: { type: string; metadata?: unknown; segment_ids?: string[] }[]
@@ -149,25 +149,11 @@ function extractDuffelError(err: unknown): { message: string; code: string; http
       return { message: first.message || first.title || "Airline error", code, httpStatus };
     }
   }
-  if (err instanceof Error) return { message: err.message, code: "server_error", httpStatus: 500 };
-  return { message: "Unknown error", code: "unknown", httpStatus: 500 };
+  if (err instanceof Error) return { message: "An unexpected error occurred", code: "server_error", httpStatus: 500 };
+  return { message: "An unexpected error occurred", code: "unknown", httpStatus: 500 };
 }
 
 const router = Router();
-
-const requireAuth: RequestHandler = (req, res, next) => {
-  const auth = req.headers["authorization"];
-  if (!auth?.startsWith("Bearer ")) {
-    res.status(401).json({ error: "unauthorized", message: "Authentication required" });
-    return;
-  }
-  const session = validateSession(auth.slice(7));
-  if (!session) {
-    res.status(401).json({ error: "unauthorized", message: "Session expired or invalid. Please log in again." });
-    return;
-  }
-  next();
-};
 
 router.post("/offers/search", requireAuth, async (req, res) => {
   const body = req.body as Record<string, unknown>;
@@ -221,8 +207,7 @@ router.post("/offers/search", requireAuth, async (req, res) => {
     res.json({ offerRequestId, offers, nextAfter });
   } catch (err: unknown) {
     req.log.error({ err }, "Error searching offers");
-    const message = err instanceof Error ? err.message : "Failed to search offers";
-    res.status(500).json({ error: "duffel_error", message });
+    res.status(500).json({ error: "duffel_error", message: "Failed to search offers" });
   }
 });
 

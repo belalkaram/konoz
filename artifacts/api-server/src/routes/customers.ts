@@ -5,6 +5,10 @@ import { requireAuth, requireAdmin, getSessionFromRequest } from "../middlewares
 
 const router = Router();
 
+function isAdmin(req: import("express").Request): boolean {
+  return req.employee?.role === "Administrator";
+}
+
 router.get("/customers", requireAuth, async (req, res) => {
   try {
     const { search, status, assignedEmployeeId } = req.query as Record<string, string | undefined>;
@@ -22,7 +26,9 @@ router.get("/customers", requireAuth, async (req, res) => {
     if (status) {
       conditions.push(eq(customersTable.status, status as typeof customersTable.status._.data));
     }
-    if (assignedEmployeeId) {
+    if (!isAdmin(req)) {
+      conditions.push(eq(customersTable.assignedEmployeeId, req.employee!.employeeId));
+    } else if (assignedEmployeeId) {
       conditions.push(eq(customersTable.assignedEmployeeId, Number(assignedEmployeeId)));
     }
 
@@ -84,7 +90,11 @@ router.get("/customers", requireAuth, async (req, res) => {
 });
 
 router.post("/customers", requireAuth, async (req, res) => {
-  const parsed = insertCustomerSchema.safeParse(req.body);
+  const body = req.body as Record<string, unknown>;
+  const serverControlled = isAdmin(req)
+    ? body
+    : { ...body, assignedEmployeeId: req.employee!.employeeId };
+  const parsed = insertCustomerSchema.safeParse(serverControlled);
   if (!parsed.success) {
     res.status(400).json({ error: "validation_error", message: parsed.error.message });
     return;
@@ -252,6 +262,10 @@ router.get("/customers/:id", requireAuth, async (req, res) => {
       res.status(404).json({ error: "not_found", message: "Customer not found" });
       return;
     }
+    if (!isAdmin(req) && customer.assignedEmployeeId !== req.employee!.employeeId) {
+      res.status(404).json({ error: "not_found", message: "Customer not found" });
+      return;
+    }
     res.json({ customer });
   } catch (err) {
     req.log.error({ err }, "Error getting customer");
@@ -271,9 +285,24 @@ router.put("/customers/:id", requireAuth, async (req, res) => {
     return;
   }
   try {
+    const [existing] = await db
+      .select({ id: customersTable.id, assignedEmployeeId: customersTable.assignedEmployeeId })
+      .from(customersTable)
+      .where(eq(customersTable.id, id));
+    if (!existing) {
+      res.status(404).json({ error: "not_found", message: "Customer not found" });
+      return;
+    }
+    if (!isAdmin(req) && existing.assignedEmployeeId !== req.employee!.employeeId) {
+      res.status(404).json({ error: "not_found", message: "Customer not found" });
+      return;
+    }
+    const updateData = isAdmin(req)
+      ? parsed.data
+      : (({ assignedEmployeeId: _aei, ...rest }) => rest)(parsed.data as Record<string, unknown>) as typeof parsed.data;
     const [customer] = await db
       .update(customersTable)
-      .set({ ...parsed.data, updatedAt: new Date() })
+      .set({ ...updateData, updatedAt: new Date() })
       .where(eq(customersTable.id, id))
       .returning();
     if (!customer) {

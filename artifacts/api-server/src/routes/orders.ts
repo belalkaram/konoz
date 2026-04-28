@@ -1,23 +1,9 @@
-import { Router, type RequestHandler } from "express";
+import { Router } from "express";
 import { duffel } from "../lib/duffel";
 import { CreateOrderBody, ListOrdersQueryParams, GetOrderParams, CancelOrderParams } from "@workspace/api-zod";
-import { validateSession } from "../lib/sessions.js";
+import { requireAuth } from "../middlewares/auth.js";
 
 const router = Router();
-
-const requireAuth: RequestHandler = (req, res, next) => {
-  const auth = req.headers["authorization"];
-  if (!auth?.startsWith("Bearer ")) {
-    res.status(401).json({ error: "unauthorized", message: "Authentication required" });
-    return;
-  }
-  const session = validateSession(auth.slice(7));
-  if (!session) {
-    res.status(401).json({ error: "unauthorized", message: "Session expired or invalid. Please log in again." });
-    return;
-  }
-  next();
-};
 
 function formatOrder(order: Record<string, unknown>) {
   const o = order as {
@@ -201,8 +187,7 @@ router.get("/orders", requireAuth, async (req, res) => {
     });
   } catch (err: unknown) {
     req.log.error({ err }, "Error listing orders");
-    const message = err instanceof Error ? err.message : "Failed to list orders";
-    res.status(500).json({ error: "duffel_error", message });
+    res.status(500).json({ error: "duffel_error", message: "Failed to list orders" });
   }
 });
 
@@ -248,11 +233,11 @@ router.post("/orders", requireAuth, async (req, res) => {
       ],
     });
 
+    req.log.info({ event: "security:payment_created", actorId: req.employee?.employeeId, ip: req.ip }, "Order created");
     res.status(201).json(formatOrder(order as unknown as Record<string, unknown>));
   } catch (err: unknown) {
     req.log.error({ err }, "Error creating order");
-    const message = err instanceof Error ? err.message : "Failed to create order";
-    res.status(400).json({ error: "duffel_error", message });
+    res.status(400).json({ error: "duffel_error", message: "Failed to create order" });
   }
 });
 
@@ -273,8 +258,7 @@ router.get("/orders/:orderId", requireAuth, async (req, res) => {
     res.json(formatOrder(order as unknown as Record<string, unknown>));
   } catch (err: unknown) {
     req.log.error({ err }, "Error getting order");
-    const message = err instanceof Error ? err.message : "Order not found";
-    res.status(404).json({ error: "not_found", message });
+    res.status(404).json({ error: "not_found", message: "Order not found" });
   }
 });
 
@@ -308,8 +292,7 @@ router.post("/orders/:orderId/cancel", requireAuth, async (req, res) => {
     });
   } catch (err: unknown) {
     req.log.error({ err }, "Error cancelling order");
-    const message = err instanceof Error ? err.message : "Failed to cancel order";
-    res.status(400).json({ error: "duffel_error", message });
+    res.status(400).json({ error: "duffel_error", message: "Failed to cancel order" });
   }
 });
 

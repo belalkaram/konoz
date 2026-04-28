@@ -1,23 +1,13 @@
-import { Router, type RequestHandler } from "express";
-import { eq, and, gte, lt, desc, isNotNull, SQL } from "drizzle-orm";
+import { Router } from "express";
+import { eq, and, desc, isNotNull, SQL } from "drizzle-orm";
 import { db, remindersTable, customerNotesTable, customersTable, insertReminderSchema, updateReminderSchema } from "@workspace/db";
-import { validateSession } from "../lib/sessions.js";
+import { requireAuth } from "../middlewares/auth.js";
 
 const router = Router();
 
-const requireAuth: RequestHandler = (req, res, next) => {
-  const auth = req.headers["authorization"];
-  if (!auth?.startsWith("Bearer ")) {
-    res.status(401).json({ error: "unauthorized", message: "Authentication required" });
-    return;
-  }
-  const session = validateSession(auth.slice(7));
-  if (!session) {
-    res.status(401).json({ error: "unauthorized", message: "Session expired or invalid. Please log in again." });
-    return;
-  }
-  next();
-};
+function isAdmin(req: import("express").Request): boolean {
+  return req.employee?.role === "Administrator";
+}
 
 function coerceDates(body: Record<string, unknown>, ...fields: string[]) {
   const result = { ...body };
@@ -35,7 +25,11 @@ router.get("/reminders", requireAuth, async (req, res) => {
 
     const conditions: SQL[] = [];
     if (status) conditions.push(eq(remindersTable.status, status as "pending" | "done" | "missed"));
-    if (employeeId) conditions.push(eq(remindersTable.employeeId, Number(employeeId)));
+    if (!isAdmin(req)) {
+      conditions.push(eq(remindersTable.employeeId, req.employee!.employeeId));
+    } else if (employeeId) {
+      conditions.push(eq(remindersTable.employeeId, Number(employeeId)));
+    }
 
     const rows = await db
       .select({
@@ -62,7 +56,8 @@ router.get("/reminders", requireAuth, async (req, res) => {
 });
 
 router.post("/reminders", requireAuth, async (req, res) => {
-  const parsed = insertReminderSchema.safeParse(coerceDates(req.body as Record<string, unknown>, "reminderDate"));
+  const body = { ...req.body, employeeId: req.employee!.employeeId };
+  const parsed = insertReminderSchema.safeParse(coerceDates(body as Record<string, unknown>, "reminderDate"));
   if (!parsed.success) {
     res.status(400).json({ error: "validation_error", message: parsed.error.message });
     return;
@@ -93,6 +88,18 @@ router.put("/reminders/:id/status", requireAuth, async (req, res) => {
     return;
   }
   try {
+    const [existing] = await db
+      .select({ id: remindersTable.id, employeeId: remindersTable.employeeId })
+      .from(remindersTable)
+      .where(eq(remindersTable.id, id));
+    if (!existing) {
+      res.status(404).json({ error: "not_found", message: "Reminder not found" });
+      return;
+    }
+    if (!isAdmin(req) && existing.employeeId !== req.employee!.employeeId) {
+      res.status(404).json({ error: "not_found", message: "Reminder not found" });
+      return;
+    }
     const [reminder] = await db
       .update(remindersTable)
       .set({ status, updatedAt: new Date() })
@@ -115,6 +122,11 @@ router.get("/followups", requireAuth, async (req, res) => {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const todayEnd = new Date(todayStart.getTime() + 86400000);
 
+    const conditions: SQL[] = [isNotNull(customerNotesTable.followUpDate)];
+    if (!isAdmin(req)) {
+      conditions.push(eq(customerNotesTable.employeeId, req.employee!.employeeId));
+    }
+
     const notes = await db
       .select({
         note: customerNotesTable,
@@ -124,7 +136,7 @@ router.get("/followups", requireAuth, async (req, res) => {
       })
       .from(customerNotesTable)
       .leftJoin(customersTable, eq(customerNotesTable.customerId, customersTable.id))
-      .where(isNotNull(customerNotesTable.followUpDate))
+      .where(and(...(conditions as [SQL])))
       .orderBy(desc(customerNotesTable.followUpDate));
 
     const enriched = notes.map((r) => {

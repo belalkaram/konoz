@@ -41,56 +41,50 @@ const EMPTY_FORM: EmployeeFormData = {
   pin: "",
 };
 
-function adminHeaders(token: string): HeadersInit {
-  return { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
-}
-
-function adminPatchHeaders(token: string): HeadersInit {
-  return { "Authorization": `Bearer ${token}` };
-}
-
-async function fetchAllEmployees(token: string): Promise<EmployeeRow[]> {
+async function fetchAllEmployees(): Promise<EmployeeRow[]> {
   const res = await fetch(`${BASE}/api/employees?includeInactive=true`, {
-    headers: { "Authorization": `Bearer ${token}` },
+    credentials: "include",
   });
   if (!res.ok) throw new Error("Failed to fetch employees");
   const data = await res.json() as { employees: EmployeeRow[] };
   return data.employees;
 }
 
-async function createEmployee(token: string, data: EmployeeFormData): Promise<void> {
+async function createEmployee(data: EmployeeFormData): Promise<void> {
   const res = await fetch(`${BASE}/api/employees`, {
     method: "POST",
-    headers: adminHeaders(token),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
+    credentials: "include",
   });
   const json = await res.json();
   if (!res.ok) throw new Error((json as { message?: string }).message || "Failed to create employee");
 }
 
-async function updateEmployee(token: string, id: number, data: Partial<EmployeeFormData>): Promise<void> {
+async function updateEmployee(id: number, data: Partial<EmployeeFormData>): Promise<void> {
   const res = await fetch(`${BASE}/api/employees/${id}`, {
     method: "PUT",
-    headers: adminHeaders(token),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
+    credentials: "include",
   });
   const json = await res.json();
   if (!res.ok) throw new Error((json as { message?: string }).message || "Failed to update employee");
 }
 
-async function deactivateEmployee(token: string, id: number): Promise<void> {
+async function deactivateEmployee(id: number): Promise<void> {
   const res = await fetch(`${BASE}/api/employees/${id}/deactivate`, {
     method: "PATCH",
-    headers: adminPatchHeaders(token),
+    credentials: "include",
   });
   const json = await res.json();
   if (!res.ok) throw new Error((json as { message?: string }).message || "Failed to deactivate employee");
 }
 
-async function activateEmployee(token: string, id: number): Promise<void> {
+async function activateEmployee(id: number): Promise<void> {
   const res = await fetch(`${BASE}/api/employees/${id}/activate`, {
     method: "PATCH",
-    headers: adminPatchHeaders(token),
+    credentials: "include",
   });
   const json = await res.json();
   if (!res.ok) throw new Error((json as { message?: string }).message || "Failed to activate employee");
@@ -103,12 +97,11 @@ function autoInitials(name: string): string {
 interface EmployeeFormSheetProps {
   open: boolean;
   editing: EmployeeRow | null;
-  token: string;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-function EmployeeFormSheet({ open, editing, token, onClose, onSuccess }: EmployeeFormSheetProps) {
+function EmployeeFormSheet({ open, editing, onClose, onSuccess }: EmployeeFormSheetProps) {
   const [form, setForm] = useState<EmployeeFormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<EmployeeFormData>>({});
   const { toast } = useToast();
@@ -150,9 +143,9 @@ function EmployeeFormSheet({ open, editing, token, onClose, onSuccess }: Employe
       if (editing) {
         const payload: Partial<EmployeeFormData> = { name: form.name, initials: form.initials, role: form.role, username: form.username };
         if (form.pin) payload.pin = form.pin;
-        await updateEmployee(token, editing.id, payload);
+        await updateEmployee(editing.id, payload);
       } else {
-        await createEmployee(token, form);
+        await createEmployee(form);
       }
     },
     onSuccess: () => {
@@ -231,10 +224,9 @@ function EmployeeFormSheet({ open, editing, token, onClose, onSuccess }: Employe
 }
 
 export default function EmployeesPage() {
-  const { employees, refreshEmployees, sessionToken } = useEmployee();
+  const { employees, refreshEmployees } = useEmployee();
   const currentEmployee = useCurrentEmployee();
   const [, navigate] = useLocation();
-  const token = sessionToken ?? "";
   const [showSheet, setShowSheet] = useState(false);
   const [editing, setEditing] = useState<EmployeeRow | null>(null);
   const [confirmDeactivate, setConfirmDeactivate] = useState<EmployeeRow | null>(null);
@@ -247,17 +239,17 @@ export default function EmployeesPage() {
 
   async function loadAll() {
     try {
-      const rows = await fetchAllEmployees(token);
+      const rows = await fetchAllEmployees();
       setAllEmployees(rows);
     } catch {
     }
   }
 
   useEffect(() => {
-    if (isAdmin && token) {
+    if (isAdmin) {
       loadAll();
     }
-  }, [isAdmin, token]);
+  }, [isAdmin]);
 
   function handleToggleShowInactive(show: boolean) {
     setShowInactive(show);
@@ -271,7 +263,7 @@ export default function EmployeesPage() {
     : (allEmployees ? allEmployees.filter((e) => e.isActive) : employees as EmployeeRow[]);
 
   const deactivateMutation = useMutation({
-    mutationFn: (id: number) => deactivateEmployee(token, id),
+    mutationFn: (id: number) => deactivateEmployee(id),
     onSuccess: async () => {
       toast({ title: "Employee deactivated" });
       await refreshEmployees();
@@ -282,7 +274,7 @@ export default function EmployeesPage() {
   });
 
   const activateMutation = useMutation({
-    mutationFn: (id: number) => activateEmployee(token, id),
+    mutationFn: (id: number) => activateEmployee(id),
     onSuccess: async () => {
       toast({ title: "Employee activated" });
       await refreshEmployees();
@@ -436,7 +428,6 @@ export default function EmployeesPage() {
       <EmployeeFormSheet
         open={showSheet}
         editing={editing}
-        token={token}
         onClose={() => setShowSheet(false)}
         onSuccess={handleFormSuccess}
       />

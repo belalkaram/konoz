@@ -172,21 +172,27 @@ export default function Dashboard() {
                             <TableHead>Customer</TableHead>
                             <TableHead>Note</TableHead>
                             <TableHead className="text-right">Time</TableHead>
+                            <TableHead></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {crmData.todayFollowUps.map((f) => (
                             <TableRow key={f.id}>
-                              <TableCell className="text-sm font-medium truncate max-w-[90px]">
-                                {f.customerId ? (
-                                  <Link href={`/customers/${f.customerId}`}>
-                                    <span className="hover:underline cursor-pointer">{f.customerName ?? "Unknown"}</span>
-                                  </Link>
-                                ) : (f.customerName ?? "Unknown")}
+                              <TableCell className="text-sm font-medium truncate max-w-[80px]">
+                                {f.customerName ?? "Unknown"}
                               </TableCell>
-                              <TableCell className="text-xs text-muted-foreground line-clamp-1 max-w-[110px]">{f.note}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground line-clamp-1 max-w-[100px]">{f.note}</TableCell>
                               <TableCell className="text-xs text-muted-foreground text-right whitespace-nowrap">
                                 {f.followUpDate ? formatDateTime(f.followUpDate).split(",")[1]?.trim() ?? "" : "—"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {f.customerId ? (
+                                  <Link href={`/customers/${f.customerId}`}>
+                                    <span className="text-xs text-primary hover:underline flex items-center justify-end gap-0.5 cursor-pointer">
+                                      View <ChevronRight className="h-3 w-3" />
+                                    </span>
+                                  </Link>
+                                ) : null}
                               </TableCell>
                             </TableRow>
                           ))}

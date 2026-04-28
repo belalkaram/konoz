@@ -277,6 +277,46 @@ components:
         - offerRequestId
         - offers
 
+    PurchasableBaggageService:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [carry_on, checked]
+        maximumWeightKg:
+          type: number
+          nullable: true
+        maximumHeightCm:
+          type: number
+          nullable: true
+        maximumLengthCm:
+          type: number
+          nullable: true
+        maximumDepthCm:
+          type: number
+          nullable: true
+        totalAmount:
+          type: string
+        totalCurrency:
+          type: string
+        segmentIds:
+          type: array
+          items:
+            type: string
+        passengerIds:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - type
+        - totalAmount
+        - totalCurrency
+        - segmentIds
+        - passengerIds
+
     Offer:
       type: object
       properties:
@@ -304,6 +344,11 @@ components:
             type: object
         owner:
           $ref: "#/components/schemas/Airline"
+        availableBaggageServices:
+          type: array
+          description: Purchasable additional baggage services with weight details
+          items:
+            $ref: "#/components/schemas/PurchasableBaggageService"
       required:
         - id
         - totalAmount
@@ -344,6 +389,18 @@ components:
           enum: [carry_on, checked]
         quantity:
           type: integer
+        maximumWeightKg:
+          type: number
+          nullable: true
+        maximumHeightCm:
+          type: number
+          nullable: true
+        maximumLengthCm:
+          type: number
+          nullable: true
+        maximumDepthCm:
+          type: number
+          nullable: true
       required:
         - type
         - quantity

@@ -5,13 +5,17 @@
  * Flight Booking Management API powered by Duffel
  * OpenAPI spec version: 0.1.0
  */
-import type { BaggageAllowanceType } from "./baggageAllowanceType";
+import type { PurchasableBaggageServiceType } from "./purchasableBaggageServiceType";
 
-export interface BaggageAllowance {
-  type: BaggageAllowanceType;
-  quantity: number;
+export interface PurchasableBaggageService {
+  id: string;
+  type: PurchasableBaggageServiceType;
   maximumWeightKg?: number | null;
   maximumHeightCm?: number | null;
   maximumLengthCm?: number | null;
   maximumDepthCm?: number | null;
+  totalAmount: string;
+  totalCurrency: string;
+  segmentIds: string[];
+  passengerIds: string[];
 }

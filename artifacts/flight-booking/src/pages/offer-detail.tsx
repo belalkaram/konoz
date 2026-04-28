@@ -119,7 +119,7 @@ export default function OfferDetail() {
                                     <ShoppingBag className="h-3.5 w-3.5" />
                                   )}
                                   {bag.quantity > 0
-                                    ? `${bag.quantity}× ${bag.type === "checked" ? "Checked bag" : "Carry-on"}`
+                                    ? `${bag.quantity}× ${bag.type === "checked" ? "Checked bag" : "Carry-on"}${bag.maximumWeightKg ? ` · ${bag.maximumWeightKg}kg` : ""}`
                                     : `No ${bag.type === "checked" ? "checked bag" : "carry-on"}`}
                                 </Badge>
                               ))
@@ -169,6 +169,40 @@ export default function OfferDetail() {
             </CardFooter>
           </Card>
           
+          {offer.availableBaggageServices && offer.availableBaggageServices.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Luggage className="h-4 w-4 text-primary" />
+                  Extra Baggage Available
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 pt-0">
+                {offer.availableBaggageServices.map((svc) => (
+                  <div key={svc.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      {svc.type === "checked" ? (
+                        <Luggage className="h-3.5 w-3.5 flex-shrink-0" />
+                      ) : (
+                        <ShoppingBag className="h-3.5 w-3.5 flex-shrink-0" />
+                      )}
+                      <span>
+                        {svc.type === "checked" ? "Checked bag" : "Carry-on"}
+                        {svc.maximumWeightKg ? ` · ${svc.maximumWeightKg}kg` : ""}
+                        {svc.maximumHeightCm && svc.maximumLengthCm && svc.maximumDepthCm
+                          ? ` · ${svc.maximumHeightCm}×${svc.maximumLengthCm}×${svc.maximumDepthCm}cm`
+                          : ""}
+                      </span>
+                    </div>
+                    <span className="font-medium text-primary">
+                      +{formatCurrency(svc.totalAmount, svc.totalCurrency)}
+                    </span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
           <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground flex gap-3">
             <Info className="h-5 w-5 shrink-0 text-primary" />
             <div>

@@ -7,6 +7,7 @@
  */
 import type { Airline } from "./airline";
 import type { OfferPassengersItem } from "./offerPassengersItem";
+import type { PurchasableBaggageService } from "./purchasableBaggageService";
 import type { Slice } from "./slice";
 
 export interface Offer {
@@ -20,4 +21,6 @@ export interface Offer {
   slices: Slice[];
   passengers?: OfferPassengersItem[];
   owner?: Airline;
+  /** Purchasable additional baggage services with weight details */
+  availableBaggageServices?: PurchasableBaggageService[];
 }

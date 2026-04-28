@@ -78,6 +78,10 @@ export const BaggageAllowanceType = {
 export interface BaggageAllowance {
   type: BaggageAllowanceType;
   quantity: number;
+  maximumWeightKg?: number | null;
+  maximumHeightCm?: number | null;
+  maximumLengthCm?: number | null;
+  maximumDepthCm?: number | null;
 }
 
 export type SegmentAircraft = {
@@ -110,6 +114,27 @@ export interface Slice {
   segments?: Segment[];
 }
 
+export type PurchasableBaggageServiceType =
+  (typeof PurchasableBaggageServiceType)[keyof typeof PurchasableBaggageServiceType];
+
+export const PurchasableBaggageServiceType = {
+  carry_on: "carry_on",
+  checked: "checked",
+} as const;
+
+export interface PurchasableBaggageService {
+  id: string;
+  type: PurchasableBaggageServiceType;
+  maximumWeightKg?: number | null;
+  maximumHeightCm?: number | null;
+  maximumLengthCm?: number | null;
+  maximumDepthCm?: number | null;
+  totalAmount: string;
+  totalCurrency: string;
+  segmentIds: string[];
+  passengerIds: string[];
+}
+
 export type OfferPassengersItem = { [key: string]: unknown };
 
 export interface Offer {
@@ -123,6 +148,8 @@ export interface Offer {
   slices: Slice[];
   passengers?: OfferPassengersItem[];
   owner?: Airline;
+  /** Purchasable additional baggage services with weight details */
+  availableBaggageServices?: PurchasableBaggageService[];
 }
 
 export interface SearchOffersResponse {

@@ -364,7 +364,7 @@ export default function Search() {
                             {checkedBag && checkedBag.quantity > 0 ? (
                               <Badge variant="secondary" className="text-xs gap-1 px-1.5 py-0.5">
                                 <Luggage className="h-3 w-3" />
-                                {checkedBag.quantity}✕ checked
+                                {checkedBag.quantity}✕ checked{checkedBag.maximumWeightKg ? ` · ${checkedBag.maximumWeightKg}kg` : ""}
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="text-xs gap-1 px-1.5 py-0.5 text-muted-foreground">
@@ -375,7 +375,7 @@ export default function Search() {
                             {carryOn && carryOn.quantity > 0 && (
                               <Badge variant="secondary" className="text-xs gap-1 px-1.5 py-0.5">
                                 <ShoppingBag className="h-3 w-3" />
-                                {carryOn.quantity}✕ carry-on
+                                {carryOn.quantity}✕ carry-on{carryOn.maximumWeightKg ? ` · ${carryOn.maximumWeightKg}kg` : ""}
                               </Badge>
                             )}
                           </div>

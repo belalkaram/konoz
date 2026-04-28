@@ -29,6 +29,8 @@ export * from "./passengerDetailsGender";
 export * from "./passengerDetailsTitle";
 export * from "./passengerInput";
 export * from "./passengerInputType";
+export * from "./purchasableBaggageService";
+export * from "./purchasableBaggageServiceType";
 export * from "./searchOffersBody";
 export * from "./searchOffersBodyCabinClass";
 export * from "./searchOffersResponse";

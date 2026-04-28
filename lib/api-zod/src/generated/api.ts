@@ -115,6 +115,10 @@ export const SearchOffersResponse = zod.object({
                     zod.object({
                       type: zod.enum(["carry_on", "checked"]),
                       quantity: zod.number(),
+                      maximumWeightKg: zod.number().nullish(),
+                      maximumHeightCm: zod.number().nullish(),
+                      maximumLengthCm: zod.number().nullish(),
+                      maximumDepthCm: zod.number().nullish(),
                     }),
                   )
                   .optional()
@@ -135,6 +139,25 @@ export const SearchOffersResponse = zod.object({
           logotypeLockupImageUrl: zod.string().optional(),
         })
         .optional(),
+      availableBaggageServices: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            type: zod.enum(["carry_on", "checked"]),
+            maximumWeightKg: zod.number().nullish(),
+            maximumHeightCm: zod.number().nullish(),
+            maximumLengthCm: zod.number().nullish(),
+            maximumDepthCm: zod.number().nullish(),
+            totalAmount: zod.string(),
+            totalCurrency: zod.string(),
+            segmentIds: zod.array(zod.string()),
+            passengerIds: zod.array(zod.string()),
+          }),
+        )
+        .optional()
+        .describe(
+          "Purchasable additional baggage services with weight details",
+        ),
     }),
   ),
   slices: zod.array(zod.object({}).passthrough()).optional(),
@@ -220,6 +243,10 @@ export const GetOfferResponse = zod.object({
                 zod.object({
                   type: zod.enum(["carry_on", "checked"]),
                   quantity: zod.number(),
+                  maximumWeightKg: zod.number().nullish(),
+                  maximumHeightCm: zod.number().nullish(),
+                  maximumLengthCm: zod.number().nullish(),
+                  maximumDepthCm: zod.number().nullish(),
                 }),
               )
               .optional()
@@ -240,6 +267,23 @@ export const GetOfferResponse = zod.object({
       logotypeLockupImageUrl: zod.string().optional(),
     })
     .optional(),
+  availableBaggageServices: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        type: zod.enum(["carry_on", "checked"]),
+        maximumWeightKg: zod.number().nullish(),
+        maximumHeightCm: zod.number().nullish(),
+        maximumLengthCm: zod.number().nullish(),
+        maximumDepthCm: zod.number().nullish(),
+        totalAmount: zod.string(),
+        totalCurrency: zod.string(),
+        segmentIds: zod.array(zod.string()),
+        passengerIds: zod.array(zod.string()),
+      }),
+    )
+    .optional()
+    .describe("Purchasable additional baggage services with weight details"),
 });
 
 /**
@@ -329,6 +373,10 @@ export const ListOrdersResponse = zod.object({
                       zod.object({
                         type: zod.enum(["carry_on", "checked"]),
                         quantity: zod.number(),
+                        maximumWeightKg: zod.number().nullish(),
+                        maximumHeightCm: zod.number().nullish(),
+                        maximumLengthCm: zod.number().nullish(),
+                        maximumDepthCm: zod.number().nullish(),
                       }),
                     )
                     .optional()
@@ -471,6 +519,10 @@ export const GetOrderResponse = zod.object({
                   zod.object({
                     type: zod.enum(["carry_on", "checked"]),
                     quantity: zod.number(),
+                    maximumWeightKg: zod.number().nullish(),
+                    maximumHeightCm: zod.number().nullish(),
+                    maximumLengthCm: zod.number().nullish(),
+                    maximumDepthCm: zod.number().nullish(),
                   }),
                 )
                 .optional()
@@ -601,6 +653,10 @@ export const GetStatsSummaryResponse = zod.object({
                       zod.object({
                         type: zod.enum(["carry_on", "checked"]),
                         quantity: zod.number(),
+                        maximumWeightKg: zod.number().nullish(),
+                        maximumHeightCm: zod.number().nullish(),
+                        maximumLengthCm: zod.number().nullish(),
+                        maximumDepthCm: zod.number().nullish(),
                       }),
                     )
                     .optional()

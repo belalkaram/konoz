@@ -53,71 +53,53 @@
 }
 
 :root {
-  --background: 210 20% 98%;
-  --foreground: 220 50% 10%;
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 221 83% 53%;
+  /* ── Emerald Luxury Palette ── */
+  --background: 150 30% 97%;
+  --foreground: 161 40% 8%;
+
+  --border: 150 25% 87%;
+  --input: 150 25% 87%;
+  --ring: 161 88% 17%;
+
   --card: 0 0% 100%;
-  --card-foreground: 220 50% 10%;
-  --card-border: 214 32% 91%;
+  --card-foreground: 161 40% 8%;
+  --card-border: 150 25% 90%;
+
   --popover: 0 0% 100%;
-  --popover-foreground: 220 50% 10%;
-  --popover-border: 214 32% 91%;
-  --primary: 221 83% 53%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222 47% 11%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222 47% 11%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
-  --sidebar: 222 47% 11%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-border: 217 32% 17%;
-  --sidebar-primary: 221 83% 53%;
-  --sidebar-primary-foreground: 210 40% 98%;
-  --sidebar-accent: 217 32% 17%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-ring: 221 83% 53%;
+  --popover-foreground: 161 40% 8%;
+  --popover-border: 150 25% 88%;
+
+  /* Deep emerald as the primary action colour */
+  --primary: 161 88% 17%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 150 40% 93%;
+  --secondary-foreground: 161 88% 17%;
+
+  --muted: 150 20% 94%;
+  --muted-foreground: 150 10% 42%;
+
+  --accent: 150 35% 91%;
+  --accent-foreground: 161 88% 17%;
+
+  --destructive: 0 84% 58%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* ── Deep emerald sidebar ── */
+  --sidebar: 161 88% 7%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-border: 161 50% 12%;
+  --sidebar-primary: 43 64% 52%;
+  --sidebar-primary-foreground: 161 88% 7%;
+  --sidebar-accent: 161 60% 12%;
+  --sidebar-accent-foreground: 151 80% 75%;
+  --sidebar-ring: 43 64% 52%;
 
   --app-font-sans: 'Inter', sans-serif;
   --app-font-mono: 'Space Mono', monospace;
-  --radius: 0.5rem;
-}
 
-.dark {
-  --background: 222 47% 11%;
-  --foreground: 210 40% 98%;
-  --border: 217 32% 17%;
-  --input: 217 32% 17%;
-  --ring: 224 76% 48%;
-  --card: 222 47% 14%;
-  --card-foreground: 210 40% 98%;
-  --card-border: 217 32% 17%;
-  --popover: 222 47% 14%;
-  --popover-foreground: 210 40% 98%;
-  --popover-border: 217 32% 17%;
-  --primary: 217 91% 60%;
-  --primary-foreground: 222 47% 11%;
-  --secondary: 217 32% 17%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217 32% 17%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217 32% 17%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --sidebar: 222 47% 11%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-border: 217 32% 17%;
-  --sidebar-primary: 217 91% 60%;
-  --sidebar-primary-foreground: 222 47% 11%;
-  --sidebar-accent: 217 32% 17%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-ring: 224 76% 48%;
+  /* Large radius → very rounded cards; buttons/inputs override to full pill below */
+  --radius: 1rem;
 }
 
 @layer base {
@@ -126,5 +108,24 @@
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  /* Luxury heading font */
+  h1 {
+    font-family: 'Playfair Display', 'Georgia', serif;
+    letter-spacing: -0.02em;
+  }
+
+  /* ── Pill shape for all interactive controls ── */
+  button:not([class*="rounded-none"]),
+  [role="button"]:not([class*="rounded-none"]) {
+    border-radius: 9999px;
+  }
+  input:not([type="date"]):not([type="checkbox"]):not([type="radio"]):not([class*="rounded-none"]),
+  select:not([class*="rounded-none"]) {
+    border-radius: 9999px;
+  }
+  [data-radix-select-trigger]:not([class*="rounded-none"]) {
+    border-radius: 9999px;
   }
 }

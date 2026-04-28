@@ -7,6 +7,7 @@ import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { SESSION_COOKIE_NAME, CSRF_COOKIE_NAME, getCsrfToken } from "./lib/sessions.js";
 
 const COOKIE_SECRET = process.env.COOKIE_SECRET ?? randomBytes(32).toString("hex");
 
@@ -115,6 +116,32 @@ app.use("/api/auth", (_req, res, next) => {
 app.post("/api/auth/login", loginLimiter);
 
 app.use("/api", generalLimiter);
+
+const CSRF_EXEMPT = new Set(["/api/auth/login"]);
+
+app.use((req, res, next) => {
+  if (!["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    return next();
+  }
+  if (CSRF_EXEMPT.has(req.path)) {
+    return next();
+  }
+  const sessionToken = req.signedCookies?.[SESSION_COOKIE_NAME] as string | undefined | false;
+  if (!sessionToken) {
+    return next();
+  }
+  const expectedCsrf = getCsrfToken(sessionToken);
+  if (!expectedCsrf) {
+    return next();
+  }
+  const headerToken = req.headers["x-csrf-token"];
+  if (typeof headerToken !== "string" || headerToken !== expectedCsrf) {
+    req.log?.warn({ event: "security:csrf_mismatch", ip: req.ip, route: req.path }, "CSRF token mismatch");
+    res.status(403).json({ error: "csrf_error", message: "Invalid or missing CSRF token" });
+    return;
+  }
+  next();
+});
 
 app.use((req, res, next) => {
   if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method) && req.path !== "/api/auth/login") {

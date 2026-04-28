@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db, employeesTable } from "@workspace/db";
-import { createSession, deleteSession, SESSION_COOKIE_NAME, COOKIE_OPTIONS } from "../lib/sessions.js";
+import { createSession, deleteSession, SESSION_COOKIE_NAME, COOKIE_OPTIONS, CSRF_COOKIE_NAME, CSRF_COOKIE_OPTIONS, getCsrfToken } from "../lib/sessions.js";
 import { requireAuth } from "../middlewares/auth.js";
 
 const LoginSchema = z.object({
@@ -58,8 +58,10 @@ router.post("/auth/login", async (req, res) => {
     }
 
     const sessionToken = createSession(employee.id, employee.role, employee.name);
+    const csrfToken = getCsrfToken(sessionToken)!;
 
     res.cookie(SESSION_COOKIE_NAME, sessionToken, COOKIE_OPTIONS);
+    res.cookie(CSRF_COOKIE_NAME, csrfToken, CSRF_COOKIE_OPTIONS);
 
     req.log.info({ event: "security:login_success", actorId: employee.id, ip }, "Login successful");
 
@@ -71,6 +73,7 @@ router.post("/auth/login", async (req, res) => {
         role: employee.role,
         username: employee.username,
       },
+      csrfToken,
     });
   } catch (err) {
     req.log.error({ err }, "Error during login");
@@ -84,6 +87,7 @@ router.post("/auth/logout", (req, res) => {
     deleteSession(token);
   }
   res.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
+  res.clearCookie(CSRF_COOKIE_NAME, { path: "/" });
   req.log.info({ event: "security:logout", ip: req.ip }, "User logged out");
   res.json({ ok: true });
 });
@@ -103,11 +107,18 @@ router.get("/auth/me", requireAuth, async (req, res) => {
 
     if (!employee) {
       res.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
+      res.clearCookie(CSRF_COOKIE_NAME, { path: "/" });
       res.status(401).json({ error: "unauthorized", message: "Session invalid" });
       return;
     }
 
-    res.json({ employee });
+    const sessionToken = req.signedCookies?.[SESSION_COOKIE_NAME] as string;
+    const csrfToken = getCsrfToken(sessionToken);
+    if (csrfToken) {
+      res.cookie(CSRF_COOKIE_NAME, csrfToken, CSRF_COOKIE_OPTIONS);
+    }
+
+    res.json({ employee, csrfToken });
   } catch (err) {
     req.log.error({ err }, "Error fetching /auth/me");
     res.status(500).json({ error: "server_error", message: "Failed to get session" });

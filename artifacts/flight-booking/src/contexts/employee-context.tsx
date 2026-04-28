@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { authFetch } from "../lib/api";
 
 export interface Employee {
   id: number;
@@ -92,10 +93,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    fetch(`${BASE}/api/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-    }).catch(() => {});
+    authFetch(`${BASE}/api/auth/logout`, { method: "POST" }).catch(() => {});
     setCurrentEmployee(null);
   }, []);
 

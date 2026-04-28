@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useEmployee, useCurrentEmployee } from "@/contexts/employee-context";
+import { authFetch } from "@/lib/api";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -51,41 +52,31 @@ async function fetchAllEmployees(): Promise<EmployeeRow[]> {
 }
 
 async function createEmployee(data: EmployeeFormData): Promise<void> {
-  const res = await fetch(`${BASE}/api/employees`, {
+  const res = await authFetch(`${BASE}/api/employees`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
-    credentials: "include",
   });
   const json = await res.json();
   if (!res.ok) throw new Error((json as { message?: string }).message || "Failed to create employee");
 }
 
 async function updateEmployee(id: number, data: Partial<EmployeeFormData>): Promise<void> {
-  const res = await fetch(`${BASE}/api/employees/${id}`, {
+  const res = await authFetch(`${BASE}/api/employees/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
-    credentials: "include",
   });
   const json = await res.json();
   if (!res.ok) throw new Error((json as { message?: string }).message || "Failed to update employee");
 }
 
 async function deactivateEmployee(id: number): Promise<void> {
-  const res = await fetch(`${BASE}/api/employees/${id}/deactivate`, {
-    method: "PATCH",
-    credentials: "include",
-  });
+  const res = await authFetch(`${BASE}/api/employees/${id}/deactivate`, { method: "PATCH" });
   const json = await res.json();
   if (!res.ok) throw new Error((json as { message?: string }).message || "Failed to deactivate employee");
 }
 
 async function activateEmployee(id: number): Promise<void> {
-  const res = await fetch(`${BASE}/api/employees/${id}/activate`, {
-    method: "PATCH",
-    credentials: "include",
-  });
+  const res = await authFetch(`${BASE}/api/employees/${id}/activate`, { method: "PATCH" });
   const json = await res.json();
   if (!res.ok) throw new Error((json as { message?: string }).message || "Failed to activate employee");
 }

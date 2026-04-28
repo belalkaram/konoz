@@ -451,18 +451,20 @@ export default function TicketDetail() {
         </CardContent>
       </Card>
 
-      {ticket.notes && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-4 w-4 text-muted-foreground" /> Notes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileText className="h-4 w-4 text-muted-foreground" /> Notes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {ticket.notes ? (
             <p className="text-sm whitespace-pre-wrap">{ticket.notes}</p>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <p className="text-sm text-muted-foreground italic">No notes added for this ticket.</p>
+          )}
+        </CardContent>
+      </Card>
 
       {payments.length > 0 && (
         <Card>

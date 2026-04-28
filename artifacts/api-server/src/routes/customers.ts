@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { eq, ilike, or, sql, and } from "drizzle-orm";
-import { db, customersTable, ticketsTable, insertCustomerSchema, updateCustomerSchema } from "@workspace/db";
+import { eq, ilike, or, sql, and, desc } from "drizzle-orm";
+import { db, customersTable, ticketsTable, insertCustomerSchema, insertTicketSchema, updateCustomerSchema } from "@workspace/db";
 
 const router = Router();
 
@@ -25,9 +25,55 @@ router.get("/customers", async (req, res) => {
       conditions.push(eq(customersTable.assignedEmployeeId, Number(assignedEmployeeId)));
     }
 
+    const baseQuery = db
+      .select({
+        id: customersTable.id,
+        fullName: customersTable.fullName,
+        phone: customersTable.phone,
+        whatsapp: customersTable.whatsapp,
+        email: customersTable.email,
+        nationality: customersTable.nationality,
+        passportNumber: customersTable.passportNumber,
+        nationalId: customersTable.nationalId,
+        address: customersTable.address,
+        source: customersTable.source,
+        status: customersTable.status,
+        assignedEmployeeId: customersTable.assignedEmployeeId,
+        lastContactedAt: customersTable.lastContactedAt,
+        createdAt: customersTable.createdAt,
+        updatedAt: customersTable.updatedAt,
+        latestTicketId: sql<number | null>`(
+          SELECT id FROM tickets WHERE customer_id = ${customersTable.id}
+          ORDER BY created_at DESC LIMIT 1
+        )`,
+        pnr: sql<string | null>`(
+          SELECT pnr FROM tickets WHERE customer_id = ${customersTable.id}
+          ORDER BY created_at DESC LIMIT 1
+        )`,
+        bookingDate: sql<string | null>`(
+          SELECT created_at FROM tickets WHERE customer_id = ${customersTable.id}
+          ORDER BY created_at DESC LIMIT 1
+        )`,
+        costPrice: sql<string | null>`(
+          SELECT cost_price FROM tickets WHERE customer_id = ${customersTable.id}
+          ORDER BY created_at DESC LIMIT 1
+        )`,
+        sellingPrice: sql<string | null>`(
+          SELECT price FROM tickets WHERE customer_id = ${customersTable.id}
+          ORDER BY created_at DESC LIMIT 1
+        )`,
+        ticketCurrency: sql<string | null>`(
+          SELECT currency FROM tickets WHERE customer_id = ${customersTable.id}
+          ORDER BY created_at DESC LIMIT 1
+        )`,
+      })
+      .from(customersTable);
+
     const customers = conditions.length
-      ? await db.select().from(customersTable).where(conditions.length === 1 ? conditions[0]! : and(...(conditions as [ReturnType<typeof eq>]))).orderBy(sql`${customersTable.createdAt} desc`)
-      : await db.select().from(customersTable).orderBy(sql`${customersTable.createdAt} desc`);
+      ? await baseQuery
+          .where(conditions.length === 1 ? conditions[0]! : and(...(conditions as [ReturnType<typeof eq>])))
+          .orderBy(desc(customersTable.createdAt))
+      : await baseQuery.orderBy(desc(customersTable.createdAt));
 
     res.json({ customers });
   } catch (err) {
@@ -52,6 +98,90 @@ router.post("/customers", async (req, res) => {
     req.log.error({ err }, "Error creating customer");
     res.status(500).json({ error: "server_error", message: "Failed to create customer" });
   }
+});
+
+router.post("/customers/import", async (req, res) => {
+  const rows = req.body as Array<{
+    fullName: string;
+    phone?: string;
+    flightRoute?: string;
+    travelDate?: string;
+    pnr?: string;
+    airline?: string;
+    costPrice?: number;
+    price?: number;
+    paymentMethod?: string;
+    bookingDate?: string;
+  }>;
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    res.status(400).json({ error: "validation_error", message: "No rows provided" });
+    return;
+  }
+
+  const results: Array<{ customerName: string; success: boolean; error?: string }> = [];
+
+  for (const row of rows) {
+    try {
+      if (!row.fullName?.trim()) {
+        results.push({ customerName: row.fullName || "(blank)", success: false, error: "Customer name is required" });
+        continue;
+      }
+
+      let customerId: number;
+      if (row.phone?.trim()) {
+        const existing = await db
+          .select({ id: customersTable.id })
+          .from(customersTable)
+          .where(eq(customersTable.phone, row.phone.trim()))
+          .limit(1);
+        if (existing.length > 0) {
+          customerId = existing[0]!.id;
+        } else {
+          const [newCustomer] = await db
+            .insert(customersTable)
+            .values({ fullName: row.fullName.trim(), phone: row.phone.trim(), status: "booked" })
+            .returning({ id: customersTable.id });
+          customerId = newCustomer!.id;
+        }
+      } else {
+        const [newCustomer] = await db
+          .insert(customersTable)
+          .values({ fullName: row.fullName.trim(), status: "booked" })
+          .returning({ id: customersTable.id });
+        customerId = newCustomer!.id;
+      }
+
+      const ticketData: Record<string, unknown> = {
+        customerId,
+        ticketStatus: "issued",
+        paymentStatus: row.price != null ? "paid" : "unpaid",
+        currency: "KWD",
+      };
+      if (row.flightRoute) ticketData.flightRoute = row.flightRoute;
+      if (row.pnr) ticketData.pnr = row.pnr;
+      if (row.airline) ticketData.airline = row.airline;
+      if (row.costPrice != null) ticketData.costPrice = String(row.costPrice);
+      if (row.price != null) ticketData.price = String(row.price);
+      if (row.travelDate) {
+        const d = new Date(row.travelDate);
+        if (!isNaN(d.getTime())) ticketData.departureDatetime = d;
+      }
+      if (row.paymentMethod) ticketData.notes = `Payment method: ${row.paymentMethod}`;
+
+      const ticketParsed = insertTicketSchema.safeParse(ticketData);
+      if (ticketParsed.success) {
+        await db.insert(ticketsTable).values(ticketParsed.data);
+      }
+
+      results.push({ customerName: row.fullName, success: true });
+    } catch (err: unknown) {
+      results.push({ customerName: row.fullName, success: false, error: String(err) });
+    }
+  }
+
+  const succeeded = results.filter((r) => r.success).length;
+  res.json({ results, succeeded, total: rows.length });
 });
 
 router.get("/customers/:id", async (req, res) => {

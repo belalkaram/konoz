@@ -4,8 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SheetFooter } from "@/components/ui/sheet";
-import { STATUS_LABELS, SOURCE_LABELS, CUSTOMER_STATUSES, CUSTOMER_SOURCES } from "@/lib/customer-constants";
-import { useEmployee } from "@/contexts/employee-context";
+import { STATUS_LABELS, CUSTOMER_STATUSES } from "@/lib/customer-constants";
 
 export interface CustomerFormData {
   fullName: string;
@@ -16,9 +15,7 @@ export interface CustomerFormData {
   passportNumber: string;
   nationalId: string;
   address: string;
-  source: string;
   status: string;
-  assignedEmployeeId: string;
 }
 
 export const EMPTY_CUSTOMER_FORM: CustomerFormData = {
@@ -30,9 +27,7 @@ export const EMPTY_CUSTOMER_FORM: CustomerFormData = {
   passportNumber: "",
   nationalId: "",
   address: "",
-  source: "walk_in",
   status: "new",
-  assignedEmployeeId: "",
 };
 
 interface Props {
@@ -46,7 +41,6 @@ interface Props {
 export function CustomerForm({ initialValues, submitLabel, isPending, onSubmit, onCancel }: Props) {
   const [form, setForm] = useState<CustomerFormData>({ ...EMPTY_CUSTOMER_FORM, ...initialValues });
   const [errors, setErrors] = useState<Partial<CustomerFormData>>({});
-  const { employees } = useEmployee();
 
   function set(field: keyof CustomerFormData, val: string) {
     setForm((f) => ({ ...f, [field]: val }));
@@ -67,9 +61,7 @@ export function CustomerForm({ initialValues, submitLabel, isPending, onSubmit, 
     const REQUIRED = new Set(["fullName", "phone"]);
     const payload: Record<string, unknown> = {};
     Object.entries(form).forEach(([k, v]) => {
-      if (k === "assignedEmployeeId") {
-        payload[k] = v ? Number(v) : null;
-      } else if (REQUIRED.has(k)) {
+      if (REQUIRED.has(k)) {
         payload[k] = v;
       } else {
         payload[k] = v || null;
@@ -89,12 +81,12 @@ export function CustomerForm({ initialValues, submitLabel, isPending, onSubmit, 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="cf-phone">Phone *</Label>
-          <Input id="cf-phone" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+201012345678" />
+          <Input id="cf-phone" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+96512345678" />
           {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="cf-whatsapp">WhatsApp</Label>
-          <Input id="cf-whatsapp" value={form.whatsapp} onChange={(e) => set("whatsapp", e.target.value)} placeholder="+201012345678" />
+          <Input id="cf-whatsapp" value={form.whatsapp} onChange={(e) => set("whatsapp", e.target.value)} placeholder="+96512345678" />
         </div>
       </div>
 
@@ -106,7 +98,7 @@ export function CustomerForm({ initialValues, submitLabel, isPending, onSubmit, 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="cf-nationality">Nationality</Label>
-          <Input id="cf-nationality" value={form.nationality} onChange={(e) => set("nationality", e.target.value)} placeholder="Egyptian" />
+          <Input id="cf-nationality" value={form.nationality} onChange={(e) => set("nationality", e.target.value)} placeholder="Kuwaiti" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="cf-passportNumber">Passport No.</Label>
@@ -121,39 +113,15 @@ export function CustomerForm({ initialValues, submitLabel, isPending, onSubmit, 
 
       <div className="space-y-1.5">
         <Label htmlFor="cf-address">Address</Label>
-        <Input id="cf-address" value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="Cairo, Egypt" />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label>Source</Label>
-          <Select value={form.source} onValueChange={(v) => set("source", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {CUSTOMER_SOURCES.map((s) => <SelectItem key={s} value={s}>{SOURCE_LABELS[s]}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Status</Label>
-          <Select value={form.status} onValueChange={(v) => set("status", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {CUSTOMER_STATUSES.map((s) => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
+        <Input id="cf-address" value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="Kuwait City, Kuwait" />
       </div>
 
       <div className="space-y-1.5">
-        <Label>Assigned Agent</Label>
-        <Select value={form.assignedEmployeeId || "unassigned"} onValueChange={(v) => set("assignedEmployeeId", v === "unassigned" ? "" : v)}>
-          <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
+        <Label>Status</Label>
+        <Select value={form.status} onValueChange={(v) => set("status", v)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="unassigned">Unassigned</SelectItem>
-            {employees.map((e) => (
-              <SelectItem key={e.id} value={String(e.id)}>{e.name} — {e.role}</SelectItem>
-            ))}
+            {CUSTOMER_STATUSES.map((s) => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>

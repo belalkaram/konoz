@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { formatShortDate, formatDateTime } from "@/lib/formatters";
-import { STATUS_COLORS, STATUS_LABELS, SOURCE_LABELS, CUSTOMER_STATUSES } from "@/lib/customer-constants";
+import { STATUS_COLORS, STATUS_LABELS, CUSTOMER_STATUSES } from "@/lib/customer-constants";
 import { CustomerForm } from "@/components/customer-form";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -143,9 +143,7 @@ function EditCustomerSheet({ customer, open, onClose }: { customer: Customer; op
             passportNumber: customer.passportNumber ?? "",
             nationalId: customer.nationalId ?? "",
             address: customer.address ?? "",
-            source: customer.source ?? "other",
             status: customer.status,
-            assignedEmployeeId: customer.assignedEmployeeId?.toString() ?? "",
           }}
           submitLabel="Save Changes"
           isPending={mutation.isPending}
@@ -546,10 +544,7 @@ export default function CustomerProfile() {
             <InfoRow label="Passport No." value={c.passportNumber} icon={<CreditCard className="h-3.5 w-3.5" />} />
             <InfoRow label="National ID" value={c.nationalId} icon={<CreditCard className="h-3.5 w-3.5" />} />
             <InfoRow label="Address" value={c.address} icon={<MapPin className="h-3.5 w-3.5" />} />
-            <InfoRow label="Source" value={c.source ? (SOURCE_LABELS[c.source] ?? c.source) : null} />
-            <InfoRow label="Assigned Emp." value={c.assignedEmployeeId ? `Employee #${c.assignedEmployeeId}` : null} />
             <InfoRow label="Added" value={formatShortDate(c.createdAt)} />
-            {c.lastContactedAt && <InfoRow label="Last Contact" value={formatShortDate(c.lastContactedAt)} />}
           </div>
         </CardContent>
       </Card>

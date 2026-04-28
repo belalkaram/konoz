@@ -26,6 +26,16 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
 
+## Customers Page
+
+The Customers page shows: Name, Phone, Status, Passport No., PNR, Booking Date, Net Profit (KWD).
+- PNR, booking date, cost price, and selling price come from the customer's most recent ticket (subquery JOIN in GET /api/customers).
+- Net Profit = selling price − cost price (both stored in KWD on the tickets table).
+- `tickets.costPrice` was added as a new column (`cost_price NUMERIC(12,2)`).
+- Currency default changed to KWD.
+- Excel import: button on Customers page parses `.xlsx/.xls` client-side via SheetJS (`xlsx` package); rows sent to `POST /api/customers/import`; creates customers (deduped by phone) + tickets.
+- Customer form no longer has Source or Assigned Agent fields.
+
 ## Authentication
 
 Simple PIN-based auth for the Flight Booking app. No JWT/sessions — employees are stored in DB and authenticated via SHA-256 hashed PIN. Session persists in `localStorage` under key `aeroops_employee`.

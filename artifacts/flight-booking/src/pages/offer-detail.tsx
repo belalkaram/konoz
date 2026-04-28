@@ -9,9 +9,10 @@ import { formatCurrency, formatDuration, formatDateTime } from "@/lib/formatters
 import { Plane, ArrowRight, Info, AlertCircle, Luggage, ShoppingBag, X, ExternalLink, RefreshCw, WifiOff } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getAirlineWebsite } from "@/lib/airlines";
+import { authFetch, BASE } from "@/lib/api";
 
 async function fetchOffer(offerId: string) {
-  const res = await fetch(`/api/offers/${offerId}`);
+  const res = await authFetch(`${BASE}/api/offers/${offerId}`);
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err = Object.assign(

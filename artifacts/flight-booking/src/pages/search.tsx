@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { AirportCombobox } from "@/components/airport-combobox";
 import { Input } from "@/components/ui/input";
+import { authFetch, BASE } from "@/lib/api";
 
 type TripType = "one_way" | "round_trip";
 type StopsFilter = "all" | "nonstop" | "stops";
@@ -50,7 +51,7 @@ async function fetchOffers(key: SearchKey): Promise<SearchOffersResponse> {
   if (key.tripType === "round_trip" && key.returnDate) {
     body.returnDate = key.returnDate;
   }
-  const res = await fetch("/api/offers/search", {
+  const res = await authFetch(`${BASE}/api/offers/search`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { MapPin, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { authFetch, BASE } from "@/lib/api";
 
 interface Airport {
   iataCode: string;
@@ -22,7 +23,7 @@ interface AirportComboboxProps {
 
 async function searchAirports(query: string): Promise<Airport[]> {
   if (query.length < 1) return [];
-  const res = await fetch(`/api/airports/search?query=${encodeURIComponent(query)}`);
+  const res = await authFetch(`${BASE}/api/airports/search?query=${encodeURIComponent(query)}`);
   if (!res.ok) return [];
   const data = await res.json();
   return data.airports ?? [];

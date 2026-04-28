@@ -442,14 +442,14 @@ export default function Search() {
               </button>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 items-end">
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
               <div className="flex-1">
                 <AirportCombobox id="origin" label="From" value={origin} onChange={setOrigin} placeholder="City or IATA code" />
               </div>
               <button
                 type="button"
                 onClick={swapAirports}
-                className="self-end sm:self-auto p-2 rounded-full border border-border hover:bg-accent text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+                className="self-center sm:self-auto p-2 rounded-full border border-border hover:bg-accent text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
                 title="Swap airports"
               >
                 <ArrowLeftRight className="h-4 w-4" />
@@ -520,29 +520,29 @@ export default function Search() {
       </Card>
 
       {/* Direct-booking airlines notice */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-4 py-3 flex gap-3 text-sm">
+      <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-3 py-2.5 flex gap-2.5 text-sm">
         <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <span className="font-medium text-amber-800 dark:text-amber-300">بعض الشركات لا تظهر في البحث المباشر</span>
-          <span className="text-amber-700 dark:text-amber-400 mx-1">—</span>
-          <span className="text-amber-700 dark:text-amber-400">يجب حجزها مباشرة من موقعها أو إضافة تذكرتها يدوياً:</span>
-          <div className="flex flex-wrap gap-3 mt-2">
+        <div className="min-w-0">
+          <p className="font-medium text-amber-800 dark:text-amber-300 text-xs leading-snug">
+            بعض الشركات لا تظهر في البحث — احجز مباشرة من موقعها:
+          </p>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
             {[
-              { name: "Jazeera Airways", code: "J9", url: "https://www.jazeeraairways.com" },
+              { name: "Jazeera", code: "J9", url: "https://www.jazeeraairways.com" },
               { name: "Air Cairo", code: "SM", url: "https://www.aircairo.com" },
               { name: "Nile Air", code: "NP", url: "https://www.nileair.com" },
               { name: "flyadeal", code: "F3", url: "https://www.flyadeal.com" },
-              { name: "Air Arabia Egypt", code: "E5", url: "https://www.airarabia.com/en/air-arabia-egypt" },
+              { name: "Air Arabia EG", code: "E5", url: "https://www.airarabia.com/en/air-arabia-egypt" },
             ].map((a) => (
               <a
                 key={a.code}
                 href={a.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-medium text-amber-800 dark:text-amber-300 underline underline-offset-2 hover:text-amber-900"
+                className="inline-flex items-center gap-0.5 text-[11px] font-medium text-amber-800 dark:text-amber-300 underline underline-offset-2 hover:text-amber-900"
               >
-                {a.name} ({a.code})
-                <ExternalLink className="h-3 w-3" />
+                {a.name}
+                <ExternalLink className="h-2.5 w-2.5 flex-shrink-0" />
               </a>
             ))}
           </div>
@@ -552,7 +552,25 @@ export default function Search() {
       {isLoading && (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <Card key={i}><CardContent className="p-5"><div className="flex justify-between items-center gap-4"><div className="space-y-2 flex-1"><Skeleton className="h-5 w-36" /><Skeleton className="h-4 w-24" /></div><Skeleton className="h-10 w-24" /></div></CardContent></Card>
+            <Card key={i}>
+              <CardContent className="p-3 sm:p-5">
+                {/* Mobile skeleton */}
+                <div className="sm:hidden space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2"><Skeleton className="w-7 h-7 rounded" /><Skeleton className="h-4 w-24" /></div>
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                  <Skeleton className="h-16 w-full rounded-lg" />
+                  <div className="flex justify-between"><Skeleton className="h-6 w-24" /><Skeleton className="h-8 w-20" /></div>
+                </div>
+                {/* Desktop skeleton */}
+                <div className="hidden sm:flex justify-between items-center gap-4">
+                  <Skeleton className="w-10 h-10 rounded flex-shrink-0" />
+                  <div className="flex-1 space-y-2"><Skeleton className="h-5 w-36" /><Skeleton className="h-4 w-24" /></div>
+                  <Skeleton className="h-10 w-24" />
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}
@@ -647,10 +665,89 @@ export default function Search() {
                 const airlineCode = offer.owner?.iataCode ?? "";
                 const airlineWebsite = airlineCode ? getAirlineWebsite(airlineCode) : null;
 
+                const selectOffer = () => {
+                  try { sessionStorage.setItem(`offer_${offer.id}`, JSON.stringify(offer)); } catch {}
+                  setLocation(`/offers/${offer.id}`);
+                };
+                const baggageBadges = (
+                  <div className="flex gap-1 flex-wrap">
+                    {checkedBag && checkedBag.quantity > 0 ? (
+                      <Badge variant="secondary" className="text-xs gap-1 px-1.5 py-0.5">
+                        <Luggage className="h-3 w-3" />
+                        {checkedBag.quantity}✕ checked{checkedBag.maximumWeightKg ? ` · ${checkedBag.maximumWeightKg}kg` : ""}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs gap-1 px-1.5 py-0.5 text-muted-foreground">
+                        <Luggage className="h-3 w-3" />
+                        No bag
+                      </Badge>
+                    )}
+                    {carryOn && carryOn.quantity > 0 && (
+                      <Badge variant="secondary" className="text-xs gap-1 px-1.5 py-0.5">
+                        <ShoppingBag className="h-3 w-3" />
+                        {carryOn.quantity}✕ carry-on
+                      </Badge>
+                    )}
+                  </div>
+                );
+
                 return (
                   <Card key={offer.id} className="hover:border-primary/50 transition-colors">
-                    <CardContent className="p-4 md:p-5">
-                      <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
+                    <CardContent className="p-3 sm:p-5">
+
+                      {/* ── MOBILE LAYOUT ── */}
+                      <div className="sm:hidden space-y-2.5">
+                        {/* Top row: airline + price */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {offer.owner?.logoSymbolUrl ? (
+                              <img src={offer.owner.logoSymbolUrl} alt={offer.owner.name} className="w-7 h-7 object-contain flex-shrink-0" />
+                            ) : (
+                              <div className="w-7 h-7 bg-muted rounded flex items-center justify-center font-bold text-muted-foreground text-[10px] flex-shrink-0">
+                                {airlineCode || "??"}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="text-xs font-semibold truncate">{offer.owner?.name}</div>
+                              <div className="text-[10px] text-muted-foreground uppercase">{offer.cabinClass?.replace("_", " ")}</div>
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <div className="text-lg font-bold text-primary leading-none">
+                              {formatCurrency(offer.totalAmount, offer.totalCurrency, displayCurrency)}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Route */}
+                        <div className="bg-muted/30 rounded-lg px-3 py-2">
+                          {renderSliceRow(offer.slices![0], isRoundTrip ? "Outbound" : undefined)}
+                          {isRoundTrip && offer.slices![1] && (
+                            <>
+                              <div className="border-t border-dashed border-border my-2" />
+                              {renderSliceRow(offer.slices![1], "Return")}
+                            </>
+                          )}
+                        </div>
+
+                        {/* Bottom row: baggage + select */}
+                        <div className="flex items-center justify-between gap-2">
+                          {baggageBadges}
+                          <Button size="sm" className="flex-shrink-0 h-8 px-4 text-xs" onClick={selectOffer}>
+                            Select <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                          </Button>
+                        </div>
+
+                        {airlineWebsite && (
+                          <a href={airlineWebsite} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-0.5 text-[10px] text-primary hover:underline">
+                            <ExternalLink className="h-2.5 w-2.5" /> Website
+                          </a>
+                        )}
+                      </div>
+
+                      {/* ── DESKTOP LAYOUT ── */}
+                      <div className="hidden sm:flex gap-4 items-center justify-between">
                         {/* Airline logo + name */}
                         <div className="flex flex-col items-center gap-1 flex-shrink-0 w-16">
                           {offer.owner?.logoSymbolUrl ? (
@@ -662,15 +759,9 @@ export default function Search() {
                           )}
                           <span className="text-xs text-muted-foreground text-center leading-tight line-clamp-2">{offer.owner?.name}</span>
                           {airlineWebsite && (
-                            <a
-                              href={airlineWebsite}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="flex items-center gap-0.5 text-[10px] text-primary hover:underline"
-                            >
-                              <ExternalLink className="h-2.5 w-2.5" />
-                              Website
+                            <a href={airlineWebsite} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-0.5 text-[10px] text-primary hover:underline">
+                              <ExternalLink className="h-2.5 w-2.5" /> Website
                             </a>
                           )}
                         </div>
@@ -687,46 +778,18 @@ export default function Search() {
                         </div>
 
                         {/* Price + CTA */}
-                        <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 sm:gap-2 border-t sm:border-t-0 sm:border-l border-border pt-3 sm:pt-0 sm:pl-5 flex-shrink-0">
+                        <div className="flex flex-col items-end justify-center gap-2 border-l border-border pl-5 flex-shrink-0">
                           <div className="text-right">
-                            <div className="text-xl md:text-2xl font-bold text-primary">
+                            <div className="text-2xl font-bold text-primary">
                               {formatCurrency(offer.totalAmount, offer.totalCurrency, displayCurrency)}
                             </div>
                             <div className="text-xs text-muted-foreground uppercase tracking-wide">
                               {offer.cabinClass?.replace("_", " ")}
                             </div>
-                            <div className="flex gap-1 justify-end mt-1 flex-wrap">
-                              {checkedBag && checkedBag.quantity > 0 ? (
-                                <Badge variant="secondary" className="text-xs gap-1 px-1.5 py-0.5">
-                                  <Luggage className="h-3 w-3" />
-                                  {checkedBag.quantity}✕ checked{checkedBag.maximumWeightKg ? ` · ${checkedBag.maximumWeightKg}kg` : ""}
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-xs gap-1 px-1.5 py-0.5 text-muted-foreground">
-                                  <Luggage className="h-3 w-3" />
-                                  No checked bag
-                                </Badge>
-                              )}
-                              {carryOn && carryOn.quantity > 0 && (
-                                <Badge variant="secondary" className="text-xs gap-1 px-1.5 py-0.5">
-                                  <ShoppingBag className="h-3 w-3" />
-                                  {carryOn.quantity}✕ carry-on{carryOn.maximumWeightKg ? ` · ${carryOn.maximumWeightKg}kg` : ""}
-                                </Badge>
-                              )}
-                            </div>
+                            <div className="mt-1">{baggageBadges}</div>
                           </div>
-                          <Button
-                            size="sm"
-                            className="w-full sm:w-auto"
-                            onClick={() => {
-                              try {
-                                sessionStorage.setItem(`offer_${offer.id}`, JSON.stringify(offer));
-                              } catch {}
-                              setLocation(`/offers/${offer.id}`);
-                            }}
-                          >
-                            Select
-                            <ArrowRight className="h-4 w-4 ml-1" />
+                          <Button size="sm" className="w-full" onClick={selectOffer}>
+                            Select <ArrowRight className="h-4 w-4 ml-1" />
                           </Button>
                         </div>
                       </div>
@@ -734,10 +797,7 @@ export default function Search() {
                       {/* Purchasable baggage packages */}
                       {offer.availableBaggageServices && offer.availableBaggageServices.length > 0 && (
                         <div className="mt-3 pt-3 border-t border-border/60">
-                          <BaggagePackages
-                            services={offer.availableBaggageServices}
-                            currency={offer.totalCurrency}
-                          />
+                          <BaggagePackages services={offer.availableBaggageServices} currency={offer.totalCurrency} />
                         </div>
                       )}
                     </CardContent>

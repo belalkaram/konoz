@@ -1,7 +1,7 @@
 import express from "express";
-import app from "./app";
-import { logger } from "./lib/logger";
-import { seedEmployees } from "./lib/seed-employees";
+import app from "./app.js";
+import { logger } from "./lib/logger.js";
+import { seedEmployees } from "./lib/seed-employees.js";
 
 const rawPort = process.env.API_PORT || process.env.PORT || "3000";
 
@@ -12,7 +12,7 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) {
-  app.listen(port, async (err) => {
+  app.listen(port, async (err: any) => {
     if (err) {
       logger.error({ err }, "Error listening on port");
       process.exit(1);

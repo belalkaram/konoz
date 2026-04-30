@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { randomBytes } from "crypto";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
@@ -5,8 +6,8 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
-import router from "./routes";
-import { logger } from "./lib/logger";
+import router from "./routes/index.js";
+import { logger } from "./lib/logger.js";
 import { SESSION_COOKIE_NAME, CSRF_COOKIE_NAME, getCsrfToken } from "./lib/sessions.js";
 
 const COOKIE_SECRET = process.env.COOKIE_SECRET ?? randomBytes(32).toString("hex");

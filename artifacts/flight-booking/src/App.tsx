@@ -26,7 +26,7 @@ import NotAuthorized from "@/pages/not-authorized";
 
 const queryClient = new QueryClient();
 
-function SupervisorOrAdminRoute({ component: Component }: { component: () => JSX.Element }) {
+function SupervisorOrAdminRoute({ component: Component }: { component: any }) {
   const { currentEmployee } = useEmployee();
   const role = currentEmployee?.role;
   if (!currentEmployee || (role !== "Administrator" && role !== "Supervisor")) {
@@ -35,7 +35,7 @@ function SupervisorOrAdminRoute({ component: Component }: { component: () => JSX
   return <Component />;
 }
 
-function AdminRoute({ component: Component }: { component: () => JSX.Element }) {
+function AdminRoute({ component: Component }: { component: any }) {
   const { currentEmployee } = useEmployee();
   if (!currentEmployee || currentEmployee.role !== "Administrator") {
     return <NotAuthorized />;

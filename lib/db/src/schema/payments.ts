@@ -1,6 +1,6 @@
 import { pgTable, serial, text, integer, timestamp, numeric, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { ticketsTable, paymentStatusEnum } from "./tickets";
 import { customersTable } from "./customers";
 
@@ -27,7 +27,7 @@ export const paymentsTable = pgTable("payments", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertPaymentSchema = createInsertSchema(paymentsTable).omit({
+export const insertPaymentSchema = (createInsertSchema(paymentsTable) as any).omit({
   id: true,
   createdAt: true,
 });

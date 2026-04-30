@@ -1,0 +1,1 @@
+import { Duffel } from '@duffel/api'; const duffel = new Duffel({ token: process.env.DUFFEL_ACCESS_TOKEN }); duffel.offers.get('off_0000B5ogFNVB2t0XlwxDKI').then(res => console.log('SUCCESS')).catch(err => console.error(JSON.stringify(err, null, 2)));

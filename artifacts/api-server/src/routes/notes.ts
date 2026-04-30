@@ -117,7 +117,7 @@ router.post("/customers/:customerId/notes", requireAuth, async (req, res) => {
   try {
     const [note] = await db
       .insert(customerNotesTable)
-      .values(parsed.data)
+      .values(parsed.data as any)
       .returning();
 
     await db

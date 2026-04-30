@@ -23,7 +23,7 @@ router.post("/branches", requireAdmin, async (req, res) => {
     return;
   }
   try {
-    const [branch] = await db.insert(branchesTable).values(parsed.data).returning();
+    const [branch] = await db.insert(branchesTable).values(parsed.data as any).returning();
     res.status(201).json({ branch });
   } catch (err) {
     req.log.error({ err }, "Error creating branch");

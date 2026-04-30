@@ -37,7 +37,7 @@ export default function OrderDetail() {
 
   const handleCancel = () => {
     if (!orderId) return;
-    cancelOrder.mutate({ params: { orderId } }, {
+    cancelOrder.mutate({ orderId } as any, {
       onSuccess: () => {
         toast({ title: "Order Cancelled", description: "The booking has been successfully cancelled." });
         queryClient.invalidateQueries({ queryKey: getGetOrderQueryKey(orderId) });

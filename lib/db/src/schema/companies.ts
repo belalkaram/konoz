@@ -14,7 +14,7 @@ export const companiesTable = pgTable("companies", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertCompanySchema = createInsertSchema(companiesTable).omit({
+export const insertCompanySchema = (createInsertSchema(companiesTable) as any).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

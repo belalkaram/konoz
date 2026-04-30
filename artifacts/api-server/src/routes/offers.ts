@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { duffel } from "../lib/duffel";
-import type { OfferAvailableServiceBaggage } from "@duffel/api";
+// import type { OfferAvailableServiceBaggage } from "@duffel/api";
+type OfferAvailableServiceBaggage = any;
 import { SearchOffersBody } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth.js";
 
@@ -45,7 +46,7 @@ function mapAvailableBaggageServices(
     });
 }
 
-function mapOffer(offer: Awaited<ReturnType<typeof duffel.offers.list>>["data"][number]) {
+function mapOffer(offer: any) {
   const weightMap = extractBaggageWeightMap(offer.available_services ?? []);
   return {
     id: offer.id,
@@ -56,7 +57,7 @@ function mapOffer(offer: Awaited<ReturnType<typeof duffel.offers.list>>["data"][
     expiresAt: offer.expires_at,
     cabinClass: offer.cabin_class,
     availableBaggageServices: mapAvailableBaggageServices(offer.available_services ?? []),
-    slices: offer.slices.map((slice) => ({
+    slices: offer.slices.map((slice: any) => ({
       id: slice.id,
       origin: {
         iataCode: slice.origin.iata_code,
@@ -73,7 +74,7 @@ function mapOffer(offer: Awaited<ReturnType<typeof duffel.offers.list>>["data"][
       departureDateTime: slice.segments[0]?.departing_at ?? "",
       arrivalDateTime: slice.segments[slice.segments.length - 1]?.arriving_at ?? "",
       duration: slice.duration,
-      segments: slice.segments.map((seg) => ({
+      segments: slice.segments.map((seg: any) => ({
         id: seg.id,
         origin: {
           iataCode: seg.origin.iata_code,
@@ -108,7 +109,7 @@ function mapOffer(offer: Awaited<ReturnType<typeof duffel.offers.list>>["data"][
         aircraft: seg.aircraft
           ? { iataCode: seg.aircraft.iata_code, name: seg.aircraft.name }
           : undefined,
-        baggages: seg.passengers?.[0]?.baggages?.map((b) => ({
+        baggages: seg.passengers?.[0]?.baggages?.map((b: any) => ({
           type: b.type as "carry_on" | "checked",
           quantity: b.quantity,
           maximumWeightKg: weightMap.get(seg.id)?.get(b.type) ?? null,
@@ -175,18 +176,18 @@ router.post("/offers/search", requireAuth, async (req, res) => {
       const { origin, destination, departureDate, returnDate, passengers, cabinClass } = parsed.data;
 
       const slices: { origin: string; destination: string; departure_date: string }[] = [
-        { origin, destination, departure_date: departureDate },
+        { origin, destination, departure_date: (departureDate as Date).toISOString().split("T")[0] },
       ];
       if (returnDate) {
-        slices.push({ origin: destination, destination: origin, departure_date: returnDate });
+        slices.push({ origin: destination, destination: origin, departure_date: (returnDate as Date).toISOString().split("T")[0] });
       }
 
       const offerRequest = await duffel.offerRequests.create({
-        slices,
-        passengers: passengers.map((p) => ({
-          type: p.type as "adult" | "child" | "infant_without_seat",
+        slices: slices as any,
+        passengers: passengers.map((p: any) => ({
+          type: p.type as any,
           ...(p.age !== undefined ? { age: p.age } : {}),
-        })),
+        }) as any),
         cabin_class: (cabinClass ?? "economy") as "economy" | "premium_economy" | "business" | "first",
         return_offers: false,
       });
@@ -218,7 +219,7 @@ router.get("/offers/:offerId", requireAuth, async (req, res) => {
   const { offerId } = req.params;
 
   try {
-    const { data: offer } = await duffel.offers.get(offerId);
+    const { data: offer } = await duffel.offers.get(offerId as string) as any;
 
     const weightMap = extractBaggageWeightMap(offer.available_services ?? []);
     res.json({
@@ -230,7 +231,7 @@ router.get("/offers/:offerId", requireAuth, async (req, res) => {
       expiresAt: offer.expires_at,
       cabinClass: offer.cabin_class,
       availableBaggageServices: mapAvailableBaggageServices(offer.available_services ?? []),
-      slices: offer.slices.map((slice) => ({
+      slices: offer.slices.map((slice: any) => ({
         id: slice.id,
         origin: {
           iataCode: slice.origin.iata_code,
@@ -247,7 +248,7 @@ router.get("/offers/:offerId", requireAuth, async (req, res) => {
         departureDateTime: slice.segments[0]?.departing_at ?? "",
         arrivalDateTime: slice.segments[slice.segments.length - 1]?.arriving_at ?? "",
         duration: slice.duration,
-        segments: slice.segments.map((seg) => ({
+        segments: slice.segments.map((seg: any) => ({
           id: seg.id,
           origin: {
             iataCode: seg.origin.iata_code,
@@ -282,7 +283,7 @@ router.get("/offers/:offerId", requireAuth, async (req, res) => {
           aircraft: seg.aircraft
             ? { iataCode: seg.aircraft.iata_code, name: seg.aircraft.name }
             : undefined,
-          baggages: seg.passengers?.[0]?.baggages?.map((b) => ({
+          baggages: seg.passengers?.[0]?.baggages?.map((b: any) => ({
             type: b.type as "carry_on" | "checked",
             quantity: b.quantity,
             maximumWeightKg: weightMap.get(seg.id)?.get(b.type) ?? null,

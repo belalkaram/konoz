@@ -49,6 +49,7 @@ interface Customer {
   costPrice: string | null;
   sellingPrice: string | null;
   ticketCurrency: string | null;
+  uploadedByName?: string | null;
 }
 
 async function fetchCustomers(assignedEmployeeId?: string | null): Promise<{ customers: Customer[] }> {

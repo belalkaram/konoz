@@ -54,6 +54,7 @@ export interface ActiveSessionRow {
   employeeId: number;
   name: string;
   role: string;
+  companyId: number | null;
   createdAt: Date;
   expiresAt: number;
 }
@@ -65,6 +66,7 @@ export async function getAllActiveSessions(): Promise<ActiveSessionRow[]> {
       employeeId: sessionsTable.employeeId,
       name: sessionsTable.name,
       role: sessionsTable.role,
+      companyId: sessionsTable.companyId,
       createdAt: sessionsTable.createdAt,
       expiresAt: sessionsTable.expiresAt,
     })

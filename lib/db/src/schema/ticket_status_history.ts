@@ -1,6 +1,6 @@
 import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { ticketsTable } from "./tickets";
 
 export const ticketStatusHistoryTable = pgTable("ticket_status_history", {
@@ -14,7 +14,7 @@ export const ticketStatusHistoryTable = pgTable("ticket_status_history", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertTicketStatusHistorySchema = createInsertSchema(ticketStatusHistoryTable).omit({
+export const insertTicketStatusHistorySchema = (createInsertSchema(ticketStatusHistoryTable) as any).omit({
   id: true,
   createdAt: true,
 });

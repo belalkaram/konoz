@@ -1,6 +1,6 @@
 import { pgTable, serial, text, integer, timestamp, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { customersTable } from "./customers";
 
 export const reminderStatusEnum = pgEnum("reminder_status", [
@@ -24,7 +24,7 @@ export const remindersTable = pgTable("reminders", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertReminderSchema = createInsertSchema(remindersTable).omit({
+export const insertReminderSchema = (createInsertSchema(remindersTable) as any).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

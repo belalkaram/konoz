@@ -1,6 +1,6 @@
 import { pgTable, serial, text, integer, timestamp, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { customersTable } from "./customers";
 
 export const followUpStatusEnum = pgEnum("follow_up_status", [
@@ -23,7 +23,7 @@ export const customerNotesTable = pgTable("customer_notes", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertCustomerNoteSchema = createInsertSchema(customerNotesTable).omit({
+export const insertCustomerNoteSchema = (createInsertSchema(customerNotesTable) as any).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

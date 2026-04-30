@@ -72,7 +72,7 @@ router.post("/reminders", requireAuth, async (req, res) => {
     return;
   }
   try {
-    const [reminder] = await db.insert(remindersTable).values(parsed.data).returning();
+    const [reminder] = await db.insert(remindersTable).values(parsed.data as any).returning();
     res.status(201).json({ reminder });
   } catch (err) {
     req.log.error({ err }, "Error creating reminder");

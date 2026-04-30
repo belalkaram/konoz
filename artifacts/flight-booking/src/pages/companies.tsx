@@ -171,7 +171,7 @@ export default function CompaniesPage() {
         open={showCompanySheet} 
         editing={editingCompany} 
         onClose={() => setShowCompanySheet(false)} 
-        onSubmit={(name) => companyMutation.mutate(name)}
+        onSubmit={(name: string) => companyMutation.mutate(name)}
         isPending={companyMutation.isPending}
       />
 
@@ -180,7 +180,7 @@ export default function CompaniesPage() {
         editing={editingBranch} 
         companyId={selectedCompanyId!}
         onClose={() => setShowBranchSheet(false)} 
-        onSubmit={(name) => branchMutation.mutate({ name, companyId: selectedCompanyId! })}
+        onSubmit={(name: string) => branchMutation.mutate({ name, companyId: selectedCompanyId! })}
         isPending={branchMutation.isPending}
       />
     </div>

@@ -23,7 +23,7 @@ router.post("/companies", requireAdmin, async (req, res) => {
     return;
   }
   try {
-    const [company] = await db.insert(companiesTable).values(parsed.data).returning();
+    const [company] = await db.insert(companiesTable).values(parsed.data as any).returning();
     res.status(201).json({ company });
   } catch (err) {
     req.log.error({ err }, "Error creating company");

@@ -231,7 +231,7 @@ router.post("/orders", requireAuth, async (req, res) => {
     return;
   }
 
-  const { selectedOfferId, passengers, type } = parsed.data;
+  const { selectedOfferId, passengers, type } = parsed.data as any;
 
   try {
     // Fetch offer to get total amount and currency for payment
@@ -239,24 +239,24 @@ router.post("/orders", requireAuth, async (req, res) => {
 
     const { data: order } = await duffel.orders.create({
       selected_offers: [selectedOfferId],
-      passengers: passengers.map((p) => ({
+      passengers: passengers.map((p: any) => ({
         id: p.id,
         title: p.title as "mr" | "ms" | "mrs" | "miss" | "dr" | undefined,
         given_name: p.givenName,
         family_name: p.familyName,
         gender: p.gender as "m" | "f",
-        born_on: p.bornOn,
+        born_on: (p.bornOn as Date).toISOString().split("T")[0],
         email: p.email,
         phone_number: p.phoneNumber,
         ...(p.passportNumber ? { passport_number: p.passportNumber } : {}),
         ...(p.passportExpiryDate
-          ? { passport_expiry_date: p.passportExpiryDate }
+          ? { passport_expiry_date: (p.passportExpiryDate as Date).toISOString().split("T")[0] }
           : {}),
         ...(p.nationalityIataCountryCode
           ? { nationality_iata_country_code: p.nationalityIataCountryCode }
           : {}),
       })),
-      type: (type ?? "instant") as "instant" | "hold",
+      type: (type ?? "instant") as any,
       payments: [
         {
           type: "balance",

@@ -15,7 +15,7 @@ export const branchesTable = pgTable("branches", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertBranchSchema = createInsertSchema(branchesTable).omit({
+export const insertBranchSchema = (createInsertSchema(branchesTable) as any).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

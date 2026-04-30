@@ -87,7 +87,7 @@ router.post("/tickets", requireAuth, async (req, res) => {
     return;
   }
   try {
-    const [ticket] = await db.insert(ticketsTable).values(parsed.data).returning();
+    const [ticket] = await db.insert(ticketsTable).values(parsed.data as any).returning();
 
     await db.insert(ticketStatusHistoryTable).values({
       ticketId: ticket!.id,
@@ -271,12 +271,12 @@ async function handleAddPayment(
       return;
     }
 
-    if (!isAdmin(req) && existing.employeeId !== req.employee!.employeeId) {
+    if (getRole(req) !== "Administrator" && existing.employeeId !== req.employee!.employeeId) {
       res.status(404).json({ error: "not_found", message: "Ticket not found" });
       return;
     }
 
-    const [payment] = await db.insert(paymentsTable).values(parsed.data).returning();
+    const [payment] = await db.insert(paymentsTable).values(parsed.data as any).returning();
 
     const [totals] = await db
       .select({ total: sum(paymentsTable.amount) })

@@ -64,7 +64,7 @@ export default function Checkout() {
     }
 
     const passengerData: PassengerDetails = {
-      id: offer.passengers[0]?.id || "pass_1",
+      id: (offer as any).passengers?.[0]?.id || "pass_1",
       title: passenger.title as PassengerDetailsTitle,
       givenName: passenger.givenName,
       familyName: passenger.familyName,

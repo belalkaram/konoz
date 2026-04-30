@@ -135,12 +135,12 @@ router.post("/customers", requireAuth, async (req, res) => {
     const customer = await db.transaction(async (tx) => {
       const [newCustomer] = await tx
         .insert(customersTable)
-        .values(parsed.data)
+        .values(parsed.data as any)
         .returning();
 
       const { pnr, bookingDate, travelDate, costPrice, ticketPrice } = body;
       if (pnr || ticketPrice || travelDate) {
-        await tx.insert(ticketsTable).values({
+        await (tx.insert(ticketsTable) as any).values({
           customerId: newCustomer.id,
           employeeId: newCustomer.assignedEmployeeId,
           pnr: (pnr as string) || null,
@@ -264,7 +264,7 @@ router.post("/customers/import", requireAuth, async (req, res) => {
         const { bookingDate: _bd, departureDatetime: _dep, ...minimalData } = ticketData;
         const fallback1 = insertTicketSchema.safeParse({ ...minimalData, ...(typeof _dep !== "undefined" ? { departureDatetime: _dep } : {}) });
         if (fallback1.success) {
-          const inserted = await db.insert(ticketsTable).values(fallback1.data).returning({ id: ticketsTable.id });
+          const inserted = await db.insert(ticketsTable).values(fallback1.data as any).returning({ id: ticketsTable.id });
           if (inserted[0]) {
             if (typeof _bd === "string" && _bd) {
               await db.update(ticketsTable).set({ bookingDate: _bd }).where(eq(ticketsTable.id, inserted[0].id));
@@ -275,7 +275,7 @@ router.post("/customers/import", requireAuth, async (req, res) => {
         }
         const fallback2 = insertTicketSchema.safeParse(minimalData);
         if (fallback2.success) {
-          const inserted = await db.insert(ticketsTable).values(fallback2.data).returning({ id: ticketsTable.id });
+          const inserted = await db.insert(ticketsTable).values(fallback2.data as any).returning({ id: ticketsTable.id });
           if (inserted[0]) {
             if (typeof _bd === "string" && _bd) {
               await db.update(ticketsTable).set({ bookingDate: _bd }).where(eq(ticketsTable.id, inserted[0].id));
@@ -286,7 +286,7 @@ router.post("/customers/import", requireAuth, async (req, res) => {
         }
       }
       if (ticketParsed.success) {
-        await db.insert(ticketsTable).values(ticketParsed.data);
+        await db.insert(ticketsTable).values(ticketParsed.data as any);
       }
 
       results.push({ customerName: row.fullName, success: true });

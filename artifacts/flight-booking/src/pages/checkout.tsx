@@ -18,10 +18,11 @@ export default function Checkout() {
   const offerId = searchParams.get("offerId");
   const { toast } = useToast();
 
-  const { data: offer, isLoading: isOfferLoading } = useGetOffer(offerId || "", {
+  const { data: offer, isLoading: isOfferLoading, isError, error } = useGetOffer(offerId || "", {
     query: {
       enabled: !!offerId,
-      queryKey: getGetOfferQueryKey(offerId || "")
+      queryKey: getGetOfferQueryKey(offerId || ""),
+      retry: false,
     }
   });
 
@@ -39,7 +40,7 @@ export default function Checkout() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!offerId) return;
+    if (!offerId || !offer) return;
 
     if (!passenger.givenName || !passenger.familyName || !passenger.email || !passenger.phoneNumber) {
       toast({
@@ -51,7 +52,7 @@ export default function Checkout() {
     }
 
     const passengerData: PassengerDetails = {
-      id: offer?.passengers[0]?.id || "pass_1",
+      id: offer.passengers[0]?.id || "pass_1",
       title: passenger.title as PassengerDetailsTitle,
       givenName: passenger.givenName,
       familyName: passenger.familyName,
@@ -88,6 +89,29 @@ export default function Checkout() {
 
   if (isOfferLoading) {
     return <Skeleton className="h-96 w-full" />;
+  }
+
+  if (isError) {
+    const apiError = error as { status?: number; message?: string } | null;
+    const isAirlineError = apiError?.status === 502;
+    const isExpired = apiError?.status === 404;
+    return (
+      <div className="max-w-3xl mx-auto space-y-4">
+        <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-md shadow-sm">
+          <h2 className="text-xl font-bold mb-2">{isAirlineError ? "Airline System Error" : isExpired ? "Offer Expired" : "Error Loading Offer"}</h2>
+          <p>
+            {isAirlineError
+              ? "The airline's system returned an error. This is a temporary issue on the airline's side. Please go back and search again."
+              : isExpired
+              ? "This offer is no longer available. It may have expired. Please search again for updated results."
+              : apiError?.message || "Failed to load offer details. It may be invalid or expired."}
+          </p>
+          <Button variant="outline" className="mt-4" onClick={() => setLocation("/search")}>
+            ← Back to Search
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (

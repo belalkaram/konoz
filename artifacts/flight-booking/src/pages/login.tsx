@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plane, Lock, User } from "lucide-react";
 import { useEmployee } from "@/contexts/employee-context";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,13 @@ export default function Login() {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "deactivated") {
+      setError("Your account has been deactivated. Please contact your supervisor to reactivate your account.");
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +72,7 @@ export default function Login() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="e.g. james"
+                  placeholder="e.g. Belal"
                   autoComplete="username"
                   autoFocus
                   className="pl-9 border-0 text-white placeholder:text-white/30"

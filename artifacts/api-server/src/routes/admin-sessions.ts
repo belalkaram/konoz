@@ -1,12 +1,18 @@
 import { Router } from "express";
-import { requireAdmin } from "../middlewares/auth.js";
+import { requireSupervisorOrAdmin, getTeamEmployeeIds } from "../middlewares/auth.js";
 import { getAllActiveSessions, deleteSession } from "../lib/sessions.js";
 
 const router = Router();
 
-router.get("/admin/sessions", requireAdmin, async (req, res) => {
+router.get("/admin/sessions", requireSupervisorOrAdmin, async (req, res) => {
   try {
-    const sessions = await getAllActiveSessions();
+    let sessions = await getAllActiveSessions();
+    
+    if (req.employee?.role === "Supervisor") {
+      const myCompanyId = req.employee.companyId;
+      sessions = sessions.filter(s => s.companyId === myCompanyId);
+    }
+    
     res.json({ sessions });
   } catch (err) {
     req.log.error({ err }, "Error listing active sessions");
@@ -14,7 +20,7 @@ router.get("/admin/sessions", requireAdmin, async (req, res) => {
   }
 });
 
-router.delete("/admin/sessions/:token", requireAdmin, async (req, res) => {
+router.delete("/admin/sessions/:token", requireSupervisorOrAdmin, async (req, res) => {
   const { token } = req.params;
   if (!token || typeof token !== "string" || token.length < 10) {
     res.status(400).json({ error: "validation_error", message: "Invalid session token" });
@@ -24,7 +30,7 @@ router.delete("/admin/sessions/:token", requireAdmin, async (req, res) => {
     await deleteSession(token);
     req.log.info(
       { event: "security:session_revoked", actorId: req.employee?.employeeId, ip: req.ip },
-      "Session revoked by admin"
+      "Session revoked by supervisor/admin"
     );
     res.json({ success: true });
   } catch (err) {

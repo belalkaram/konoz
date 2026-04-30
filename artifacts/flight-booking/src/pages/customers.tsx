@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Users, Plus, Search, ChevronRight, Phone, FileSpreadsheet, TrendingUp, TrendingDown, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Users, Plus, Search, ChevronRight, Phone, FileSpreadsheet, TrendingUp, TrendingDown, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Download } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,13 +45,17 @@ interface Customer {
   updatedAt: string;
   pnr: string | null;
   bookingDate: string | null;
+  travelDate: string | null;
   costPrice: string | null;
   sellingPrice: string | null;
   ticketCurrency: string | null;
 }
 
-async function fetchCustomers(): Promise<{ customers: Customer[] }> {
-  const res = await authFetch(`${BASE}/api/customers`);
+async function fetchCustomers(assignedEmployeeId?: string | null): Promise<{ customers: Customer[] }> {
+  const url = assignedEmployeeId 
+    ? `${BASE}/api/customers?assignedEmployeeId=${assignedEmployeeId}` 
+    : `${BASE}/api/customers`;
+  const res = await authFetch(url);
   if (!res.ok) throw new Error("Failed to fetch customers");
   return res.json();
 }
@@ -76,7 +80,7 @@ async function deleteCustomer(id: number): Promise<{ success?: boolean; error?: 
 function netProfit(c: Customer): number | null {
   const sell = c.sellingPrice != null ? parseFloat(c.sellingPrice) : null;
   const cost = c.costPrice != null ? parseFloat(c.costPrice) : null;
-  if (sell == null || cost == null) return sell != null ? sell : null;
+  if (sell == null || cost == null) return null;
   return sell - cost;
 }
 
@@ -138,13 +142,60 @@ export default function Customers() {
   const currentEmployee = useCurrentEmployee();
   const isAdmin = currentEmployee.role === "Administrator";
 
+  const searchParams = new URLSearchParams(window.location.search);
+  const employeeIdParam = searchParams.get("assignedEmployeeId");
+
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["customers"],
-    queryFn: fetchCustomers,
+    queryKey: ["customers", employeeIdParam],
+    queryFn: () => fetchCustomers(employeeIdParam),
     staleTime: 30_000,
   });
 
   const allCustomers = data?.customers ?? [];
+
+  function exportToExcel() {
+    const headers = [
+      "ID", "Full Name", "Phone", "Email", "Status", "PNR", 
+      "Booking Date", "Travel Date", "Cost Price", "Selling Price", "Net Profit", "Currency"
+    ];
+    const rows = customers.map(c => {
+      const formatDateSafe = (d: string | null) => {
+        if (!d) return "";
+        try {
+          const date = new Date(d);
+          if (isNaN(date.getTime())) return d; // Fallback to raw string if invalid
+          return formatShortDate(d);
+        } catch {
+          return d;
+        }
+      };
+
+      return [
+        c.id, 
+        `"${(c.fullName || "").replace(/"/g, '""')}"`, 
+        c.phone || "", 
+        c.email || "", 
+        c.status, 
+        c.pnr || "",
+        formatDateSafe(c.bookingDate),
+        formatDateSafe(c.travelDate),
+        c.costPrice || "0", 
+        c.sellingPrice || "0", 
+        (netProfit(c) ?? 0).toFixed(3), 
+        c.ticketCurrency || ""
+      ];
+    });
+    
+    const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `customers_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 
   function toggleSort(col: typeof sortBy) {
     if (sortBy === col) {
@@ -180,16 +231,16 @@ export default function Customers() {
         cmp = a.fullName.localeCompare(b.fullName);
       } else if (sortBy === "bookingDate") {
         const da = a.bookingDate ? new Date(a.bookingDate).getTime() : 0;
-        const db2 = b.bookingDate ? new Date(b.bookingDate).getTime() : 0;
-        cmp = da - db2;
+        const db = b.bookingDate ? new Date(b.bookingDate).getTime() : 0;
+        cmp = da - db;
       } else if (sortBy === "netProfit") {
         const pa = netProfit(a) ?? -Infinity;
         const pb = netProfit(b) ?? -Infinity;
         cmp = pa - pb;
       } else {
         const da = new Date(a.createdAt).getTime();
-        const db2 = new Date(b.createdAt).getTime();
-        cmp = da - db2;
+        const db = new Date(b.createdAt).getTime();
+        cmp = da - db;
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -258,6 +309,13 @@ export default function Customers() {
               Delete Selected ({selectedIds.size})
             </Button>
           )}
+          <Button
+            variant="outline"
+            onClick={exportToExcel}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" /> Export Excel
+          </Button>
           <Button
             variant="outline"
             onClick={() => setImportOpen(true)}
@@ -330,7 +388,6 @@ export default function Customers() {
 
           {!isLoading && customers.length > 0 && (
             <>
-              {/* Header row */}
               <div className="hidden md:flex items-center border-b bg-muted/30">
                 {isAdmin && (
                   <div className="pl-5 pr-2 flex-shrink-0">
@@ -344,17 +401,19 @@ export default function Customers() {
                     />
                   </div>
                 )}
-                <div className="flex-1 grid grid-cols-[2fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_0.9fr_auto] gap-3 px-6 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                <div className="flex-1 grid grid-cols-[2fr_1fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_1fr_0.9fr_auto] gap-3 px-6 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                   <button type="button" onClick={() => toggleSort("name")} className="flex items-center hover:text-foreground transition-colors text-left">
                     Name<SortIcon col="name" />
                   </button>
+                  <span>Uploaded By</span>
                   <span>Phone</span>
                   <span>Status</span>
-                  <span>Passport No.</span>
+                  <span>Passport</span>
                   <span>PNR</span>
                   <button type="button" onClick={() => toggleSort("bookingDate")} className="flex items-center hover:text-foreground transition-colors text-left">
                     Booking Date<SortIcon col="bookingDate" />
                   </button>
+                  <span>Travel Date</span>
                   <button type="button" onClick={() => toggleSort("netProfit")} className="flex items-center hover:text-foreground transition-colors text-left">
                     Net Profit<SortIcon col="netProfit" />
                   </button>
@@ -362,7 +421,6 @@ export default function Customers() {
                 </div>
               </div>
 
-              {/* Rows */}
               <div className="divide-y">
                 {customers.map((c) => {
                   const profit = netProfit(c);
@@ -385,7 +443,7 @@ export default function Customers() {
                         </div>
                       )}
                       <Link href={`/customers/${c.id}`} className="flex-1 min-w-0">
-                        <div className="grid md:grid-cols-[2fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_0.9fr_auto] grid-cols-1 gap-2 md:gap-3 px-6 py-3.5 cursor-pointer group items-center">
+                        <div className="grid md:grid-cols-[2fr_1fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_1fr_0.9fr_auto] grid-cols-1 gap-2 md:gap-3 px-6 py-3.5 cursor-pointer group items-center">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
                               style={{ background: "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)", color: "#022c22" }}>
@@ -394,6 +452,10 @@ export default function Customers() {
                             <div className="min-w-0">
                               <div className="font-semibold truncate group-hover:text-primary transition-colors text-sm">{c.fullName}</div>
                             </div>
+                          </div>
+
+                          <div className="hidden md:block text-xs font-medium text-muted-foreground truncate">
+                            {c.uploadedByName || "System"}
                           </div>
 
                           <div className="hidden md:block min-w-0">
@@ -420,6 +482,10 @@ export default function Customers() {
 
                           <div className="hidden md:block text-sm text-muted-foreground">
                             {c.bookingDate ? formatShortDate(c.bookingDate) : "—"}
+                          </div>
+                          
+                          <div className="hidden md:block text-sm text-muted-foreground">
+                            {c.travelDate ? formatShortDate(c.travelDate) : "—"}
                           </div>
 
                           <div className="hidden md:flex items-center gap-1">

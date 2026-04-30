@@ -80,12 +80,14 @@ function mapOffer(offer: Awaited<ReturnType<typeof duffel.offers.list>>["data"][
           name: seg.origin.name,
           cityName: seg.origin.city_name,
           countryName: seg.origin.iata_country_code,
+          terminal: seg.origin_terminal,
         },
         destination: {
           iataCode: seg.destination.iata_code,
           name: seg.destination.name,
           cityName: seg.destination.city_name,
           countryName: seg.destination.iata_country_code,
+          terminal: seg.destination_terminal,
         },
         departureDateTime: seg.departing_at,
         arrivalDateTime: seg.arriving_at,
@@ -207,7 +209,8 @@ router.post("/offers/search", requireAuth, async (req, res) => {
     res.json({ offerRequestId, offers, nextAfter });
   } catch (err: unknown) {
     req.log.error({ err }, "Error searching offers");
-    res.status(500).json({ error: "duffel_error", message: "Failed to search offers" });
+    const { message, code, httpStatus } = extractDuffelError(err);
+    res.status(httpStatus).json({ error: code, message });
   }
 });
 
@@ -251,12 +254,14 @@ router.get("/offers/:offerId", requireAuth, async (req, res) => {
             name: seg.origin.name,
             cityName: seg.origin.city_name,
             countryName: seg.origin.iata_country_code,
+            terminal: seg.origin_terminal,
           },
           destination: {
             iataCode: seg.destination.iata_code,
             name: seg.destination.name,
             cityName: seg.destination.city_name,
             countryName: seg.destination.iata_country_code,
+            terminal: seg.destination_terminal,
           },
           departureDateTime: seg.departing_at,
           arrivalDateTime: seg.arriving_at,

@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 import { db, customerNotesTable, customersTable, insertCustomerNoteSchema, updateCustomerNoteSchema } from "@workspace/db";
-import { requireAuth, requireAdmin } from "../middlewares/auth.js";
+import { requireAuth, requireAdmin, getTeamEmployeeIds } from "../middlewares/auth.js";
 
 const router = Router();
 
-function isAdmin(req: import("express").Request): boolean {
-  return req.employee?.role === "Administrator";
+function getRole(req: import("express").Request): string {
+  return req.employee?.role || "Employee";
 }
 
 function coerceDates(body: Record<string, unknown>, ...fields: string[]) {
@@ -26,15 +26,29 @@ router.get("/customers/:customerId/notes", requireAuth, async (req, res) => {
     return;
   }
   try {
-    if (!isAdmin(req)) {
+    const role = getRole(req);
+    const myId = req.employee!.employeeId;
+    let isAuthorized = role === "Administrator";
+
+    if (!isAuthorized) {
       const [customer] = await db
         .select({ assignedEmployeeId: customersTable.assignedEmployeeId })
         .from(customersTable)
         .where(eq(customersTable.id, customerId));
-      if (!customer || customer.assignedEmployeeId !== req.employee!.employeeId) {
-        res.status(404).json({ error: "not_found", message: "Customer not found" });
-        return;
+      
+      if (customer) {
+        if (role === "Supervisor") {
+          const teamIds = await getTeamEmployeeIds(myId);
+          isAuthorized = teamIds.includes(customer.assignedEmployeeId!);
+        } else {
+          isAuthorized = customer.assignedEmployeeId === myId;
+        }
       }
+    }
+
+    if (!isAuthorized) {
+      res.status(404).json({ error: "not_found", message: "Customer not found" });
+      return;
     }
 
     const notes = await db
@@ -68,15 +82,29 @@ router.post("/customers/:customerId/notes", requireAuth, async (req, res) => {
     return;
   }
 
-  if (!isAdmin(req)) {
+  const role = getRole(req);
+  const myId = req.employee!.employeeId;
+  let isAuthorized = role === "Administrator";
+
+  if (!isAuthorized) {
     const [customer] = await db
       .select({ assignedEmployeeId: customersTable.assignedEmployeeId })
       .from(customersTable)
       .where(eq(customersTable.id, customerId));
-    if (!customer || customer.assignedEmployeeId !== req.employee!.employeeId) {
-      res.status(404).json({ error: "not_found", message: "Customer not found" });
-      return;
+    
+    if (customer) {
+      if (role === "Supervisor") {
+        const teamIds = await getTeamEmployeeIds(myId);
+        isAuthorized = teamIds.includes(customer.assignedEmployeeId!);
+      } else {
+        isAuthorized = customer.assignedEmployeeId === myId;
+      }
     }
+  }
+
+  if (!isAuthorized) {
+    res.status(404).json({ error: "not_found", message: "Customer not found" });
+    return;
   }
 
   const employeeId = req.employee!.employeeId;
@@ -119,7 +147,20 @@ router.put("/notes/:id", requireAuth, async (req, res) => {
     res.status(404).json({ error: "not_found", message: "Note not found" });
     return;
   }
-  if (!isAdmin(req) && existing.employeeId !== req.employee!.employeeId) {
+  const role = getRole(req);
+  const myId = req.employee!.employeeId;
+  let isAuthorized = role === "Administrator";
+
+  if (!isAuthorized) {
+    if (role === "Supervisor") {
+      const teamIds = await getTeamEmployeeIds(myId);
+      isAuthorized = teamIds.includes(existing.employeeId!);
+    } else {
+      isAuthorized = existing.employeeId === myId;
+    }
+  }
+
+  if (!isAuthorized) {
     res.status(404).json({ error: "not_found", message: "Note not found" });
     return;
   }

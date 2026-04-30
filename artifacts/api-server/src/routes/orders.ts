@@ -5,6 +5,36 @@ import { requireAuth } from "../middlewares/auth.js";
 
 const router = Router();
 
+function extractDuffelError(err: unknown): { message: string; code: string; httpStatus: number } {
+  if (err && typeof err === "object") {
+    const duffelErr = err as {
+      errors?: Array<{ code?: string; title?: string; message?: string; type?: string }>;
+      meta?: { status?: number };
+    };
+    if (Array.isArray(duffelErr.errors) && duffelErr.errors.length > 0) {
+      const first = duffelErr.errors[0];
+      const apiStatus = duffelErr.meta?.status ?? 500;
+      let httpStatus = 500;
+      const code = first.code ?? first.type ?? "unknown";
+      if (
+        apiStatus === 404 ||
+        code === "offer_no_longer_available" ||
+        code === "not_found" ||
+        code === "offer_expired"
+      ) {
+        httpStatus = 404;
+      } else if (first.type === "airline_error" || apiStatus >= 500) {
+        httpStatus = 502;
+      } else if (apiStatus >= 400) {
+        httpStatus = apiStatus;
+      }
+      return { message: first.message || first.title || "Airline error", code, httpStatus };
+    }
+  }
+  if (err instanceof Error) return { message: "An unexpected error occurred", code: "server_error", httpStatus: 500 };
+  return { message: "An unexpected error occurred", code: "unknown", httpStatus: 500 };
+}
+
 function formatOrder(order: Record<string, unknown>) {
   const o = order as {
     id: string;
@@ -204,6 +234,9 @@ router.post("/orders", requireAuth, async (req, res) => {
   const { selectedOfferId, passengers, type } = parsed.data;
 
   try {
+    // Fetch offer to get total amount and currency for payment
+    const { data: offer } = await duffel.offers.get(selectedOfferId);
+
     const { data: order } = await duffel.orders.create({
       selected_offers: [selectedOfferId],
       passengers: passengers.map((p) => ({
@@ -227,8 +260,8 @@ router.post("/orders", requireAuth, async (req, res) => {
       payments: [
         {
           type: "balance",
-          currency: "GBP",
-          amount: "0",
+          currency: offer.total_currency,
+          amount: offer.total_amount,
         },
       ],
     });
@@ -237,7 +270,8 @@ router.post("/orders", requireAuth, async (req, res) => {
     res.status(201).json(formatOrder(order as unknown as Record<string, unknown>));
   } catch (err: unknown) {
     req.log.error({ err }, "Error creating order");
-    res.status(400).json({ error: "duffel_error", message: "Failed to create order" });
+    const { message, code, httpStatus } = extractDuffelError(err);
+    res.status(httpStatus).json({ error: code, message });
   }
 });
 

@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { eq, and, desc, isNotNull, SQL } from "drizzle-orm";
+import { eq, and, desc, isNotNull, SQL, inArray } from "drizzle-orm";
 import { db, remindersTable, customerNotesTable, customersTable, insertReminderSchema, updateReminderSchema } from "@workspace/db";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, getTeamEmployeeIds } from "../middlewares/auth.js";
 
 const router = Router();
 
-function isAdmin(req: import("express").Request): boolean {
-  return req.employee?.role === "Administrator";
+function getRole(req: import("express").Request): string {
+  return req.employee?.role || "Employee";
 }
 
 function coerceDates(body: Record<string, unknown>, ...fields: string[]) {
@@ -25,10 +25,19 @@ router.get("/reminders", requireAuth, async (req, res) => {
 
     const conditions: SQL[] = [];
     if (status) conditions.push(eq(remindersTable.status, status as "pending" | "done" | "missed"));
-    if (!isAdmin(req)) {
-      conditions.push(eq(remindersTable.employeeId, req.employee!.employeeId));
-    } else if (employeeId) {
-      conditions.push(eq(remindersTable.employeeId, Number(employeeId)));
+    const role = getRole(req);
+    const myId = req.employee!.employeeId;
+
+    if (role === "Administrator") {
+      if (employeeId) {
+        conditions.push(eq(remindersTable.employeeId, Number(employeeId)));
+      }
+    } else if (role === "Supervisor") {
+      const teamIds = await getTeamEmployeeIds(myId);
+      conditions.push(inArray(remindersTable.employeeId, teamIds));
+    } else {
+      // Employee
+      conditions.push(eq(remindersTable.employeeId, myId));
     }
 
     const rows = await db
@@ -96,7 +105,20 @@ router.put("/reminders/:id/status", requireAuth, async (req, res) => {
       res.status(404).json({ error: "not_found", message: "Reminder not found" });
       return;
     }
-    if (!isAdmin(req) && existing.employeeId !== req.employee!.employeeId) {
+    const role = getRole(req);
+    const myId = req.employee!.employeeId;
+    let isAuthorized = role === "Administrator";
+
+    if (!isAuthorized) {
+      if (role === "Supervisor") {
+        const teamIds = await getTeamEmployeeIds(myId);
+        isAuthorized = teamIds.includes(existing.employeeId!);
+      } else {
+        isAuthorized = existing.employeeId === myId;
+      }
+    }
+
+    if (!isAuthorized) {
       res.status(404).json({ error: "not_found", message: "Reminder not found" });
       return;
     }
@@ -122,9 +144,19 @@ router.get("/followups", requireAuth, async (req, res) => {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const todayEnd = new Date(todayStart.getTime() + 86400000);
 
+    const role = getRole(req);
+    const myId = req.employee!.employeeId;
+
     const conditions: SQL[] = [isNotNull(customerNotesTable.followUpDate)];
-    if (!isAdmin(req)) {
-      conditions.push(eq(customerNotesTable.employeeId, req.employee!.employeeId));
+    
+    if (role === "Administrator") {
+      // No extra condition
+    } else if (role === "Supervisor") {
+      const teamIds = await getTeamEmployeeIds(myId);
+      conditions.push(inArray(customerNotesTable.employeeId, teamIds));
+    } else {
+      // Employee
+      conditions.push(eq(customerNotesTable.employeeId, myId));
     }
 
     const notes = await db

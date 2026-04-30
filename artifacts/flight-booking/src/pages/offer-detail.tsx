@@ -196,7 +196,9 @@ export default function OfferDetail() {
                         </div>
 
                         <div className="flex-1 pt-1">
-                          <div className="font-medium">{segment.origin.name}</div>
+                          <div className="font-medium">
+                            {segment.origin.name} ({segment.origin.iataCode}) — {segment.origin.terminal ? `Terminal ${segment.origin.terminal}` : "Terminal: Not Available"}
+                          </div>
                           <div className="text-sm text-muted-foreground mb-4">{formatDateTime(segment.departureDateTime)}</div>
 
                           <div className="flex items-center gap-2 text-sm bg-muted/50 w-fit px-3 py-1.5 rounded-md mb-3">
@@ -235,7 +237,9 @@ export default function OfferDetail() {
                             )}
                           </div>
 
-                          <div className="font-medium">{segment.destination.name}</div>
+                          <div className="font-medium">
+                            {segment.destination.name} ({segment.destination.iataCode}) — {segment.destination.terminal ? `Terminal ${segment.destination.terminal}` : "Terminal: Not Available"}
+                          </div>
                           <div className="text-sm text-muted-foreground">{formatDateTime(segment.arrivalDateTime)}</div>
                         </div>
                       </div>

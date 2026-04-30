@@ -301,7 +301,7 @@ export default function TicketForm() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Assigned Agent</Label>
+              <Label>Assigned Employee</Label>
               <Select value={form.employeeId || "unassigned"} onValueChange={(v) => setField("employeeId", v === "unassigned" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Unassigned" />

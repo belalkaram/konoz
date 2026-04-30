@@ -16,6 +16,12 @@ export interface CustomerFormData {
   nationalId: string;
   address: string;
   status: string;
+  // Optional Ticket fields
+  pnr?: string;
+  bookingDate?: string;
+  travelDate?: string;
+  costPrice?: string;
+  ticketPrice?: string;
 }
 
 export const EMPTY_CUSTOMER_FORM: CustomerFormData = {
@@ -28,6 +34,11 @@ export const EMPTY_CUSTOMER_FORM: CustomerFormData = {
   nationalId: "",
   address: "",
   status: "new",
+  pnr: "",
+  bookingDate: "",
+  travelDate: "",
+  costPrice: "",
+  ticketPrice: "",
 };
 
 interface Props {
@@ -90,9 +101,20 @@ export function CustomerForm({ initialValues, submitLabel, isPending, onSubmit, 
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="cf-email">Email</Label>
-        <Input id="cf-email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="ahmed@example.com" />
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="cf-email">Email</Label>
+          <Input id="cf-email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="ahmed@example.com" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Status</Label>
+          <Select value={form.status} onValueChange={(v) => set("status", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {CUSTOMER_STATUSES.map((s) => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -106,24 +128,30 @@ export function CustomerForm({ initialValues, submitLabel, isPending, onSubmit, 
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="cf-nationalId">National ID</Label>
-        <Input id="cf-nationalId" value={form.nationalId} onChange={(e) => set("nationalId", e.target.value)} placeholder="29901011234567" />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="cf-address">Address</Label>
-        <Input id="cf-address" value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="Kuwait City, Kuwait" />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label>Status</Label>
-        <Select value={form.status} onValueChange={(v) => set("status", v)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {CUSTOMER_STATUSES.map((s) => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}
-          </SelectContent>
-        </Select>
+      <div className="border-t pt-4 mt-2">
+        <h3 className="text-sm font-semibold mb-3 text-primary uppercase tracking-wider">Ticket Information (Optional)</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="cf-pnr">PNR</Label>
+            <Input id="cf-pnr" value={form.pnr} onChange={(e) => set("pnr", e.target.value)} placeholder="PNR / Reference" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="cf-bookingDate">Booking Date</Label>
+            <Input id="cf-bookingDate" type="date" value={form.bookingDate} onChange={(e) => set("bookingDate", e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="cf-travelDate">Travel Date</Label>
+            <Input id="cf-travelDate" type="date" value={form.travelDate} onChange={(e) => set("travelDate", e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="cf-ticketPrice">Selling Price</Label>
+            <Input id="cf-ticketPrice" type="number" step="0.001" value={form.ticketPrice} onChange={(e) => set("ticketPrice", e.target.value)} placeholder="0.000" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="cf-costPrice">Cost Price</Label>
+            <Input id="cf-costPrice" type="number" step="0.001" value={form.costPrice} onChange={(e) => set("costPrice", e.target.value)} placeholder="0.000" />
+          </div>
+        </div>
       </div>
 
       <SheetFooter className="pt-2">

@@ -1,14 +1,14 @@
 import { Router } from "express";
-import { eq, asc, sql } from "drizzle-orm";
+import { eq, asc, sql, or, and } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { db, employeesTable, customersTable, ticketsTable } from "@workspace/db";
-import { requireAdmin, getSessionFromRequest } from "../middlewares/auth.js";
+import { requireAdmin, requireSupervisorOrAdmin, getSessionFromRequest, getTeamEmployeeIds } from "../middlewares/auth.js";
 
 const CreateEmployeeSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   initials: z.string().min(1, "Initials are required").max(5),
-  role: z.enum(["Administrator", "Agent"], { errorMap: () => ({ message: "Role must be Administrator or Agent" }) }),
+  role: z.enum(["Administrator", "Employee", "Supervisor"], { errorMap: () => ({ message: "Role must be Administrator, Supervisor or Employee" }) }),
   username: z
     .string()
     .min(1, "Username is required")
@@ -17,6 +17,9 @@ const CreateEmployeeSchema = z.object({
   pin: z
     .string()
     .regex(/^\d{4,8}$/, "PIN must be 4–8 digits"),
+  supervisorId: z.number().nullable().optional(),
+  companyId: z.number().nullable().optional(),
+  branchId: z.number().nullable().optional(),
 });
 
 const UpdateEmployeeSchema = z
@@ -24,7 +27,7 @@ const UpdateEmployeeSchema = z
     name: z.string().min(1).max(100).optional(),
     initials: z.string().min(1).max(5).optional(),
     role: z
-      .enum(["Administrator", "Agent"], { errorMap: () => ({ message: "Role must be Administrator or Agent" }) })
+      .enum(["Administrator", "Employee", "Supervisor"], { errorMap: () => ({ message: "Role must be Administrator, Supervisor or Employee" }) })
       .optional(),
     username: z
       .string()
@@ -33,6 +36,9 @@ const UpdateEmployeeSchema = z
       .regex(/^[a-z0-9_]+$/, "Username must be lowercase alphanumeric or underscore")
       .optional(),
     pin: z.string().regex(/^\d{4,8}$/, "PIN must be 4–8 digits").optional(),
+    supervisorId: z.number().nullable().optional(),
+    companyId: z.number().nullable().optional(),
+    branchId: z.number().nullable().optional(),
   })
   .strict();
 
@@ -41,16 +47,27 @@ const router = Router();
 router.get("/employees", async (req, res) => {
   try {
     const { includeInactive } = req.query as Record<string, string | undefined>;
+    const session = await getSessionFromRequest(req);
+    const role = session?.role || "Employee";
+    const myId = session?.employeeId;
 
     if (includeInactive === "true") {
-      const session = await getSessionFromRequest(req);
       if (!session) {
         res.status(401).json({ error: "unauthorized", message: "Authentication required" });
         return;
       }
-      if (session.role !== "Administrator") {
-        res.status(403).json({ error: "forbidden", message: "Administrator access required" });
+      if (role !== "Administrator" && role !== "Supervisor") {
+        res.status(403).json({ error: "forbidden", message: "Supervisor or Administrator access required" });
         return;
+      }
+
+      const conditions = [];
+      if (role === "Supervisor") {
+        conditions.push(eq(employeesTable.companyId, session!.companyId!));
+      } else if (role === "Administrator") {
+        // No company filter for global admin
+      } else {
+        conditions.push(or(eq(employeesTable.id, myId!), eq(employeesTable.supervisorId, myId!)));
       }
 
       const rows = await db
@@ -61,17 +78,21 @@ router.get("/employees", async (req, res) => {
           role: employeesTable.role,
           username: employeesTable.username,
           isActive: employeesTable.isActive,
+          supervisorId: employeesTable.supervisorId,
           createdAt: employeesTable.createdAt,
           activeCustomers: sql<number>`(
             SELECT COUNT(*)::int FROM ${customersTable}
             WHERE ${customersTable.assignedEmployeeId} = ${employeesTable.id}
+            AND ${customersTable.status} NOT IN ('cancelled', 'lost')
           )`,
           openTickets: sql<number>`(
             SELECT COUNT(*)::int FROM ${ticketsTable}
             WHERE ${ticketsTable.employeeId} = ${employeesTable.id}
+            AND ${ticketsTable.ticketStatus} NOT IN ('issued', 'cancelled', 'refunded')
           )`,
         })
         .from(employeesTable)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(asc(employeesTable.name));
 
       res.json({ employees: rows });
@@ -96,13 +117,17 @@ router.get("/employees", async (req, res) => {
   }
 });
 
-router.post("/employees", requireAdmin, async (req, res) => {
+router.post("/employees", requireSupervisorOrAdmin, async (req, res) => {
   const parsed = CreateEmployeeSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "validation_error", message: parsed.error.errors[0]?.message ?? "Invalid input" });
     return;
   }
-  const { name, initials, role, username, pin } = parsed.data;
+  const { name, initials, role, username, pin, supervisorId, companyId, branchId } = parsed.data;
+  const session = req.employee!;
+
+  // If Supervisor, they can only create users in their own company
+  const targetCompanyId = session.role === "Supervisor" ? session.companyId : companyId;
 
   try {
     const [existing] = await db
@@ -126,6 +151,9 @@ router.post("/employees", requireAdmin, async (req, res) => {
         username: username.toLowerCase().trim(),
         pinHash: pinHashValue,
         isActive: true,
+        supervisorId: supervisorId ?? null,
+        companyId: targetCompanyId,
+        branchId: branchId ?? null,
       })
       .returning({
         id: employeesTable.id,
@@ -145,10 +173,22 @@ router.post("/employees", requireAdmin, async (req, res) => {
   }
 });
 
-router.put("/employees/:id", requireAdmin, async (req, res) => {
+router.put("/employees/:id", requireSupervisorOrAdmin, async (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "validation_error", message: "Invalid employee ID" });
+    return;
+  }
+
+  const [existingTarget] = await db.select().from(employeesTable).where(eq(employeesTable.id, id));
+  if (!existingTarget) {
+    res.status(404).json({ error: "not_found", message: "Employee not found" });
+    return;
+  }
+
+  const session = req.employee!;
+  if (session.role === "Supervisor" && existingTarget.companyId !== session.companyId) {
+    res.status(403).json({ error: "forbidden", message: "You can only manage employees in your own company" });
     return;
   }
 
@@ -161,17 +201,22 @@ router.put("/employees/:id", requireAdmin, async (req, res) => {
   const { pin, username, ...rest } = parsed.data;
   const updates: Record<string, unknown> = { ...rest, updatedAt: new Date() };
 
+  if (session.role === "Supervisor") {
+    // Supervisor cannot change company
+    delete updates.companyId;
+  }
+
   if (pin) {
     updates.pinHash = await bcrypt.hash(pin, 12);
   }
 
   if (username) {
-    const [existing] = await db
+    const [existingUsername] = await db
       .select({ id: employeesTable.id })
       .from(employeesTable)
       .where(eq(employeesTable.username, username.toLowerCase().trim()));
 
-    if (existing && existing.id !== id) {
+    if (existingUsername && existingUsername.id !== id) {
       res.status(409).json({ error: "conflict", message: "Username already taken" });
       return;
     }
@@ -206,10 +251,22 @@ router.put("/employees/:id", requireAdmin, async (req, res) => {
   }
 });
 
-router.patch("/employees/:id/deactivate", requireAdmin, async (req, res) => {
+router.patch("/employees/:id/deactivate", requireSupervisorOrAdmin, async (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "validation_error", message: "Invalid employee ID" });
+    return;
+  }
+
+  const [existingTarget] = await db.select().from(employeesTable).where(eq(employeesTable.id, id));
+  if (!existingTarget) {
+    res.status(404).json({ error: "not_found", message: "Employee not found" });
+    return;
+  }
+
+  const session = req.employee!;
+  if (session.role === "Supervisor" && existingTarget.companyId !== session.companyId) {
+    res.status(403).json({ error: "forbidden", message: "You can only manage employees in your own company" });
     return;
   }
 
@@ -233,10 +290,22 @@ router.patch("/employees/:id/deactivate", requireAdmin, async (req, res) => {
   }
 });
 
-router.patch("/employees/:id/activate", requireAdmin, async (req, res) => {
+router.patch("/employees/:id/activate", requireSupervisorOrAdmin, async (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "validation_error", message: "Invalid employee ID" });
+    return;
+  }
+
+  const [existingTarget] = await db.select().from(employeesTable).where(eq(employeesTable.id, id));
+  if (!existingTarget) {
+    res.status(404).json({ error: "not_found", message: "Employee not found" });
+    return;
+  }
+
+  const session = req.employee!;
+  if (session.role === "Supervisor" && existingTarget.companyId !== session.companyId) {
+    res.status(403).json({ error: "forbidden", message: "You can only manage employees in your own company" });
     return;
   }
 

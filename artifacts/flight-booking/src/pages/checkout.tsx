@@ -51,7 +51,7 @@ export default function Checkout() {
     }
 
     const passengerData: PassengerDetails = {
-      id: "pass_1", // Duffel typically requires an ID mapping to the offer passenger ID, using a dummy one or you'd extract from offer.passengers
+      id: offer?.passengers[0]?.id || "pass_1",
       title: passenger.title as PassengerDetailsTitle,
       givenName: passenger.givenName,
       familyName: passenger.familyName,

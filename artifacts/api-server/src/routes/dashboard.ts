@@ -1,9 +1,13 @@
 import { Router } from "express";
-import { eq, gte, lt, and, isNotNull, count, sql } from "drizzle-orm";
+import { eq, gte, lt, and, isNotNull, count, sql, inArray, type SQL } from "drizzle-orm";
 import { db, customersTable, customerNotesTable, ticketsTable, paymentsTable } from "@workspace/db";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, getTeamEmployeeIds } from "../middlewares/auth.js";
 
 const router = Router();
+
+function getRole(req: import("express").Request): string {
+  return req.employee?.role || "Employee";
+}
 
 router.get("/dashboard/stats", requireAuth, async (req, res) => {
   try {
@@ -11,20 +15,53 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const todayEnd = new Date(todayStart.getTime() + 86400000);
 
+    const role = getRole(req);
+    const myId = req.employee!.employeeId;
+    
+    let customerFilter: SQL | undefined;
+    let noteFilter: SQL | undefined;
+    let ticketFilter: SQL | undefined;
+    let paymentFilter: SQL | undefined;
+
+    if (role === "Supervisor") {
+      const myCompanyId = req.employee!.companyId!;
+      customerFilter = eq(customersTable.companyId, myCompanyId);
+      noteFilter = sql`EXISTS (
+        SELECT 1 FROM ${employeesTable} 
+        WHERE ${employeesTable.id} = ${customerNotesTable.employeeId} 
+        AND ${employeesTable.companyId} = ${myCompanyId}
+      )`;
+      ticketFilter = sql`EXISTS (
+        SELECT 1 FROM ${employeesTable} 
+        WHERE ${employeesTable.id} = ${ticketsTable.employeeId} 
+        AND ${employeesTable.companyId} = ${myCompanyId}
+      )`;
+    } else if (role === "Employee") {
+      customerFilter = eq(customersTable.assignedEmployeeId, myId);
+      noteFilter = eq(customerNotesTable.employeeId, myId);
+      ticketFilter = eq(ticketsTable.employeeId, myId);
+    }
+
     const [totalCustomersResult] = await db
       .select({ count: count() })
-      .from(customersTable);
+      .from(customersTable)
+      .where(customerFilter);
 
     const [newTodayResult] = await db
       .select({ count: count() })
       .from(customersTable)
-      .where(and(gte(customersTable.createdAt, todayStart), lt(customersTable.createdAt, todayEnd)));
+      .where(and(
+        customerFilter,
+        gte(customersTable.createdAt, todayStart), 
+        lt(customersTable.createdAt, todayEnd)
+      ));
 
     const followUpsToday = await db
       .select({ count: count() })
       .from(customerNotesTable)
       .where(
         and(
+          noteFilter,
           isNotNull(customerNotesTable.followUpDate),
           gte(customerNotesTable.followUpDate, todayStart),
           lt(customerNotesTable.followUpDate, todayEnd),
@@ -37,6 +74,7 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
       .from(customerNotesTable)
       .where(
         and(
+          noteFilter,
           isNotNull(customerNotesTable.followUpDate),
           lt(customerNotesTable.followUpDate, todayStart),
           eq(customerNotesTable.followUpStatus, "pending"),
@@ -45,7 +83,8 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
 
     const [totalTicketsResult] = await db
       .select({ count: count() })
-      .from(ticketsTable);
+      .from(ticketsTable)
+      .where(ticketFilter);
 
     const ticketsByStatus = await db
       .select({
@@ -53,6 +92,7 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
         count: count(),
       })
       .from(ticketsTable)
+      .where(ticketFilter)
       .groupBy(ticketsTable.ticketStatus);
 
     const ticketsByPayment = await db
@@ -61,6 +101,7 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
         count: count(),
       })
       .from(ticketsTable)
+      .where(ticketFilter)
       .groupBy(ticketsTable.paymentStatus);
 
     const customersByStatus = await db
@@ -69,18 +110,24 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
         count: count(),
       })
       .from(customersTable)
+      .where(customerFilter)
       .groupBy(customersTable.status);
 
     const revenueResult = await db
       .select({ total: sql<string>`COALESCE(SUM(${paymentsTable.amount}), 0)::text` })
       .from(paymentsTable)
-      .where(eq(paymentsTable.paymentStatus, "paid"));
+      .innerJoin(customersTable, eq(paymentsTable.customerId, customersTable.id))
+      .where(and(
+        customerFilter,
+        eq(paymentsTable.paymentStatus, "paid")
+      ));
 
     const totalRevenue = revenueResult[0]?.total ?? "0";
 
     const recentCustomers = await db
       .select()
       .from(customersTable)
+      .where(customerFilter)
       .orderBy(sql`${customersTable.createdAt} desc`)
       .limit(5);
 
@@ -91,6 +138,7 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
       })
       .from(ticketsTable)
       .leftJoin(customersTable, eq(ticketsTable.customerId, customersTable.id))
+      .where(ticketFilter)
       .orderBy(sql`${ticketsTable.updatedAt} desc`)
       .limit(5);
 
@@ -104,6 +152,7 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
       .leftJoin(customersTable, eq(customerNotesTable.customerId, customersTable.id))
       .where(
         and(
+          noteFilter,
           isNotNull(customerNotesTable.followUpDate),
           gte(customerNotesTable.followUpDate, todayStart),
           lt(customerNotesTable.followUpDate, todayEnd),

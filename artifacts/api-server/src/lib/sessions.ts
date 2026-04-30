@@ -6,6 +6,7 @@ export interface Session {
   employeeId: number;
   name: string;
   role: string;
+  companyId: number | null;
   expiresAt: number;
   csrfToken: string;
 }
@@ -16,12 +17,12 @@ async function prune(): Promise<void> {
   await db.delete(sessionsTable).where(lt(sessionsTable.expiresAt, Date.now()));
 }
 
-export async function createSession(employeeId: number, role: string, name: string): Promise<string> {
+export async function createSession(employeeId: number, role: string, name: string, companyId: number | null): Promise<string> {
   const token = randomBytes(32).toString("hex");
   const csrfToken = randomBytes(32).toString("hex");
   const expiresAt = Date.now() + SESSION_TTL_MS;
 
-  await db.insert(sessionsTable).values({ token, employeeId, name, role, csrfToken, expiresAt });
+  await db.insert(sessionsTable).values({ token, employeeId, name, role, csrfToken, expiresAt, companyId });
 
   prune().catch(() => {});
 
@@ -35,7 +36,7 @@ export async function validateSession(token: string): Promise<Session | null> {
     await db.delete(sessionsTable).where(eq(sessionsTable.token, token));
     return null;
   }
-  return { employeeId: row.employeeId, name: row.name, role: row.role, expiresAt: row.expiresAt, csrfToken: row.csrfToken };
+  return { employeeId: row.employeeId, name: row.name, role: row.role, companyId: row.companyId, expiresAt: row.expiresAt, csrfToken: row.csrfToken };
 }
 
 export async function getCsrfToken(sessionToken: string): Promise<string | null> {

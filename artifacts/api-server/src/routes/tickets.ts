@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { eq, desc, and, sum } from "drizzle-orm";
+import { eq, desc, and, sum, inArray } from "drizzle-orm";
 import { db, ticketsTable, ticketStatusHistoryTable, paymentsTable, customersTable, insertTicketSchema, updateTicketSchema, insertPaymentSchema } from "@workspace/db";
-import { requireAuth, requireAdmin } from "../middlewares/auth.js";
+import { requireAuth, requireAdmin, getTeamEmployeeIds } from "../middlewares/auth.js";
 
 const router = Router();
 
-function isAdmin(req: import("express").Request): boolean {
-  return req.employee?.role === "Administrator";
+function getRole(req: import("express").Request): string {
+  return req.employee?.role || "Employee";
 }
 
 function coerceDates(body: Record<string, unknown>, ...fields: string[]) {
@@ -27,10 +27,28 @@ router.get("/tickets", requireAuth, async (req, res) => {
     if (customerId) conditions.push(eq(ticketsTable.customerId, Number(customerId)));
     if (ticketStatus) conditions.push(eq(ticketsTable.ticketStatus, ticketStatus as typeof ticketsTable.ticketStatus._.data));
     if (paymentStatus) conditions.push(eq(ticketsTable.paymentStatus, paymentStatus as typeof ticketsTable.paymentStatus._.data));
-    if (!isAdmin(req)) {
-      conditions.push(eq(ticketsTable.employeeId, req.employee!.employeeId));
-    } else if (employeeId) {
-      conditions.push(eq(ticketsTable.employeeId, Number(employeeId)));
+    const role = getRole(req);
+    const myId = req.employee!.employeeId;
+
+    if (role === "Administrator") {
+      if (employeeId) {
+        conditions.push(eq(ticketsTable.employeeId, Number(employeeId)));
+      }
+    } else if (role === "Supervisor") {
+      const teamIds = await getTeamEmployeeIds(myId);
+      if (employeeId) {
+        const targetId = Number(employeeId);
+        if (teamIds.includes(targetId)) {
+          conditions.push(eq(ticketsTable.employeeId, targetId));
+        } else {
+          conditions.push(inArray(ticketsTable.employeeId, teamIds));
+        }
+      } else {
+        conditions.push(inArray(ticketsTable.employeeId, teamIds));
+      }
+    } else {
+      // Employee
+      conditions.push(eq(ticketsTable.employeeId, myId));
     }
 
     const rows = await db
@@ -59,7 +77,8 @@ router.get("/tickets", requireAuth, async (req, res) => {
 
 router.post("/tickets", requireAuth, async (req, res) => {
   const body = coerceDates(req.body as Record<string, unknown>, "departureDatetime", "arrivalDatetime");
-  const serverControlled = isAdmin(req)
+  const role = getRole(req);
+  const serverControlled = (role === "Administrator" || role === "Supervisor")
     ? body
     : { ...body, employeeId: req.employee!.employeeId };
   const parsed = insertTicketSchema.safeParse(serverControlled);
@@ -108,7 +127,16 @@ router.get("/tickets/:id", requireAuth, async (req, res) => {
       return;
     }
 
-    if (!isAdmin(req) && row.ticket.employeeId !== req.employee!.employeeId) {
+    const role = getRole(req);
+    const myId = req.employee!.employeeId;
+    let isAuthorized = role === "Administrator";
+    
+    if (!isAuthorized) {
+      const teamIds = await getTeamEmployeeIds(myId);
+      isAuthorized = teamIds.includes(row.ticket.employeeId!);
+    }
+
+    if (!isAuthorized) {
       res.status(404).json({ error: "not_found", message: "Ticket not found" });
       return;
     }
@@ -162,12 +190,21 @@ router.put("/tickets/:id", requireAuth, async (req, res) => {
       return;
     }
 
-    if (!isAdmin(req) && existing.employeeId !== req.employee!.employeeId) {
+    const role = getRole(req);
+    const myId = req.employee!.employeeId;
+    let isAuthorized = role === "Administrator";
+
+    if (!isAuthorized) {
+      const teamIds = await getTeamEmployeeIds(myId);
+      isAuthorized = teamIds.includes(existing.employeeId!);
+    }
+
+    if (!isAuthorized) {
       res.status(404).json({ error: "not_found", message: "Ticket not found" });
       return;
     }
 
-    const updateData = isAdmin(req)
+    const updateData = (role === "Administrator" || role === "Supervisor")
       ? parsed.data
       : (({ employeeId: _eid, ...rest }) => rest)(parsed.data as Record<string, unknown>) as typeof parsed.data;
     const [ticket] = await db

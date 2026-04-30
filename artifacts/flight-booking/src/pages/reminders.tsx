@@ -87,7 +87,7 @@ function NoteItem({ note, showMarkDone, isAdmin }: { note: FollowUpNote; showMar
     },
   });
 
-  const agentName = note.employeeId
+  const employeeName = note.employeeId
     ? (employees.find((e) => e.id === note.employeeId)?.name ?? `#${note.employeeId}`)
     : null;
 
@@ -107,7 +107,7 @@ function NoteItem({ note, showMarkDone, isAdmin }: { note: FollowUpNote; showMar
               <span className="hover:underline cursor-pointer">Ticket #{note.ticketId}</span>
             </Link>
           )}
-          {agentName && <span className="flex items-center gap-1"><UserCheck className="h-3 w-3" />{agentName}</span>}
+          {employeeName && <span className="flex items-center gap-1"><UserCheck className="h-3 w-3" />{employeeName}</span>}
         </div>
       </div>
       <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
@@ -321,14 +321,14 @@ export default function Reminders() {
           <CardContent className="p-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label>Agent</Label>
+                <Label>Employee</Label>
                 <Select
                   value={employeeFilter || "all"}
                   onValueChange={handleEmployeeFilterChange}
                 >
-                  <SelectTrigger><SelectValue placeholder="All agents" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="All employees" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All agents</SelectItem>
+                    <SelectItem value="all">All employees</SelectItem>
                     {employees.map((e) => (
                       <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>
                     ))}

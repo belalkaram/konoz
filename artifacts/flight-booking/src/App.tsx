@@ -21,9 +21,19 @@ import TicketForm from "@/pages/ticket-form";
 import TicketDetail from "@/pages/ticket-detail";
 import Reminders from "@/pages/reminders";
 import EmployeesPage from "@/pages/employees";
+import CompaniesPage from "@/pages/companies";
 import NotAuthorized from "@/pages/not-authorized";
 
 const queryClient = new QueryClient();
+
+function SupervisorOrAdminRoute({ component: Component }: { component: () => JSX.Element }) {
+  const { currentEmployee } = useEmployee();
+  const role = currentEmployee?.role;
+  if (!currentEmployee || (role !== "Administrator" && role !== "Supervisor")) {
+    return <NotAuthorized />;
+  }
+  return <Component />;
+}
 
 function AdminRoute({ component: Component }: { component: () => JSX.Element }) {
   const { currentEmployee } = useEmployee();
@@ -62,7 +72,8 @@ function Router() {
         <Route path="/tickets/:id" component={TicketDetail} />
         <Route path="/tickets" component={Tickets} />
         <Route path="/reminders" component={Reminders} />
-        <Route path="/employees">{() => <AdminRoute component={EmployeesPage} />}</Route>
+        <Route path="/employees">{() => <SupervisorOrAdminRoute component={EmployeesPage} />}</Route>
+        <Route path="/companies">{() => <AdminRoute component={CompaniesPage} />}</Route>
         <Route path="/orders" component={Orders} />
         <Route path="/orders/new" component={Checkout} />
         <Route path="/orders/:orderId" component={OrderDetail} />

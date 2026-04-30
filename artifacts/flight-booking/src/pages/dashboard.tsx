@@ -147,9 +147,10 @@ export default function Dashboard() {
 
         {crmData && (
           <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <StatCard title="Total Customers" value={crmData.customers.total} icon={<Users className="h-4 w-4" />} color="text-primary" href="/customers" />
               <StatCard title="New Today" value={crmData.customers.newToday} icon={<Users className="h-4 w-4" />} color="text-blue-500" href="/customers" />
+              <StatCard title="CRM Revenue" value={formatCurrency(crmData.totalRevenue, "USD")} icon={<TrendingUp className="h-4 w-4" />} color="text-green-600" />
               <StatCard title="Follow-ups Today" value={crmData.customers.followUpsToday} icon={<Bell className="h-4 w-4" />} color="text-yellow-500" href="/reminders" />
               <StatCard title="Missed Follow-ups" value={crmData.customers.missedFollowUps} icon={<AlertCircle className="h-4 w-4" />} color="text-destructive" href="/reminders" />
             </div>
@@ -359,103 +360,105 @@ export default function Dashboard() {
         )}
       </section>
 
-      <section className="space-y-5">
-        <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
-          <Plane className="h-5 w-5 text-blue-500" /> Flight Booking Stats
-        </h2>
+      {currentEmployee.role === "Administrator" && (
+        <section className="space-y-5">
+          <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
+            <Plane className="h-5 w-5 text-blue-500" /> Flight Booking Stats
+          </h2>
 
-        {flightLoading && <SectionSkeleton />}
-        {flightError && <div className="text-destructive text-sm">Failed to load flight booking stats.</div>}
+          {flightLoading && <SectionSkeleton />}
+          {flightError && <div className="text-destructive text-sm">Failed to load flight booking stats.</div>}
 
-        {flightStats && (
-          <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <StatCard
-                title="Total Revenue"
-                value={formatCurrency(flightStats.totalRevenue, flightStats.currency)}
-                icon={<TrendingUp className="h-4 w-4" />}
-                color="text-primary"
-              />
-              <StatCard
-                title="Total Bookings"
-                value={flightStats.totalOrders}
-                icon={<Plane className="h-4 w-4" />}
-                color="text-blue-500"
-              />
-              <StatCard
-                title="Confirmed Bookings"
-                value={flightStats.confirmedOrders}
-                icon={<CheckCircle2 className="h-4 w-4" />}
-                color="text-green-500"
-              />
-              <StatCard
-                title="Cancellations"
-                value={flightStats.cancelledOrders}
-                icon={<XCircle className="h-4 w-4" />}
-                color="text-destructive"
-              />
-            </div>
+          {flightStats && (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <StatCard
+                  title="Total Revenue"
+                  value={formatCurrency(flightStats.totalRevenue, flightStats.currency)}
+                  icon={<TrendingUp className="h-4 w-4" />}
+                  color="text-primary"
+                />
+                <StatCard
+                  title="Total Bookings"
+                  value={flightStats.totalOrders}
+                  icon={<Plane className="h-4 w-4" />}
+                  color="text-blue-500"
+                />
+                <StatCard
+                  title="Confirmed Bookings"
+                  value={flightStats.confirmedOrders}
+                  icon={<CheckCircle2 className="h-4 w-4" />}
+                  color="text-green-500"
+                />
+                <StatCard
+                  title="Cancellations"
+                  value={flightStats.cancelledOrders}
+                  icon={<XCircle className="h-4 w-4" />}
+                  color="text-destructive"
+                />
+              </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-              <Card className="md:col-span-1 lg:col-span-4">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Recent Orders</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {flightStats.recentOrders?.map((order) => (
-                      <div key={order.id} className="flex items-center justify-between border-b border-border pb-3 last:pb-0 last:border-0">
-                        <div>
-                          <div className="font-medium text-sm">{order.bookingReference}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {order.slices?.[0]?.origin.iataCode} → {order.slices?.[0]?.destination.iataCode}
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+                <Card className="md:col-span-1 lg:col-span-4">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Recent Orders</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {flightStats.recentOrders?.map((order) => (
+                        <div key={order.id} className="flex items-center justify-between border-b border-border pb-3 last:pb-0 last:border-0">
+                          <div>
+                            <div className="font-medium text-sm">{order.bookingReference}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {order.slices?.[0]?.origin.iataCode} → {order.slices?.[0]?.destination.iataCode}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-medium text-sm">{formatCurrency(order.totalAmount, order.totalCurrency)}</div>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              order.status === "confirmed" ? "bg-green-100 text-green-800" :
+                              order.status === "cancelled" ? "bg-red-100 text-red-800" :
+                              "bg-gray-100 text-gray-700"
+                            }`}>
+                              {order.status}
+                            </span>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="font-medium text-sm">{formatCurrency(order.totalAmount, order.totalCurrency)}</div>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            order.status === "confirmed" ? "bg-green-100 text-green-800" :
-                            order.status === "cancelled" ? "bg-red-100 text-red-800" :
-                            "bg-gray-100 text-gray-700"
-                          }`}>
-                            {order.status}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-3 pt-3 border-t">
-                    <Link href="/orders" className="text-sm text-primary hover:underline font-medium">
-                      View all orders →
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
+                      ))}
+                    </div>
+                    <div className="mt-3 pt-3 border-t">
+                      <Link href="/orders" className="text-sm text-primary hover:underline font-medium">
+                        View all orders →
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <Card className="md:col-span-1 lg:col-span-3">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Top Routes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {flightStats.topRoutes?.map((route, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                            <Plane className="w-3.5 h-3.5 text-muted-foreground" />
+                <Card className="md:col-span-1 lg:col-span-3">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Top Routes</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {flightStats.topRoutes?.map((route, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                              <Plane className="w-3.5 h-3.5 text-muted-foreground" />
+                            </div>
+                            <span className="text-sm font-medium">{route.origin} → {route.destination}</span>
                           </div>
-                          <span className="text-sm font-medium">{route.origin} → {route.destination}</span>
+                          <span className="text-sm text-muted-foreground">{route.count} bookings</span>
                         </div>
-                        <span className="text-sm text-muted-foreground">{route.count} bookings</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </>
-        )}
-      </section>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
+        </section>
+      )}
     </div>
   );
 }

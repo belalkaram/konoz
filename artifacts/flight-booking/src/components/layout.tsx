@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Plane, Search, ListFilter, LayoutDashboard, Menu, X, Users, Tag, Bell, LogOut, UserCog } from "lucide-react";
+import { Plane, Search, ListFilter, LayoutDashboard, Menu, X, Users, Tag, Bell, LogOut, UserCog, Building2 } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useEmployee } from "@/contexts/employee-context";
@@ -12,8 +12,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { currentEmployee, logout } = useEmployee();
+  const role = currentEmployee?.role;
 
-  const isAdmin = currentEmployee?.role === "Administrator";
+  const isSupervisorOrAdmin = role === "Administrator" || role === "Supervisor";
+  const isAdmin = role === "Administrator";
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -22,7 +24,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/reminders", label: "Reminders", icon: Bell },
     { href: "/search", label: "Flight Search", icon: Search },
     { href: "/orders", label: "Orders", icon: ListFilter },
-    ...(isAdmin ? [{ href: "/employees", label: "Employees", icon: UserCog }] : []),
+    ...(isSupervisorOrAdmin ? [{ href: "/employees", label: "Employees", icon: UserCog }] : []),
+    ...(isAdmin ? [{ href: "/companies", label: "Companies", icon: Building2 }] : []),
   ];
 
   const isActive = (href: string) =>
@@ -157,7 +160,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {/* Desktop env label */}
             <div className="hidden md:flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-sm font-medium" style={{ color: "#047857" }}>Duffel Live Environment</span>
+              <span className="text-sm font-medium" style={{ color: "#047857" }}>Konooz Live System</span>
             </div>
           </div>
 

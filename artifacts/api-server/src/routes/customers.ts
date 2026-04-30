@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { eq, ilike, or, sql, and, desc } from "drizzle-orm";
+import { eq, ilike, or, sql, and, desc, inArray } from "drizzle-orm";
 import { db, customersTable, ticketsTable, insertCustomerSchema, insertTicketSchema, updateCustomerSchema } from "@workspace/db";
-import { requireAuth, requireAdmin, getSessionFromRequest } from "../middlewares/auth.js";
+import { requireAuth, requireAdmin, getSessionFromRequest, getTeamEmployeeIds } from "../middlewares/auth.js";
 
 const router = Router();
 
-function isAdmin(req: import("express").Request): boolean {
-  return req.employee?.role === "Administrator";
+function getRole(req: import("express").Request): string {
+  return req.employee?.role || "Employee";
 }
 
 router.get("/customers", requireAuth, async (req, res) => {
@@ -26,10 +26,28 @@ router.get("/customers", requireAuth, async (req, res) => {
     if (status) {
       conditions.push(eq(customersTable.status, status as typeof customersTable.status._.data));
     }
-    if (!isAdmin(req)) {
-      conditions.push(eq(customersTable.assignedEmployeeId, req.employee!.employeeId));
-    } else if (assignedEmployeeId) {
-      conditions.push(eq(customersTable.assignedEmployeeId, Number(assignedEmployeeId)));
+    
+    const role = getRole(req);
+    const myId = req.employee!.employeeId;
+
+    if (role === "Administrator") {
+      if (assignedEmployeeId) {
+        conditions.push(eq(customersTable.assignedEmployeeId, Number(assignedEmployeeId)));
+      }
+    } else if (role === "Supervisor") {
+      conditions.push(eq(customersTable.companyId, req.employee!.companyId!));
+      if (assignedEmployeeId) {
+        conditions.push(eq(customersTable.assignedEmployeeId, Number(assignedEmployeeId)));
+      }
+    } else {
+      // Employee
+      conditions.push(eq(customersTable.companyId, req.employee!.companyId!));
+      conditions.push(
+        or(
+          eq(customersTable.assignedEmployeeId, myId),
+          eq(customersTable.createdByEmployeeId, myId)
+        )!
+      );
     }
 
     const baseQuery = db
@@ -51,27 +69,34 @@ router.get("/customers", requireAuth, async (req, res) => {
         updatedAt: customersTable.updatedAt,
         latestTicketId: sql<number | null>`(
           SELECT id FROM tickets WHERE customer_id = ${customersTable.id}
-          ORDER BY created_at DESC LIMIT 1
+          ORDER BY created_at DESC, id DESC LIMIT 1
         )`,
         pnr: sql<string | null>`(
           SELECT pnr FROM tickets WHERE customer_id = ${customersTable.id}
-          ORDER BY created_at DESC LIMIT 1
+          ORDER BY created_at DESC, id DESC LIMIT 1
         )`,
         bookingDate: sql<string | null>`(
           SELECT COALESCE(booking_date::text, created_at::text) FROM tickets WHERE customer_id = ${customersTable.id}
-          ORDER BY created_at DESC LIMIT 1
+          ORDER BY created_at DESC, id DESC LIMIT 1
         )`,
         costPrice: sql<string | null>`(
           SELECT cost_price FROM tickets WHERE customer_id = ${customersTable.id}
-          ORDER BY created_at DESC LIMIT 1
+          ORDER BY created_at DESC, id DESC LIMIT 1
         )`,
         sellingPrice: sql<string | null>`(
           SELECT price FROM tickets WHERE customer_id = ${customersTable.id}
-          ORDER BY created_at DESC LIMIT 1
+          ORDER BY created_at DESC, id DESC LIMIT 1
         )`,
         ticketCurrency: sql<string | null>`(
           SELECT currency FROM tickets WHERE customer_id = ${customersTable.id}
-          ORDER BY created_at DESC LIMIT 1
+          ORDER BY created_at DESC, id DESC LIMIT 1
+        )`,
+        travelDate: sql<string | null>`(
+          SELECT departure_datetime::text FROM tickets WHERE customer_id = ${customersTable.id}
+          ORDER BY created_at DESC, id DESC LIMIT 1
+        )`,
+        uploadedByName: sql<string | null>`(
+          SELECT name FROM employees WHERE id = ${customersTable.createdByEmployeeId}
         )`,
       })
       .from(customersTable);
@@ -91,19 +116,46 @@ router.get("/customers", requireAuth, async (req, res) => {
 
 router.post("/customers", requireAuth, async (req, res) => {
   const body = req.body as Record<string, unknown>;
-  const serverControlled = isAdmin(req)
-    ? body
-    : { ...body, assignedEmployeeId: req.employee!.employeeId };
+  const role = getRole(req);
+  const myId = req.employee!.employeeId;
+
+  const serverControlled = {
+    ...body,
+    createdByEmployeeId: myId,
+    assignedEmployeeId: body.assignedEmployeeId ?? myId,
+    companyId: req.employee!.companyId,
+  };
+
   const parsed = insertCustomerSchema.safeParse(serverControlled);
   if (!parsed.success) {
     res.status(400).json({ error: "validation_error", message: parsed.error.message });
     return;
   }
   try {
-    const [customer] = await db
-      .insert(customersTable)
-      .values(parsed.data)
-      .returning();
+    const customer = await db.transaction(async (tx) => {
+      const [newCustomer] = await tx
+        .insert(customersTable)
+        .values(parsed.data)
+        .returning();
+
+      const { pnr, bookingDate, travelDate, costPrice, ticketPrice } = body;
+      if (pnr || ticketPrice || travelDate) {
+        await tx.insert(ticketsTable).values({
+          customerId: newCustomer.id,
+          employeeId: newCustomer.assignedEmployeeId,
+          pnr: (pnr as string) || null,
+          bookingDate: bookingDate ? new Date(bookingDate as string) : null,
+          departureDatetime: travelDate ? new Date(travelDate as string) : null,
+          price: (ticketPrice as string) || "0",
+          costPrice: (costPrice as string) || "0",
+          ticketStatus: "quoted",
+          paymentStatus: "unpaid",
+          currency: "USD",
+        });
+      }
+      return newCustomer;
+    });
+
     res.status(201).json({ customer });
   } catch (err) {
     req.log.error({ err }, "Error creating customer");
@@ -262,7 +314,20 @@ router.get("/customers/:id", requireAuth, async (req, res) => {
       res.status(404).json({ error: "not_found", message: "Customer not found" });
       return;
     }
-    if (!isAdmin(req) && customer.assignedEmployeeId !== req.employee!.employeeId) {
+    const role = getRole(req);
+    const myId = req.employee!.employeeId;
+    const myCompanyId = req.employee!.companyId;
+    let isAuthorized = role === "Administrator";
+    
+    if (!isAuthorized) {
+      if (role === "Supervisor") {
+        isAuthorized = customer.companyId === myCompanyId;
+      } else {
+        isAuthorized = (customer.assignedEmployeeId === myId || customer.createdByEmployeeId === myId) && customer.companyId === myCompanyId;
+      }
+    }
+
+    if (!isAuthorized) {
       res.status(404).json({ error: "not_found", message: "Customer not found" });
       return;
     }
@@ -293,11 +358,20 @@ router.put("/customers/:id", requireAuth, async (req, res) => {
       res.status(404).json({ error: "not_found", message: "Customer not found" });
       return;
     }
-    if (!isAdmin(req) && existing.assignedEmployeeId !== req.employee!.employeeId) {
+    const role = getRole(req);
+    const myId = req.employee!.employeeId;
+    let isAuthorized = role === "Administrator";
+
+    if (!isAuthorized) {
+      const teamIds = await getTeamEmployeeIds(myId);
+      isAuthorized = teamIds.includes(existing.assignedEmployeeId!);
+    }
+
+    if (!isAuthorized) {
       res.status(404).json({ error: "not_found", message: "Customer not found" });
       return;
     }
-    const updateData = isAdmin(req)
+    const updateData = (role === "Administrator" || role === "Supervisor")
       ? parsed.data
       : (({ assignedEmployeeId: _aei, ...rest }) => rest)(parsed.data as Record<string, unknown>) as typeof parsed.data;
     const [customer] = await db

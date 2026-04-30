@@ -24,6 +24,7 @@ interface EmployeeRow {
   isActive: boolean;
   activeCustomers?: number;
   openTickets?: number;
+  supervisorId?: number | null;
 }
 
 interface EmployeeFormData {
@@ -32,14 +33,20 @@ interface EmployeeFormData {
   role: string;
   username: string;
   pin: string;
+  supervisorId: string;
+  companyId: string;
+  branchId: string;
 }
 
 const EMPTY_FORM: EmployeeFormData = {
   name: "",
   initials: "",
-  role: "Agent",
+  role: "Employee",
   username: "",
   pin: "",
+  supervisorId: "",
+  companyId: "",
+  branchId: "",
 };
 
 interface ActiveSession {
@@ -107,14 +114,30 @@ function autoInitials(name: string): string {
   return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 }
 
+interface Company {
+  id: number;
+  name: string;
+}
+
+interface Branch {
+  id: number;
+  name: string;
+  companyId: number;
+}
+
 interface EmployeeFormSheetProps {
   open: boolean;
   editing: EmployeeRow | null;
   onClose: () => void;
   onSuccess: () => void;
+  allPossibleSupervisors: EmployeeRow[];
+  allEmployees: EmployeeRow[];
+  companies: Company[];
+  branches: Branch[];
+  isAdmin: boolean;
 }
 
-function EmployeeFormSheet({ open, editing, onClose, onSuccess }: EmployeeFormSheetProps) {
+function EmployeeFormSheet({ open, editing, onClose, onSuccess, allPossibleSupervisors, allEmployees, companies, branches, isAdmin }: EmployeeFormSheetProps) {
   const [form, setForm] = useState<EmployeeFormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<EmployeeFormData>>({});
   const { toast } = useToast();
@@ -122,7 +145,16 @@ function EmployeeFormSheet({ open, editing, onClose, onSuccess }: EmployeeFormSh
   useEffect(() => {
     if (open) {
       if (editing) {
-        setForm({ name: editing.name, initials: editing.initials, role: editing.role, username: editing.username, pin: "" });
+        setForm({
+          name: editing.name,
+          initials: editing.initials,
+          role: editing.role,
+          username: editing.username,
+          pin: "",
+          supervisorId: editing.supervisorId?.toString() || "",
+          companyId: (editing as any).companyId?.toString() || "",
+          branchId: (editing as any).branchId?.toString() || "",
+        });
       } else {
         setForm(EMPTY_FORM);
       }
@@ -154,11 +186,23 @@ function EmployeeFormSheet({ open, editing, onClose, onSuccess }: EmployeeFormSh
   const mutation = useMutation({
     mutationFn: async () => {
       if (editing) {
-        const payload: Partial<EmployeeFormData> = { name: form.name, initials: form.initials, role: form.role, username: form.username };
+        const payload: any = { 
+          name: form.name, 
+          initials: form.initials, 
+          role: form.role, 
+          username: form.username,
+          companyId: form.companyId ? parseInt(form.companyId) : null,
+          branchId: form.branchId ? parseInt(form.branchId) : null,
+        };
         if (form.pin) payload.pin = form.pin;
+        payload.supervisorId = form.supervisorId ? parseInt(form.supervisorId) : null;
         await updateEmployee(editing.id, payload);
       } else {
-        await createEmployee(form);
+        const payload: any = { ...form };
+        payload.supervisorId = form.supervisorId ? parseInt(form.supervisorId) : null;
+        payload.companyId = form.companyId ? parseInt(form.companyId) : null;
+        payload.branchId = form.branchId ? parseInt(form.branchId) : null;
+        await createEmployee(payload);
       }
     },
     onSuccess: () => {
@@ -199,7 +243,7 @@ function EmployeeFormSheet({ open, editing, onClose, onSuccess }: EmployeeFormSh
               <Select value={form.role} onValueChange={(v) => set("role", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Agent">Agent</SelectItem>
+                  <SelectItem value="Employee">Employee</SelectItem>
                   <SelectItem value="Administrator">Administrator</SelectItem>
                   <SelectItem value="Supervisor">Supervisor</SelectItem>
                 </SelectContent>
@@ -226,11 +270,91 @@ function EmployeeFormSheet({ open, editing, onClose, onSuccess }: EmployeeFormSh
             {errors.pin && <p className="text-xs text-destructive">{errors.pin}</p>}
           </div>
 
+          <div className="space-y-1.5">
+            <Label>Supervisor</Label>
+            <Select value={form.supervisorId || "none"} onValueChange={(v) => set("supervisorId", v === "none" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="No Supervisor" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No Supervisor</SelectItem>
+                {allPossibleSupervisors.map(s => (
+                  <SelectItem key={s.id} value={s.id.toString()}>{s.name} ({s.role})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {isAdmin && (
+            <div className="space-y-1.5">
+              <Label>Company</Label>
+              <Select value={form.companyId || "none"} onValueChange={(v) => {
+                set("companyId", v === "none" ? "" : v);
+                set("branchId", ""); // Reset branch when company changes
+              }}>
+                <SelectTrigger><SelectValue placeholder="No Company" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Company</SelectItem>
+                  {companies.map(c => (
+                    <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <Label>Branch</Label>
+            <Select value={form.branchId || "none"} onValueChange={(v) => set("branchId", v === "none" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="No Branch" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No Branch</SelectItem>
+                {branches.filter(b => !form.companyId || b.companyId === parseInt(form.companyId)).map(b => (
+                  <SelectItem key={b.id} value={b.id.toString()}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>Cancel</Button>
             <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? "Saving..." : editing ? "Save Changes" : "Add Employee"}</Button>
           </div>
         </form>
+
+        {editing && (editing.role === "Supervisor" || editing.role === "Administrator") && (
+          <div className="mt-8 border-t pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Users className="h-4 w-4" /> Team Members
+              </h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 text-xs"
+                onClick={() => {
+                   setForm({ ...EMPTY_FORM, supervisorId: editing.id.toString(), role: "Employee" });
+                   // This is a bit tricky since we are in the same sheet. 
+                   // Ideally we'd reset the form to 'new' mode but keep the supervisorId.
+                }}
+              >
+                <Plus className="h-3 w-3 mr-1" /> Add to Team
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {allEmployees.filter(e => e.supervisorId === editing.id).length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">No employees assigned to this supervisor.</p>
+              ) : (
+                allEmployees.filter(e => e.supervisorId === editing.id).map(member => (
+                  <div key={member.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{member.name}</span>
+                      <span className="text-xs text-muted-foreground">({member.role})</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );
@@ -248,10 +372,33 @@ export default function EmployeesPage() {
   const [activeSessions, setActiveSessions] = useState<ActiveSession[] | null>(null);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [confirmRevoke, setConfirmRevoke] = useState<ActiveSession | null>(null);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const { toast } = useToast();
   const qc = useQueryClient();
 
-  const isAdmin = currentEmployee.role === "Administrator";
+  const role = currentEmployee.role;
+  const isAdmin = role === "Administrator";
+  const isSupervisorOrAdmin = role === "Administrator" || role === "Supervisor";
+
+  async function loadMetadata() {
+    try {
+      const [compRes, branchRes] = await Promise.all([
+        authFetch(`${BASE}/api/companies`),
+        authFetch(`${BASE}/api/branches`),
+      ]);
+      if (compRes.ok) {
+        const data = await compRes.json();
+        setCompanies(data.companies || []);
+      }
+      if (branchRes.ok) {
+        const data = await branchRes.json();
+        setBranches(data.branches || []);
+      }
+    } catch {
+      // Fail silently
+    }
+  }
 
   async function loadAll() {
     try {
@@ -274,11 +421,12 @@ export default function EmployeesPage() {
   }, [toast]);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isSupervisorOrAdmin) {
       loadAll();
       loadSessions();
+      loadMetadata();
     }
-  }, [isAdmin]);
+  }, [isSupervisorOrAdmin]);
 
   function handleToggleShowInactive(show: boolean) {
     setShowInactive(show);
@@ -290,6 +438,10 @@ export default function EmployeesPage() {
   const displayEmployees: EmployeeRow[] = showInactive
     ? (allEmployees ?? [])
     : (allEmployees ? allEmployees.filter((e) => e.isActive) : employees as EmployeeRow[]);
+
+  const allPossibleSupervisors = (allEmployees ?? (employees as EmployeeRow[])).filter(
+    (e) => (e.role === "Administrator" || e.role === "Supervisor") && e.isActive
+  );
 
   const deactivateMutation = useMutation({
     mutationFn: (id: number) => deactivateEmployee(id),
@@ -339,12 +491,12 @@ export default function EmployeesPage() {
   }
 
   useEffect(() => {
-    if (!isAdmin) {
+    if (!isSupervisorOrAdmin) {
       navigate("/");
     }
-  }, [isAdmin, navigate]);
+  }, [isSupervisorOrAdmin, navigate]);
 
-  if (!isAdmin) {
+  if (!isSupervisorOrAdmin) {
     return null;
   }
 
@@ -356,16 +508,20 @@ export default function EmployeesPage() {
           <p className="text-muted-foreground mt-1 text-sm">Manage your team members and their access.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant={showInactive ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleToggleShowInactive(!showInactive)}
-          >
-            {showInactive ? "Hide Inactive" : "Show Inactive"}
-          </Button>
-          <Button onClick={openAdd} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" /> Add Employee
-          </Button>
+          {isAdmin && (
+            <>
+              <Button
+                variant={showInactive ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleToggleShowInactive(!showInactive)}
+              >
+                {showInactive ? "Hide Inactive" : "Show Inactive"}
+              </Button>
+              <Button onClick={openAdd} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" /> Add Employee
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -421,7 +577,7 @@ export default function EmployeesPage() {
                       </button>
                     </div>
                   )}
-                  {emp.id !== currentEmployee.id ? (
+                  {isAdmin && emp.id !== currentEmployee.id && (
                     <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"
@@ -453,7 +609,8 @@ export default function EmployeesPage() {
                         </Button>
                       )}
                     </div>
-                  ) : (
+                  )}
+                  {emp.id === currentEmployee.id && (
                     <span className="text-xs text-muted-foreground px-2 py-1 rounded-full bg-muted">You</span>
                   )}
                 </div>
@@ -463,79 +620,86 @@ export default function EmployeesPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <ShieldAlert className="h-4 w-4 text-muted-foreground" />
-              Active Sessions
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={loadSessions}
-              disabled={sessionsLoading}
-              className="flex items-center gap-1.5 text-xs"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${sessionsLoading ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {activeSessions === null || sessionsLoading ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">Loading sessions…</div>
-          ) : activeSessions.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">No active sessions found.</div>
-          ) : (
-            <div>
-              {activeSessions.map((session) => {
-                const isCurrentSession = session.employeeId === currentEmployee.id;
-                const loginTime = new Date(session.createdAt);
-                const expiresTime = new Date(session.expiresAt);
-                return (
-                  <div
-                    key={session.token}
-                    className="flex items-center gap-4 px-6 py-3 border-b last:border-0"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm flex items-center gap-2">
-                        {session.name}
-                        {isCurrentSession && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                            You
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted-foreground">{session.role}</div>
-                    </div>
-                    <div className="text-right text-xs text-muted-foreground flex-shrink-0 hidden sm:block">
-                      <div>Logged in {loginTime.toLocaleString()}</div>
-                      <div>Expires {expiresTime.toLocaleString()}</div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      title="Force logout"
-                      onClick={() => setConfirmRevoke(session)}
-                      className="flex items-center gap-1.5 text-xs text-destructive hover:text-destructive flex-shrink-0"
-                    >
-                      <LogOut className="h-3.5 w-3.5" />
-                      Revoke
-                    </Button>
-                  </div>
-                );
-              })}
+      {isSupervisorOrAdmin && (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                Active Sessions
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={loadSessions}
+                disabled={sessionsLoading}
+                className="flex items-center gap-1.5 text-xs"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${sessionsLoading ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="p-0">
+            {activeSessions === null || sessionsLoading ? (
+              <div className="text-center py-8 text-muted-foreground text-sm">Loading sessions…</div>
+            ) : activeSessions.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground text-sm">No active sessions found.</div>
+            ) : (
+              <div>
+                {activeSessions.map((session) => {
+                  const isCurrentSession = session.employeeId === currentEmployee.id;
+                  const loginTime = new Date(session.createdAt);
+                  const expiresTime = new Date(session.expiresAt);
+                  return (
+                    <div
+                      key={session.token}
+                      className="flex items-center gap-4 px-6 py-3 border-b last:border-0"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm flex items-center gap-2">
+                          {session.name}
+                          {isCurrentSession && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                              You
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground">{session.role}</div>
+                      </div>
+                      <div className="text-right text-xs text-muted-foreground flex-shrink-0 hidden sm:block">
+                        <div>Logged in {loginTime.toLocaleString()}</div>
+                        <div>Expires {expiresTime.toLocaleString()}</div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="Force logout"
+                        onClick={() => setConfirmRevoke(session)}
+                        className="flex items-center gap-1.5 text-xs text-destructive hover:text-destructive flex-shrink-0"
+                      >
+                        <LogOut className="h-3.5 w-3.5" />
+                        Revoke
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <EmployeeFormSheet
         open={showSheet}
         editing={editing}
         onClose={() => setShowSheet(false)}
         onSuccess={handleFormSuccess}
+        allPossibleSupervisors={allPossibleSupervisors}
+        allEmployees={allEmployees ?? (employees as EmployeeRow[])}
+        companies={companies}
+        branches={branches}
+        isAdmin={isAdmin}
       />
 
       <Dialog open={!!confirmRevoke} onOpenChange={(o) => { if (!o) setConfirmRevoke(null); }}>

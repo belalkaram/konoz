@@ -224,10 +224,10 @@ export default function Tickets() {
             </Select>
             <Select value={selectValue} onValueChange={handleEmployeeFilter}>
               <SelectTrigger className="w-full sm:w-44">
-                <SelectValue placeholder="All agents" />
+                <SelectValue placeholder="All employees" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All agents</SelectItem>
+                <SelectItem value="all">All employees</SelectItem>
                 {employees.map((e) => (
                   <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>
                 ))}
@@ -261,7 +261,7 @@ export default function Tickets() {
               <p className="text-sm text-muted-foreground mt-1">
                 {allTickets.length === 0
                   ? myTickets || activeEmployeeId
-                    ? "No tickets assigned to this agent."
+                    ? "No tickets assigned to this employee."
                     : "Start by adding your first ticket."
                   : "Try adjusting your search or filters."}
               </p>
@@ -297,7 +297,7 @@ export default function Tickets() {
                       <TableHead>Airline</TableHead>
                       <TableHead>Departure</TableHead>
                       <TableHead>PNR</TableHead>
-                      <TableHead>Agent</TableHead>
+                      <TableHead>Employee</TableHead>
                       <TableHead>Ticket Status</TableHead>
                       <TableHead>Payment</TableHead>
                       <TableHead className="text-right">Price</TableHead>
@@ -382,7 +382,7 @@ export default function Tickets() {
                       {t.pnr && <div className="text-xs text-muted-foreground mt-1">PNR: <span className="font-mono">{t.pnr}</span></div>}
                       {t.employeeId && (
                         <div className="text-xs text-muted-foreground mt-1">
-                          Agent: {employees.find((e) => e.id === t.employeeId)?.name ?? `#${t.employeeId}`}
+                          Employee: {employees.find((e) => e.id === t.employeeId)?.name ?? `#${t.employeeId}`}
                         </div>
                       )}
                     </div>

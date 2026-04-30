@@ -5,7 +5,7 @@ function getCsrfToken(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-export function authFetch(input: string, init: RequestInit = {}): Promise<Response> {
+export async function authFetch(input: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
@@ -14,5 +14,19 @@ export function authFetch(input: string, init: RequestInit = {}): Promise<Respon
   if (csrfToken) {
     headers.set("X-CSRF-Token", csrfToken);
   }
-  return fetch(input, { ...init, headers, credentials: "include" });
+  const res = await fetch(input, { ...init, headers, credentials: "include" });
+  
+  if (res.status === 403) {
+    const clone = res.clone();
+    try {
+      const data = await clone.json();
+      if (data.message?.includes("deactivated")) {
+        window.location.href = `${BASE}/login?error=deactivated`;
+      }
+    } catch {
+      // Not JSON or other error
+    }
+  }
+  
+  return res;
 }

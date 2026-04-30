@@ -57,7 +57,7 @@ router.post("/auth/login", async (req, res) => {
       return;
     }
 
-    const sessionToken = await createSession(employee.id, employee.role, employee.name);
+    const sessionToken = await createSession(employee.id, employee.role, employee.name, employee.companyId);
     const csrfToken = (await getCsrfToken(sessionToken))!;
 
     res.cookie(SESSION_COOKIE_NAME, sessionToken, COOKIE_OPTIONS);
@@ -72,6 +72,7 @@ router.post("/auth/login", async (req, res) => {
         initials: employee.initials,
         role: employee.role,
         username: employee.username,
+        companyId: employee.companyId,
       },
       csrfToken,
     });

@@ -6,3 +6,5 @@ export * from "./ticket_status_history";
 export * from "./payments";
 export * from "./reminders";
 export * from "./sessions";
+export * from "./companies";
+export * from "./branches";

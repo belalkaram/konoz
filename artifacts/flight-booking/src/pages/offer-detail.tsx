@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency, formatDuration, formatDateTime } from "@/lib/formatters";
+import { formatCurrency, formatDuration, formatDateTime, formatTime } from "@/lib/formatters";
 import { Plane, ArrowRight, Info, AlertCircle, Luggage, ShoppingBag, X, ExternalLink, RefreshCw, WifiOff } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getAirlineWebsite } from "@/lib/airlines";
@@ -188,10 +188,10 @@ export default function OfferDetail() {
                     <div key={segment.id} className="relative p-6 border-b border-border last:border-0">
                       <div className="flex gap-6">
                         <div className="flex flex-col items-center min-w-12">
-                          <div className="text-sm font-bold">{new Date(segment.departureDateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                          <div className="text-sm font-bold">{formatTime(segment.departureDateTime)}</div>
                           <div className="text-xs text-muted-foreground">{segment.origin.iataCode}</div>
                           <div className="w-px h-full bg-border my-2 flex-1"></div>
-                          <div className="text-sm font-bold">{new Date(segment.arrivalDateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                          <div className="text-sm font-bold">{formatTime(segment.arrivalDateTime)}</div>
                           <div className="text-xs text-muted-foreground">{segment.destination.iataCode}</div>
                         </div>
 

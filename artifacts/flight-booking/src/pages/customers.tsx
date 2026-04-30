@@ -170,23 +170,28 @@ export default function Customers() {
         }
       };
 
+      const escape = (val: any) => {
+        const s = val === null || val === undefined ? "" : String(val);
+        return `"${s.replace(/"/g, '""')}"`;
+      };
+
       return [
-        c.id, 
-        `"${(c.fullName || "").replace(/"/g, '""')}"`, 
-        c.phone || "", 
-        c.email || "", 
-        c.status, 
-        c.pnr || "",
-        formatDateSafe(c.bookingDate),
-        formatDateSafe(c.travelDate),
-        c.costPrice || "0", 
-        c.sellingPrice || "0", 
-        (netProfit(c) ?? 0).toFixed(3), 
-        c.ticketCurrency || ""
+        escape(c.id),
+        escape(c.fullName),
+        escape(c.phone),
+        escape(c.email),
+        escape(c.status),
+        escape(c.pnr),
+        escape(formatDateSafe(c.bookingDate)),
+        escape(formatDateSafe(c.travelDate)),
+        escape(c.costPrice || "0"),
+        escape(c.sellingPrice || "0"),
+        escape((netProfit(c) ?? 0).toFixed(3)),
+        escape(c.ticketCurrency)
       ];
     });
     
-    const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
+    const csvContent = "\uFEFF" + [headers.map(h => `"${h}"`), ...rows].map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

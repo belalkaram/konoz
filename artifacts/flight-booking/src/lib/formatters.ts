@@ -56,7 +56,10 @@ export function formatCurrency(
   }
 }
 
-export function formatDateTime(isoString: string) {
+export function formatDateTime(isoString: string | null | undefined) {
+  if (!isoString) return "—";
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return isoString;
   return new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
     month: "short",
@@ -64,23 +67,36 @@ export function formatDateTime(isoString: string) {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).format(new Date(isoString));
+  }).format(date);
 }
 
-export function formatDate(isoString: string) {
+export function formatDate(isoString: string | null | undefined) {
+  if (!isoString) return "—";
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return isoString;
   return new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
-  }).format(new Date(isoString));
+  }).format(date);
 }
 
-export function formatShortDate(isoString: string) {
+export function formatShortDate(isoString: string | null | undefined) {
+  if (!isoString) return "—";
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return isoString;
   return new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
-  }).format(new Date(isoString));
+  }).format(date);
+}
+
+export function formatTime(isoString: string | null | undefined) {
+  if (!isoString) return "—";
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return "—";
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 export function formatDuration(duration: string) {

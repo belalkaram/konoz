@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCurrency, formatDuration, formatShortDate } from "@/lib/formatters";
+import { formatCurrency, formatDuration, formatShortDate, formatTime } from "@/lib/formatters";
 import { getAirlineWebsite } from "@/lib/airlines";
 import {
   Plane, Search as SearchIcon, ArrowRight, Clock, Users, ArrowLeftRight,
@@ -371,12 +371,8 @@ export default function Search() {
     const segs = slice?.segments ?? [];
     const first = segs[0];
     const last = segs[segs.length - 1];
-    const depTime = first?.departureDateTime
-      ? new Date(first.departureDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
-      : "--:--";
-    const arrTime = last?.arrivalDateTime
-      ? new Date(last.arrivalDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
-      : "--:--";
+    const depTime = formatTime(first?.departureDateTime);
+    const arrTime = formatTime(last?.arrivalDateTime);
     const depDate = first?.departureDateTime ? formatShortDate(first.departureDateTime) : "";
     const arrDate = last?.arrivalDateTime ? formatShortDate(last.arrivalDateTime) : "";
     const stops = segs.length - 1;

@@ -12,7 +12,7 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) {
-  app.listen(port, async (err: any) => {
+  (app as any).listen(port, async (err: any) => {
     if (err) {
       logger.error({ err }, "Error listening on port");
       process.exit(1);

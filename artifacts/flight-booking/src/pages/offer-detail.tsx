@@ -50,13 +50,14 @@ export default function OfferDetail() {
   } = useQuery({
     queryKey: ["offer", offerId],
     queryFn: () => fetchOffer(offerId),
-    enabled: !!offerId,
+    enabled: !!offerId && !cachedOffer,
+    initialData: cachedOffer,
     retry: (count, err: unknown) => {
       const e = err as { status?: number };
       if (e?.status === 404 || e?.status === 410 || e?.status === 502) return false;
       return count < 2;
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: Infinity,
   });
 
   const offer = freshOffer ?? (isError ? cachedOffer : null);

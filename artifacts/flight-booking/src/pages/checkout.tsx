@@ -18,9 +18,21 @@ export default function Checkout() {
   const offerId = searchParams.get("offerId");
   const { toast } = useToast();
 
+  function getSessionOffer(offerId: string) {
+    try {
+      const raw = sessionStorage.getItem(`offer_${offerId}`);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return null;
+  }
+
+  const cachedOffer = getSessionOffer(offerId || "");
+
   const { data: offer, isLoading: isOfferLoading, isError, error } = useGetOffer(offerId || "", {
     query: {
-      enabled: !!offerId,
+      enabled: !!offerId && !cachedOffer,
+      initialData: cachedOffer,
+      staleTime: Infinity,
       queryKey: getGetOfferQueryKey(offerId || ""),
       retry: false,
     }

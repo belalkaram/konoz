@@ -4,6 +4,7 @@ import { Plane, Search, ListFilter, LayoutDashboard, Menu, X, Users, Tag, Bell, 
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useEmployee } from "@/contexts/employee-context";
+import { EmployeeSettingsDialog } from "./employee-settings-dialog";
 
 const SIDEBAR_GRADIENT = "linear-gradient(180deg, #011a13 0%, #022c22 40%, #064e3b 100%)";
 const GOLD_GRADIENT = "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)";
@@ -84,16 +85,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <div className="text-white text-sm font-semibold truncate">{currentEmployee?.name ?? ""}</div>
             <div className="text-xs truncate" style={{ color: "#86efac" }}>{currentEmployee?.role ?? ""}</div>
           </div>
-          <button
-            onClick={logout}
-            title="Sign out"
-            className="p-1.5 rounded-full transition-colors flex-shrink-0"
-            style={{ color: "rgba(255,255,255,0.4)" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.8)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.4)"; }}
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            {currentEmployee && <EmployeeSettingsDialog employee={currentEmployee} />}
+            <button
+              onClick={logout}
+              title="Sign out"
+              className="p-1.5 rounded-full transition-colors flex-shrink-0"
+              style={{ color: "rgba(255,255,255,0.4)" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.8)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.4)" }}
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
     </>

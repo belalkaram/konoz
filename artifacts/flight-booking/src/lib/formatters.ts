@@ -109,3 +109,24 @@ export function formatDuration(duration: string) {
   if (hours === "0") return `${minutes}m`;
   return `${hours}h ${minutes}m`;
 }
+
+export function calculateDaysRemaining(isoString: string | null | undefined): { days: number | null; label: string; color: string } {
+  if (!isoString) return { days: null, label: "—", color: "text-muted-foreground" };
+  const targetDate = new Date(isoString);
+  if (isNaN(targetDate.getTime())) return { days: null, label: "—", color: "text-muted-foreground" };
+
+  const now = new Date();
+  // Set both to midnight for simple day difference
+  const d1 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const d2 = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+  
+  const diffTime = d2.getTime() - d1.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return { days: diffDays, label: "Departed", color: "text-muted-foreground" };
+  if (diffDays === 0) return { days: 0, label: "Travels Today", color: "text-destructive font-bold animate-pulse" };
+  if (diffDays === 1) return { days: 1, label: "1 Day Left", color: "text-destructive font-semibold" };
+  if (diffDays <= 3) return { days: diffDays, label: `${diffDays} Days Left`, color: "text-orange-600 font-semibold" };
+  
+  return { days: diffDays, label: `${diffDays} Days Left`, color: "text-emerald-600 font-medium" };
+}

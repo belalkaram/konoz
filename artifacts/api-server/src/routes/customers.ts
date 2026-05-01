@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, ilike, or, sql, and, desc, inArray } from "drizzle-orm";
-import { db, customersTable, ticketsTable, insertCustomerSchema, insertTicketSchema, updateCustomerSchema } from "@workspace/db";
+import { db, customersTable, ticketsTable, employeesTable, insertCustomerSchema, insertTicketSchema, updateCustomerSchema } from "@workspace/db";
 import { requireAuth, requireAdmin, getSessionFromRequest, getTeamEmployeeIds } from "../middlewares/auth.js";
 
 const router = Router();
@@ -157,6 +157,32 @@ router.post("/customers", requireAuth, async (req, res) => {
     });
 
     res.status(201).json({ customer });
+
+    // Send email notification asynchronously
+    (async () => {
+      try {
+        const [emp] = await db
+          .select({ email: employeesTable.email, name: employeesTable.name })
+          .from(employeesTable)
+          .where(eq(employeesTable.id, customer.assignedEmployeeId!))
+          .limit(1);
+
+        if (emp?.email) {
+          req.log.info({ email: emp.email, employeeName: emp.name }, "Attempting to send new traveler notification email");
+          const { pnr, travelDate } = body;
+          await (await import("../lib/email.js")).sendNewTravelerNotification(
+            emp.email,
+            customer.fullName,
+            { phone: customer.phone, pnr, travelDate }
+          );
+          req.log.info({ email: emp.email }, "New traveler notification email sent successfully");
+        } else {
+          req.log.warn({ employeeId: customer.assignedEmployeeId }, "Skipping email notification: Assigned employee has no email set");
+        }
+      } catch (err) {
+        req.log.error({ err }, "Error sending new traveler notification email");
+      }
+    })();
   } catch (err) {
     req.log.error({ err }, "Error creating customer");
     res.status(500).json({ error: "server_error", message: "Failed to create customer" });

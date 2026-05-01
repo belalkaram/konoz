@@ -39,10 +39,39 @@ const UpdateEmployeeSchema = z
     supervisorId: z.number().nullable().optional(),
     companyId: z.number().nullable().optional(),
     branchId: z.number().nullable().optional(),
+    email: z.string().email("Invalid email address").nullable().optional(),
   })
   .strict();
 
 const router = Router();
+
+import { requireAuth } from "../middlewares/auth.js";
+
+router.patch("/employees/me/email", requireAuth, async (req, res) => {
+  const email = req.body.email;
+  const myId = req.employee!.employeeId;
+
+  if (email && !z.string().email().safeParse(email).success) {
+    res.status(400).json({ error: "validation_error", message: "Invalid email address" });
+    return;
+  }
+
+  try {
+    const [employee] = await db
+      .update(employeesTable)
+      .set({ email: email || null, updatedAt: new Date() })
+      .where(eq(employeesTable.id, myId))
+      .returning({
+        id: employeesTable.id,
+        email: employeesTable.email,
+      });
+
+    res.json({ success: true, email: employee?.email });
+  } catch (err) {
+    req.log.error({ err }, "Error updating profile email");
+    res.status(500).json({ error: "server_error", message: "Failed to update email" });
+  }
+});
 
 router.get("/employees", async (req, res) => {
   try {
@@ -77,6 +106,7 @@ router.get("/employees", async (req, res) => {
           initials: employeesTable.initials,
           role: employeesTable.role,
           username: employeesTable.username,
+          email: employeesTable.email,
           isActive: employeesTable.isActive,
           supervisorId: employeesTable.supervisorId,
           createdAt: employeesTable.createdAt,
@@ -105,6 +135,7 @@ router.get("/employees", async (req, res) => {
         name: employeesTable.name,
         initials: employeesTable.initials,
         role: employeesTable.role,
+        email: employeesTable.email,
       })
       .from(employeesTable)
       .where(eq(employeesTable.isActive, true))

@@ -7,6 +7,7 @@ export interface Employee {
   initials: string;
   role: string;
   username: string;
+  email?: string | null;
   isActive?: boolean;
 }
 
@@ -18,6 +19,7 @@ interface EmployeeContextValue {
   login: (username: string, pin: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   refreshEmployees: () => Promise<void>;
+  refreshCurrentEmployee: () => Promise<void>;
 }
 
 const EmployeeContext = createContext<EmployeeContextValue>({
@@ -28,6 +30,7 @@ const EmployeeContext = createContext<EmployeeContextValue>({
   login: async () => ({ success: false }),
   logout: () => {},
   refreshEmployees: async () => {},
+  refreshCurrentEmployee: async () => {},
 });
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -48,27 +51,27 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function init() {
-      try {
-        const res = await fetch(`${BASE}/api/auth/me`, { credentials: "include" });
-        if (res.ok) {
-          const data = await res.json() as { employee: Employee };
-          if (!cancelled && data.employee?.id) {
-            setCurrentEmployee(data.employee);
-          }
+  const refreshCurrentEmployee = useCallback(async () => {
+    try {
+      const res = await fetch(`${BASE}/api/auth/me`, { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json() as { employee: Employee };
+        if (data.employee?.id) {
+          setCurrentEmployee(data.employee);
         }
-      } catch {
       }
-      if (!cancelled) {
-        await loadEmployees();
-        setIsLoading(false);
-      }
+    } catch {
+    }
+  }, []);
+
+  useEffect(() => {
+    async function init() {
+      await refreshCurrentEmployee();
+      await loadEmployees();
+      setIsLoading(false);
     }
     init();
-    return () => { cancelled = true; };
-  }, [loadEmployees]);
+  }, [loadEmployees, refreshCurrentEmployee]);
 
   const login = useCallback(async (username: string, pin: string) => {
     try {
@@ -98,7 +101,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <EmployeeContext.Provider value={{ currentEmployee, employees, sessionToken: null, isLoading, login, logout, refreshEmployees: loadEmployees }}>
+    <EmployeeContext.Provider value={{ currentEmployee, employees, sessionToken: null, isLoading, login, logout, refreshEmployees: loadEmployees, refreshCurrentEmployee }}>
       {children}
     </EmployeeContext.Provider>
   );

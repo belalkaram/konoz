@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, numeric, pgEnum, date } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, numeric, pgEnum, date, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { customersTable } from "./customers";
@@ -40,6 +40,7 @@ export const ticketsTable = pgTable("tickets", {
   bookingDate: date("booking_date"),
   baggageDetails: text("baggage_details"),
   notes: text("notes"),
+  reminderSent24h: boolean("reminder_sent_24h").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

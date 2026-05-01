@@ -102,6 +102,7 @@ router.get("/auth/me", requireAuth, async (req, res) => {
         initials: employeesTable.initials,
         role: employeesTable.role,
         username: employeesTable.username,
+        email: employeesTable.email,
       })
       .from(employeesTable)
       .where(eq(employeesTable.id, req.employee!.employeeId));

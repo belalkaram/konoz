@@ -13,7 +13,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatCurrency, formatShortDate } from "@/lib/formatters";
+import { formatCurrency, formatShortDate, calculateDaysRemaining } from "@/lib/formatters";
 import {
   TICKET_STATUS_COLORS, TICKET_STATUS_LABELS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS,
   TICKET_STATUSES, PAYMENT_STATUSES,
@@ -296,6 +296,7 @@ export default function Tickets() {
                       <TableHead>Route</TableHead>
                       <TableHead>Airline</TableHead>
                       <TableHead>Departure</TableHead>
+                      <TableHead>Days Left</TableHead>
                       <TableHead>PNR</TableHead>
                       <TableHead>Employee</TableHead>
                       <TableHead>Ticket Status</TableHead>
@@ -337,6 +338,12 @@ export default function Tickets() {
                           <TableCell>{t.airline ?? "—"}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {t.departureDatetime ? formatShortDate(t.departureDatetime) : "—"}
+                          </TableCell>
+                          <TableCell>
+                            {(() => {
+                              const { label, color } = calculateDaysRemaining(t.departureDatetime);
+                              return <span className={`text-xs ${color}`}>{label}</span>;
+                            })()}
                           </TableCell>
                           <TableCell className="font-mono text-sm">{t.pnr ?? "—"}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">

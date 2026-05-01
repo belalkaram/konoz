@@ -9,6 +9,7 @@ export const employeesTable = pgTable("employees", {
   role: text("role").notNull().default("Employee"),
   username: text("username").notNull().unique(),
   pinHash: text("pin_hash").notNull(),
+  email: text("email"),
   isActive: boolean("is_active").notNull().default(true),
   supervisorId: integer("supervisor_id").references((): AnyPgColumn => employeesTable.id),
   companyId: integer("company_id"),

@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { formatShortDate } from "@/lib/formatters";
+import { formatShortDate, calculateDaysRemaining } from "@/lib/formatters";
 import { CustomerForm, EMPTY_CUSTOMER_FORM } from "@/components/customer-form";
 import { ExcelImportDialog } from "@/components/excel-import";
 import { STATUS_COLORS, STATUS_LABELS, CUSTOMER_STATUSES } from "@/lib/customer-constants";
@@ -407,7 +407,7 @@ export default function Customers() {
                     />
                   </div>
                 )}
-                <div className="flex-1 grid grid-cols-[2fr_1fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_1fr_0.9fr_auto] gap-3 px-6 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                <div className="flex-1 grid grid-cols-[2fr_1fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_1fr_1fr_0.9fr_auto] gap-3 px-6 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                   <button type="button" onClick={() => toggleSort("name")} className="flex items-center hover:text-foreground transition-colors text-left">
                     Name<SortIcon col="name" />
                   </button>
@@ -420,6 +420,7 @@ export default function Customers() {
                     Booking Date<SortIcon col="bookingDate" />
                   </button>
                   <span>Travel Date</span>
+                  <span>Days Left</span>
                   <button type="button" onClick={() => toggleSort("netProfit")} className="flex items-center hover:text-foreground transition-colors text-left">
                     Net Profit<SortIcon col="netProfit" />
                   </button>
@@ -449,7 +450,7 @@ export default function Customers() {
                         </div>
                       )}
                       <Link href={`/customers/${c.id}`} className="flex-1 min-w-0">
-                        <div className="grid md:grid-cols-[2fr_1fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_1fr_0.9fr_auto] grid-cols-1 gap-2 md:gap-3 px-6 py-3.5 cursor-pointer group items-center">
+                        <div className="grid md:grid-cols-[2fr_1fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_1fr_1fr_0.9fr_auto] grid-cols-1 gap-2 md:gap-3 px-6 py-3.5 cursor-pointer group items-center">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
                               style={{ background: "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)", color: "#022c22" }}>
@@ -492,6 +493,13 @@ export default function Customers() {
                           
                           <div className="hidden md:block text-sm text-muted-foreground">
                             {c.travelDate ? formatShortDate(c.travelDate) : "—"}
+                          </div>
+
+                          <div className="hidden md:block">
+                            {(() => {
+                              const { label, color } = calculateDaysRemaining(c.travelDate);
+                              return <span className={`text-xs ${color}`}>{label}</span>;
+                            })()}
                           </div>
 
                           <div className="hidden md:flex items-center gap-1">

@@ -13,8 +13,11 @@ function getRole(req: import("express").Request): string {
 function coerceDates(body: Record<string, unknown>, ...fields: string[]) {
   const result = { ...body };
   for (const field of fields) {
-    if (result[field] && typeof result[field] === "string") {
-      result[field] = new Date(result[field] as string);
+    if (result[field] === "") {
+      result[field] = null;
+    } else if (result[field] && typeof result[field] === "string") {
+      const d = new Date(result[field] as string);
+      result[field] = isNaN(d.getTime()) ? null : d;
     }
   }
   return result;

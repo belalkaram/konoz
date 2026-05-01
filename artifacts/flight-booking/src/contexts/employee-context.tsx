@@ -42,7 +42,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
 
   const loadEmployees = useCallback(async () => {
     try {
-      const res = await fetch(`${BASE}/api/employees`, { credentials: "include" });
+      const res = await authFetch(`${BASE}/api/employees`);
       if (res.ok) {
         const data = await res.json() as { employees: Employee[] };
         setEmployees(data.employees);
@@ -53,7 +53,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
 
   const refreshCurrentEmployee = useCallback(async () => {
     try {
-      const res = await fetch(`${BASE}/api/auth/me`, { credentials: "include" });
+      const res = await authFetch(`${BASE}/api/auth/me`);
       if (res.ok) {
         const data = await res.json() as { employee: Employee };
         if (data.employee?.id) {

@@ -23,6 +23,7 @@ import Reminders from "@/pages/reminders";
 import EmployeesPage from "@/pages/employees";
 import CompaniesPage from "@/pages/companies";
 import HRManagement from "@/pages/hr";
+import Reports from "@/pages/reports";
 import NotAuthorized from "@/pages/not-authorized";
 
 const queryClient = new QueryClient({
@@ -94,6 +95,7 @@ function Router() {
         <Route path="/tickets/:id" component={TicketDetail} />
         <Route path="/tickets" component={Tickets} />
         <Route path="/reminders" component={Reminders} />
+        <Route path="/reports" component={Reports} />
         <Route path="/hr">{() => <HRRoute component={HRManagement} />}</Route>
         <Route path="/employees">{() => <SupervisorOrAdminRoute component={EmployeesPage} />}</Route>
         <Route path="/companies">{() => <AdminRoute component={CompaniesPage} />}</Route>

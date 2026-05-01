@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { eq, gte, lt, and, isNotNull, count, sql, inArray, type SQL } from "drizzle-orm";
+import { eq, gte, lt, and, isNotNull, count, sql, type SQL } from "drizzle-orm";
 import { db, customersTable, customerNotesTable, ticketsTable, paymentsTable, employeesTable } from "@workspace/db";
-import { requireAuth, getTeamEmployeeIds } from "../middlewares/auth.js";
+import { requireAuth } from "../middlewares/auth.js";
 
 const router = Router();
 
@@ -11,17 +11,31 @@ function getRole(req: import("express").Request): string {
 
 router.get("/dashboard/stats", requireAuth, async (req, res) => {
   try {
+    const role = getRole(req);
+
+    // HR employees have no access to CRM/business stats — they use the /hr section instead
+    if (role === "HR") {
+      res.json({
+        hrOnly: true,
+        customers: { total: 0, newToday: 0, followUpsToday: 0, missedFollowUps: 0, byStatus: {} },
+        totalRevenue: "0",
+        tickets: { total: 0, quoted: 0, reserved: 0, confirmed: 0, paid: 0, issued: 0, cancelled: 0, refunded: 0, unpaid: 0, partiallyPaid: 0 },
+        recentCustomers: [],
+        recentTickets: [],
+        todayFollowUps: [],
+      });
+      return;
+    }
+
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const todayEnd = new Date(todayStart.getTime() + 86400000);
 
-    const role = getRole(req);
     const myId = req.employee!.employeeId;
-    
+
     let customerFilter: SQL | undefined;
     let noteFilter: SQL | undefined;
     let ticketFilter: SQL | undefined;
-    let paymentFilter: SQL | undefined;
 
     if (role === "Supervisor") {
       const myCompanyId = req.employee!.companyId!;
@@ -41,6 +55,7 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
       noteFilter = eq(customerNotesTable.employeeId, myId);
       ticketFilter = eq(ticketsTable.employeeId, myId);
     }
+    // Administrator → no filter (sees everything)
 
     const [totalCustomersResult] = await db
       .select({ count: count() })
@@ -52,34 +67,30 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
       .from(customersTable)
       .where(and(
         customerFilter,
-        gte(customersTable.createdAt, todayStart), 
+        gte(customersTable.createdAt, todayStart),
         lt(customersTable.createdAt, todayEnd)
       ));
 
     const followUpsToday = await db
       .select({ count: count() })
       .from(customerNotesTable)
-      .where(
-        and(
-          noteFilter,
-          isNotNull(customerNotesTable.followUpDate),
-          gte(customerNotesTable.followUpDate, todayStart),
-          lt(customerNotesTable.followUpDate, todayEnd),
-          eq(customerNotesTable.followUpStatus, "pending"),
-        )
-      );
+      .where(and(
+        noteFilter,
+        isNotNull(customerNotesTable.followUpDate),
+        gte(customerNotesTable.followUpDate, todayStart),
+        lt(customerNotesTable.followUpDate, todayEnd),
+        eq(customerNotesTable.followUpStatus, "pending"),
+      ));
 
     const missedFollowUps = await db
       .select({ count: count() })
       .from(customerNotesTable)
-      .where(
-        and(
-          noteFilter,
-          isNotNull(customerNotesTable.followUpDate),
-          lt(customerNotesTable.followUpDate, todayStart),
-          eq(customerNotesTable.followUpStatus, "pending"),
-        )
-      );
+      .where(and(
+        noteFilter,
+        isNotNull(customerNotesTable.followUpDate),
+        lt(customerNotesTable.followUpDate, todayStart),
+        eq(customerNotesTable.followUpStatus, "pending"),
+      ));
 
     const [totalTicketsResult] = await db
       .select({ count: count() })
@@ -87,28 +98,19 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
       .where(ticketFilter);
 
     const ticketsByStatus = await db
-      .select({
-        status: ticketsTable.ticketStatus,
-        count: count(),
-      })
+      .select({ status: ticketsTable.ticketStatus, count: count() })
       .from(ticketsTable)
       .where(ticketFilter)
       .groupBy(ticketsTable.ticketStatus);
 
     const ticketsByPayment = await db
-      .select({
-        status: ticketsTable.paymentStatus,
-        count: count(),
-      })
+      .select({ status: ticketsTable.paymentStatus, count: count() })
       .from(ticketsTable)
       .where(ticketFilter)
       .groupBy(ticketsTable.paymentStatus);
 
     const customersByStatus = await db
-      .select({
-        status: customersTable.status,
-        count: count(),
-      })
+      .select({ status: customersTable.status, count: count() })
       .from(customersTable)
       .where(customerFilter)
       .groupBy(customersTable.status);
@@ -117,10 +119,7 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
       .select({ total: sql<string>`COALESCE(SUM(${paymentsTable.amount}), 0)::text` })
       .from(paymentsTable)
       .innerJoin(customersTable, eq(paymentsTable.customerId, customersTable.id))
-      .where(and(
-        customerFilter,
-        eq(paymentsTable.paymentStatus, "paid")
-      ));
+      .where(and(customerFilter, eq(paymentsTable.paymentStatus, "paid")));
 
     const totalRevenue = revenueResult[0]?.total ?? "0";
 
@@ -132,10 +131,7 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
       .limit(5);
 
     const recentTickets = await db
-      .select({
-        ticket: ticketsTable,
-        customerName: customersTable.fullName,
-      })
+      .select({ ticket: ticketsTable, customerName: customersTable.fullName })
       .from(ticketsTable)
       .leftJoin(customersTable, eq(ticketsTable.customerId, customersTable.id))
       .where(ticketFilter)
@@ -143,21 +139,15 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
       .limit(5);
 
     const todayFollowUpsDetail = await db
-      .select({
-        note: customerNotesTable,
-        customerName: customersTable.fullName,
-        customerId: customersTable.id,
-      })
+      .select({ note: customerNotesTable, customerName: customersTable.fullName, customerId: customersTable.id })
       .from(customerNotesTable)
       .leftJoin(customersTable, eq(customerNotesTable.customerId, customersTable.id))
-      .where(
-        and(
-          noteFilter,
-          isNotNull(customerNotesTable.followUpDate),
-          gte(customerNotesTable.followUpDate, todayStart),
-          lt(customerNotesTable.followUpDate, todayEnd),
-        )
-      )
+      .where(and(
+        noteFilter,
+        isNotNull(customerNotesTable.followUpDate),
+        gte(customerNotesTable.followUpDate, todayStart),
+        lt(customerNotesTable.followUpDate, todayEnd),
+      ))
       .orderBy(customerNotesTable.followUpDate)
       .limit(10);
 
@@ -187,15 +177,8 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
         partiallyPaid: paymentMap["partially_paid"] ?? 0,
       },
       recentCustomers,
-      recentTickets: recentTickets.map((r) => ({
-        ...r.ticket,
-        customerName: r.customerName,
-      })),
-      todayFollowUps: todayFollowUpsDetail.map((r) => ({
-        ...r.note,
-        customerName: r.customerName,
-        customerId: r.customerId,
-      })),
+      recentTickets: recentTickets.map((r) => ({ ...r.ticket, customerName: r.customerName })),
+      todayFollowUps: todayFollowUpsDetail.map((r) => ({ ...r.note, customerName: r.customerName, customerId: r.customerId })),
     });
   } catch (err) {
     req.log.error({ err }, "Error getting dashboard stats");

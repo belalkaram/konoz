@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useToast } from "@/hooks/use-toast";
 import { useEmployee, useCurrentEmployee } from "@/contexts/employee-context";
 import { authFetch } from "@/lib/api";
+import { SystemSettingsDialog } from "@/components/system-settings-dialog";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -246,6 +247,7 @@ function EmployeeFormSheet({ open, editing, onClose, onSuccess, allPossibleSuper
                   <SelectItem value="Employee">Employee</SelectItem>
                   <SelectItem value="Administrator">Administrator</SelectItem>
                   <SelectItem value="Supervisor">Supervisor</SelectItem>
+                  <SelectItem value="HR">HR</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -517,6 +519,7 @@ export default function EmployeesPage() {
               >
                 {showInactive ? "Hide Inactive" : "Show Inactive"}
               </Button>
+              <SystemSettingsDialog />
               <Button onClick={openAdd} className="flex items-center gap-2">
                 <Plus className="h-4 w-4" /> Add Employee
               </Button>

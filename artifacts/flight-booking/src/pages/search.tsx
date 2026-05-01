@@ -17,6 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 import { AirportCombobox } from "@/components/airport-combobox";
 import { Input } from "@/components/ui/input";
 import { authFetch, BASE } from "@/lib/api";
+import { FlexibleDatePriceSlider } from "@/components/flexible-date-price-slider";
+import { FarePackageCards } from "@/components/fare-package-cards";
 
 type TripType = "one_way" | "round_trip";
 type StopsFilter = "all" | "nonstop" | "stops";
@@ -93,6 +95,7 @@ interface Offer {
   availableBaggageServices: BaggageService[];
   slices: Slice[];
   owner: Carrier;
+  farePackages?: any[];
 }
 
 interface SearchResult {
@@ -590,6 +593,21 @@ export default function Search() {
 
       {allOffers.length > 0 && !isLoading && (
         <div className="space-y-4">
+          <FlexibleDatePriceSlider
+            selectedDate={departureDate}
+            searchParams={currentSearchKey.current}
+            onDateChange={(newDate) => {
+              setDepartureDate(newDate);
+              const url = new URL(window.location.href);
+              url.searchParams.set("date", newDate);
+              setLocation(url.pathname + url.search);
+              if (currentSearchKey.current) {
+                runSearch({ ...currentSearchKey.current, departureDate: newDate });
+              }
+            }}
+            displayCurrency={displayCurrency}
+          />
+
           {/* Filters bar */}
           <div className="flex flex-wrap gap-3 items-start">
             <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg p-1">
@@ -665,6 +683,11 @@ export default function Search() {
                   try { sessionStorage.setItem(`offer_${offer.id}`, JSON.stringify(offer)); } catch {}
                   setLocation(`/offers/${offer.id}`);
                 };
+                
+                const selectPackage = (packageId: string) => {
+                  setLocation(`/offers/${packageId}`);
+                };
+
                 const baggageBadges = (
                   <div className="flex gap-1 flex-wrap">
                     {checkedBag && checkedBag.quantity > 0 ? (
@@ -795,6 +818,15 @@ export default function Search() {
                         <div className="mt-3 pt-3 border-t border-border/60">
                           <BaggagePackages services={offer.availableBaggageServices} currency={offer.totalCurrency} />
                         </div>
+                      )}
+
+                      {/* Fare Packages */}
+                      {offer.farePackages && (
+                        <FarePackageCards 
+                          packages={offer.farePackages} 
+                          displayCurrency={displayCurrency} 
+                          onSelect={selectPackage} 
+                        />
                       )}
                     </CardContent>
                   </Card>

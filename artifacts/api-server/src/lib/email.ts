@@ -1,28 +1,53 @@
 import nodemailer from "nodemailer";
 import { logger } from "./logger.js";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: parseInt(process.env.SMTP_PORT || "587"),
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false
-  }
-});
+import { db, systemSettingsTable } from "@workspace/db";
+import { inArray } from "drizzle-orm";
+
+async function getTransporter() {
+  const keys = ["smtp_host", "smtp_port", "smtp_user", "smtp_pass"];
+  const rows = await db.select().from(systemSettingsTable).where(inArray(systemSettingsTable.key, keys));
+  
+  const settings: Record<string, string> = {};
+  rows.forEach(r => {
+    settings[r.key] = r.value;
+  });
+
+  const host = settings.smtp_host || process.env.SMTP_HOST || "smtp.gmail.com";
+  const port = parseInt(settings.smtp_port || process.env.SMTP_PORT || "587");
+  const user = settings.smtp_user || process.env.SMTP_USER;
+  const pass = settings.smtp_pass || process.env.SMTP_PASS;
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+    tls: { rejectUnauthorized: false }
+  });
+}
 
 export async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
-  if (!process.env.SMTP_PASS || process.env.SMTP_PASS === "your_gmail_app_password_here") {
+  const keys = ["smtp_pass", "smtp_user", "smtp_from_name"];
+  const rows = await db.select().from(systemSettingsTable).where(inArray(systemSettingsTable.key, keys));
+  const settings: Record<string, string> = {};
+  rows.forEach(r => {
+    settings[r.key] = r.value;
+  });
+
+  const pass = settings.smtp_pass || process.env.SMTP_PASS;
+  const user = settings.smtp_user || process.env.SMTP_USER;
+  const fromName = settings.smtp_from_name || process.env.SMTP_FROM_NAME || "AeroOps";
+
+  if (!pass || pass === "your_gmail_app_password_here") {
     logger.warn("Email not sent: SMTP_PASS is not configured.");
     return;
   }
 
   try {
+    const transporter = await getTransporter();
     const info = await transporter.sendMail({
-      from: `"${process.env.SMTP_FROM_NAME || "AeroOps"}" <${process.env.SMTP_USER}>`,
+      from: `"${fromName}" <${user}>`,
       to,
       subject,
       html,

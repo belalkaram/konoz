@@ -74,6 +74,7 @@ function mapOffer(offer: any) {
       departureDateTime: slice.segments[0]?.departing_at ?? "",
       arrivalDateTime: slice.segments[slice.segments.length - 1]?.arriving_at ?? "",
       duration: slice.duration,
+      fareBrandName: slice.fare_brand_name,
       segments: slice.segments.map((seg: any) => ({
         id: seg.id,
         origin: {
@@ -117,6 +118,7 @@ function mapOffer(offer: any) {
       })),
     })),
     passengers: offer.passengers,
+    conditions: offer.conditions,
     owner: {
       iataCode: offer.owner.iata_code,
       name: offer.owner.name,
@@ -124,6 +126,78 @@ function mapOffer(offer: any) {
       logotypeLockupImageUrl: offer.owner.logotype_lockup_image_url,
     },
   };
+}
+
+function getFlightGroupKey(offer: ReturnType<typeof mapOffer>) {
+  const slicesKey = offer.slices
+    .map((slice: any) =>
+      slice.segments
+        .map((seg: any) => `${seg.marketingCarrier.iataCode}${seg.flightNumber}-${seg.departureDateTime}`)
+        .join("|")
+    )
+    .join("||");
+  return `${offer.owner.iataCode}-${slicesKey}`;
+}
+
+function groupOffers(offers: ReturnType<typeof mapOffer>[]) {
+  const groups = new Map<string, ReturnType<typeof mapOffer>[]>();
+  for (const offer of offers) {
+    const key = getFlightGroupKey(offer);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(offer);
+  }
+
+  const result = [];
+  for (const group of groups.values()) {
+    group.sort((a, b) => parseFloat(a.totalAmount) - parseFloat(b.totalAmount));
+    const cheapest = group[0];
+
+    const packageNames = ["Basic", "Comfort", "Flex", "Flex Plus", "Business"];
+
+    const farePackages = group.map((offer, index) => {
+      let name = offer.slices[0]?.fareBrandName || "Basic";
+      if (!offer.slices[0]?.fareBrandName) {
+        if (offer.cabinClass === "business") {
+          name = "Business";
+        } else if (offer.cabinClass === "first") {
+          name = "First";
+        } else if (offer.cabinClass === "premium_economy") {
+          name = "Premium";
+        } else {
+          name = packageNames[Math.min(index, 3)];
+        }
+      }
+
+      const diff = parseFloat(offer.totalAmount) - parseFloat(cheapest.totalAmount);
+      
+      const refundable = offer.conditions?.refund_before_departure?.allowed ?? false;
+      const changeable = offer.conditions?.change_before_departure?.allowed ?? false;
+
+      return {
+        id: offer.id,
+        name,
+        cabin: offer.cabinClass,
+        price: parseFloat(offer.totalAmount),
+        priceDifference: diff,
+        currency: offer.totalCurrency,
+        baggage: offer.availableBaggageServices || [],
+        refundable,
+        changeable,
+        sourceOfferId: offer.id,
+        available: true,
+      };
+    });
+
+    result.push({
+      ...cheapest,
+      basePrice: parseFloat(cheapest.totalAmount),
+      currency: cheapest.totalCurrency,
+      farePackages,
+    });
+  }
+
+  result.sort((a, b) => parseFloat(a.totalAmount) - parseFloat(b.totalAmount));
+  return result;
 }
 
 function extractDuffelError(err: unknown): { message: string; code: string; httpStatus: number } {
@@ -204,7 +278,8 @@ router.post("/offers/search", requireAuth, async (req, res) => {
       ...(after ? { after } : {}),
     });
 
-    const offers = offersList.data.map(mapOffer);
+    const rawOffers = offersList.data.map(mapOffer);
+    const offers = groupOffers(rawOffers);
     const nextAfter = offersList.meta?.after ?? null;
 
     res.json({ offerRequestId, offers, nextAfter });

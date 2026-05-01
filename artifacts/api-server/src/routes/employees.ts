@@ -8,7 +8,7 @@ import { requireAdmin, requireSupervisorOrAdmin, getSessionFromRequest, getTeamE
 const CreateEmployeeSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   initials: z.string().min(1, "Initials are required").max(5),
-  role: z.enum(["Administrator", "Employee", "Supervisor"], { errorMap: () => ({ message: "Role must be Administrator, Supervisor or Employee" }) }),
+  role: z.enum(["Administrator", "Employee", "Supervisor", "HR"], { errorMap: () => ({ message: "Role must be Administrator, Supervisor, Employee or HR" }) }),
   username: z
     .string()
     .min(1, "Username is required")
@@ -27,7 +27,7 @@ const UpdateEmployeeSchema = z
     name: z.string().min(1).max(100).optional(),
     initials: z.string().min(1).max(5).optional(),
     role: z
-      .enum(["Administrator", "Employee", "Supervisor"], { errorMap: () => ({ message: "Role must be Administrator, Supervisor or Employee" }) })
+      .enum(["Administrator", "Employee", "Supervisor", "HR"], { errorMap: () => ({ message: "Role must be Administrator, Supervisor, Employee or HR" }) })
       .optional(),
     username: z
       .string()
@@ -91,7 +91,7 @@ router.get("/employees", async (req, res) => {
       }
 
       const conditions = [];
-      if (role === "Supervisor") {
+      if (role === "Supervisor" || role === "HR") {
         conditions.push(eq(employeesTable.companyId, session!.companyId!));
       } else if (role === "Administrator") {
         // No company filter for global admin

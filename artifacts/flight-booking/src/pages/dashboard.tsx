@@ -117,11 +117,13 @@ function SectionSkeleton() {
 export default function Dashboard() {
   const [, navigate] = useLocation();
   const currentEmployee = useCurrentEmployee();
+  const isHR = currentEmployee.role === "HR";
 
   const { data: crmData, isLoading: crmLoading, isError: crmError } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: fetchDashboardStats,
     staleTime: 30_000,
+    enabled: !isHR,
   });
 
   const { data: flightStats, isLoading: flightLoading, isError: flightError } = useGetStatsSummary();
@@ -130,6 +132,81 @@ export default function Dashboard() {
     (f) => f.employeeId === currentEmployee.id
   ) ?? [];
 
+  // ── HR-only dashboard ──────────────────────────────────────────────────────
+  if (isHR) {
+    return (
+      <div className="space-y-10">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Welcome, {currentEmployee.name}.</p>
+        </div>
+
+        <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 dark:border-emerald-800">
+          <CardContent className="p-8 flex flex-col items-center text-center gap-4">
+            <div className="h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+              <UserCheck className="h-8 w-8 text-emerald-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-300">HR Management Portal</h2>
+              <p className="text-muted-foreground mt-1 text-sm max-w-md">
+                Your dedicated workspace for managing employee attendance, leaves, and HR records.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/hr")}
+              className="mt-2 px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition-colors flex items-center gap-2"
+            >
+              <UserCheck className="h-4 w-4" />
+              Open HR Section
+            </button>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate("/hr")}>
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                <Clock className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <div className="text-sm font-medium">Attendance Records</div>
+                <div className="text-xs text-muted-foreground">Log check-in / check-out</div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate("/hr")}>
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                <Bell className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <div className="text-sm font-medium">Leave Requests</div>
+                <div className="text-xs text-muted-foreground">Manage employee leave</div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate("/hr")}>
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+                <Users className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <div className="text-sm font-medium">HR Reports</div>
+                <div className="text-xs text-muted-foreground">Export attendance &amp; leave logs</div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Standard dashboard (Employee / Supervisor / Administrator) ─────────────
   return (
     <div className="space-y-10">
       <div>

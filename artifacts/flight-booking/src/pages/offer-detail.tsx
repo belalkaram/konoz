@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDuration, formatDateTime, formatTime } from "@/lib/formatters";
-import { Plane, ArrowRight, Info, AlertCircle, Luggage, ShoppingBag, X, ExternalLink, RefreshCw, WifiOff } from "lucide-react";
+import { Plane, ArrowRight, Info, AlertCircle, Luggage, ShoppingBag, X, ExternalLink, RefreshCw, WifiOff, ArrowLeft } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getAirlineWebsite } from "@/lib/airlines";
 import { authFetch, BASE } from "@/lib/api";
@@ -28,7 +28,7 @@ function getSessionOffer(offerId: string) {
   try {
     const raw = sessionStorage.getItem(`offer_${offerId}`);
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch { }
   return null;
 }
 
@@ -91,8 +91,8 @@ export default function OfferDetail() {
             {isAirlineError
               ? "The airline's system returned an error. This is a temporary issue on the airline's side. Please go back and try selecting the flight again."
               : isExpired
-              ? "This offer is no longer available. It may have expired. Please search again for updated results."
-              : apiError?.message || "Failed to load offer details."}
+                ? "This offer is no longer available. It may have expired. Please search again for updated results."
+                : apiError?.message || "Failed to load offer details."}
           </AlertDescription>
         </Alert>
         <div className="flex gap-3">
@@ -137,25 +137,36 @@ export default function OfferDetail() {
       )}
 
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-4">
-          {offer.owner?.logoSymbolUrl && (
-            <img src={offer.owner.logoSymbolUrl} alt={offer.owner.name ?? ""} className="w-12 h-12 object-contain" />
-          )}
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Offer Details</h1>
-            <div className="flex items-center gap-3 mt-1">
-              <p className="text-muted-foreground text-sm">{offer.owner?.name}</p>
-              {offer.owner?.iataCode && getAirlineWebsite(offer.owner.iataCode) && (
-                <a
-                  href={getAirlineWebsite(offer.owner.iataCode)!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  Official Website
-                </a>
-              )}
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-fit rounded-full text-muted-foreground hover:text-primary hover:border-primary/50 shadow-sm transition-all hover:bg-primary/5 group gap-2 px-4"
+            onClick={() => window.history.back()}
+          >
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            عودة لنتائج البحث
+          </Button>
+          <div className="flex items-center gap-4">
+            {offer.owner?.logoSymbolUrl && (
+              <img src={offer.owner.logoSymbolUrl} alt={offer.owner.name ?? ""} className="w-12 h-12 object-contain" />
+            )}
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Offer Details</h1>
+              <div className="flex items-center gap-3 mt-1">
+                <p className="text-muted-foreground text-sm">{offer.owner?.name}</p>
+                {offer.owner?.iataCode && getAirlineWebsite(offer.owner.iataCode) && (
+                  <a
+                    href={getAirlineWebsite(offer.owner.iataCode)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Official Website
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         </div>

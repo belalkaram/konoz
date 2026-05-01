@@ -14,24 +14,27 @@ export async function authFetch(input: string, init: RequestInit = {}): Promise<
   if (csrfToken) {
     headers.set("X-CSRF-Token", csrfToken);
   }
-  const res = await fetch(input, { ...init, headers, credentials: "include" });
-  
-  if (res.status === 401 && !input.includes("/api/auth/me") && !input.includes("/api/auth/login")) {
-    // Session expired or invalidated
-    window.location.href = `${BASE}/login?error=expired`;
-  }
 
-  if (res.status === 403) {
-    const clone = res.clone();
-    try {
-      const data = await clone.json();
-      if (data.message?.includes("deactivated")) {
-        window.location.href = `${BASE}/login?error=deactivated`;
-      }
-    } catch {
-      // Not JSON or other error
+  try {
+    const res = await fetch(input, { ...init, headers, credentials: "include" });
+    
+    if (res.status === 401 && !input.includes("/api/auth/me") && !input.includes("/api/auth/login")) {
+      window.location.href = `${BASE}/login?error=expired`;
     }
+
+    if (res.status === 403) {
+      const clone = res.clone();
+      try {
+        const data = await clone.json();
+        if (data.message?.includes("deactivated")) {
+          window.location.href = `${BASE}/login?error=deactivated`;
+        }
+      } catch {}
+    }
+    
+    return res;
+  } catch (err) {
+    console.error("Network error during authFetch:", err);
+    throw new Error("Network Error: Please check your internet connection.");
   }
-  
-  return res;
 }

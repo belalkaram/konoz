@@ -1,5 +1,5 @@
 import { Component, type ReactNode, type ErrorInfo } from "react";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, Globe, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Props {
@@ -9,18 +9,21 @@ interface Props {
 interface State {
   hasError: boolean;
   message: string;
+  isNetworkError: boolean;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, message: "" };
+    this.state = { hasError: false, message: "", isNetworkError: false };
   }
 
   static getDerivedStateFromError(error: unknown): State {
-    const message =
-      error instanceof Error ? error.message : "An unexpected error occurred";
-    return { hasError: true, message };
+    const message = error instanceof Error ? error.message : "An unexpected error occurred";
+    const isNetworkError = message.toLowerCase().includes("network") || 
+                          message.toLowerCase().includes("fetch") || 
+                          message.toLowerCase().includes("internet");
+    return { hasError: true, message, isNetworkError };
   }
 
   componentDidCatch(error: unknown, info: ErrorInfo) {
@@ -28,73 +31,69 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, message: "" });
+    this.setState({ hasError: false, message: "", isNetworkError: false });
   };
 
   render() {
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <div
-        className="min-h-screen flex items-center justify-center p-6"
-        style={{ background: "#011a13" }}
-      >
-        <div className="max-w-md w-full text-center space-y-6">
-          <div className="flex justify-center">
-            <div
-              className="w-20 h-20 rounded-full flex items-center justify-center"
-              style={{ background: "rgba(239,68,68,0.12)" }}
-            >
-              <AlertTriangle className="w-10 h-10 text-red-400" />
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#f0fdf4]">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border border-emerald-100 text-center relative overflow-hidden">
+          {/* Background decoration */}
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-amber-400 to-emerald-500" />
+          
+          <div className="flex justify-center mb-6">
+            <div className={
+              `w-20 h-20 rounded-full flex items-center justify-center ${this.state.isNetworkError ? 'bg-amber-50' : 'bg-red-50'}`
+            }>
+              {this.state.isNetworkError ? (
+                <Globe className="w-10 h-10 text-amber-600 animate-pulse" />
+              ) : (
+                <AlertTriangle className="w-10 h-10 text-red-600" />
+              )}
             </div>
           </div>
 
-          <div className="space-y-2">
-            <h1 className="text-2xl font-semibold text-white">
-              Something went wrong
-            </h1>
-            <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
-              An unexpected error occurred. Try refreshing the page or returning
-              to the dashboard.
-            </p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {this.state.isNetworkError ? "Connection Issue" : "Application Error"}
+          </h1>
+          
+          <p className="text-gray-600 mb-6 leading-relaxed">
+            {this.state.isNetworkError 
+              ? "We're having trouble connecting to the system. This is usually caused by an unstable internet connection."
+              : "An unexpected error occurred while processing your request. Our system logs have been updated."}
+          </p>
+
+          <div className="rounded-xl p-4 mb-8 text-left text-xs font-mono bg-gray-50 border border-gray-100 text-gray-500 break-all">
+            <div className="font-bold text-gray-400 uppercase mb-1 tracking-tighter">Error Details:</div>
+            {this.state.message}
           </div>
 
-          {this.state.message && (
-            <div
-              className="rounded-lg px-4 py-3 text-left text-xs font-mono break-all"
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                color: "rgba(255,255,255,0.4)",
-                border: "1px solid rgba(255,255,255,0.08)",
-              }}
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={this.handleReset}
+              className="w-full bg-emerald-700 hover:bg-emerald-800 h-12 text-base font-semibold transition-all active:scale-[0.98]"
             >
-              {this.state.message}
-            </div>
-          )}
-
-          <div className="flex gap-3 justify-center">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              {this.state.isNetworkError ? "Retry Connection" : "Attempt Recovery"}
+            </Button>
+            
             <Button
               variant="outline"
-              onClick={this.handleReset}
-              className="gap-2"
-              style={{
-                borderColor: "rgba(255,255,255,0.15)",
-                color: "rgba(255,255,255,0.7)",
-                background: "transparent",
-              }}
-            >
-              <RefreshCw className="w-4 h-4" />
-              Try again
-            </Button>
-            <Button
               onClick={() => {
                 this.handleReset();
                 window.location.href = "/";
               }}
-              style={{ background: "#d4af37", color: "#011a13" }}
+              className="w-full border-emerald-100 text-emerald-700 hover:bg-emerald-50"
             >
-              Go to Dashboard
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Return to Dashboard
             </Button>
+          </div>
+          
+          <div className="mt-8 pt-6 border-t border-gray-50 text-[10px] text-gray-400 uppercase tracking-widest font-bold">
+            AeroOps Premium Reliability System
           </div>
         </div>
       </div>

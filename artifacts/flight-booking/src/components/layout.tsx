@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Plane, Search, ListFilter, LayoutDashboard, Menu, X, Users, Tag, Bell, LogOut, UserCog, Building2 } from "lucide-react";
+import { Plane, Search, ListFilter, LayoutDashboard, Menu, X, Users, Tag, Bell, LogOut, UserCog, Building2, ShieldCheck, FileText } from "lucide-react";
+
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useEmployee } from "@/contexts/employee-context";
 import { EmployeeSettingsDialog } from "./employee-settings-dialog";
+import { ConnectivityBanner } from "./connectivity-banner";
 
 const SIDEBAR_GRADIENT = "linear-gradient(180deg, #011a13 0%, #022c22 40%, #064e3b 100%)";
 const GOLD_GRADIENT = "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)";
@@ -17,6 +19,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const isSupervisorOrAdmin = role === "Administrator" || role === "Supervisor";
   const isAdmin = role === "Administrator";
+  const isHR = role === "HR" || isAdmin;
+
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -25,9 +29,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/reminders", label: "Reminders", icon: Bell },
     { href: "/search", label: "Flight Search", icon: Search },
     { href: "/orders", label: "Orders", icon: ListFilter },
+    ...(isHR ? [{ href: "/hr", label: "HR Management", icon: ShieldCheck }] : []),
     ...(isSupervisorOrAdmin ? [{ href: "/employees", label: "Employees", icon: UserCog }] : []),
     ...(isAdmin ? [{ href: "/companies", label: "Companies", icon: Building2 }] : []),
   ];
+
 
   const isActive = (href: string) =>
     location === href || (href !== "/" && location.startsWith(href));
@@ -140,6 +146,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <ConnectivityBanner />
         {/* Topbar */}
         <header className="h-16 flex items-center justify-between px-4 md:px-8 flex-shrink-0 bg-white border-b" style={{ borderColor: "#d1fae5" }}>
           <div className="flex items-center gap-3">

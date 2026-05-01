@@ -22,9 +22,22 @@ import TicketDetail from "@/pages/ticket-detail";
 import Reminders from "@/pages/reminders";
 import EmployeesPage from "@/pages/employees";
 import CompaniesPage from "@/pages/companies";
+import HRManagement from "@/pages/hr";
 import NotAuthorized from "@/pages/not-authorized";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error: any) => {
+        // Retry more for network errors, less for API errors
+        if (error?.message === "Network Error" || error?.name === "TypeError") return failureCount < 5;
+        return failureCount < 2;
+      },
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+      staleTime: 5000,
+    },
+  },
+});
 
 function SupervisorOrAdminRoute({ component: Component }: { component: any }) {
   const { currentEmployee } = useEmployee();
@@ -38,6 +51,15 @@ function SupervisorOrAdminRoute({ component: Component }: { component: any }) {
 function AdminRoute({ component: Component }: { component: any }) {
   const { currentEmployee } = useEmployee();
   if (!currentEmployee || currentEmployee.role !== "Administrator") {
+    return <NotAuthorized />;
+  }
+  return <Component />;
+}
+
+function HRRoute({ component: Component }: { component: any }) {
+  const { currentEmployee } = useEmployee();
+  const role = currentEmployee?.role;
+  if (!currentEmployee || (role !== "Administrator" && role !== "HR")) {
     return <NotAuthorized />;
   }
   return <Component />;
@@ -72,6 +94,7 @@ function Router() {
         <Route path="/tickets/:id" component={TicketDetail} />
         <Route path="/tickets" component={Tickets} />
         <Route path="/reminders" component={Reminders} />
+        <Route path="/hr">{() => <HRRoute component={HRManagement} />}</Route>
         <Route path="/employees">{() => <SupervisorOrAdminRoute component={EmployeesPage} />}</Route>
         <Route path="/companies">{() => <AdminRoute component={CompaniesPage} />}</Route>
         <Route path="/orders" component={Orders} />

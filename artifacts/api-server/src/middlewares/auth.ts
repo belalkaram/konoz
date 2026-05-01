@@ -82,7 +82,8 @@ export const requireSupervisorOrAdmin: RequestHandler = async (req, res, next) =
     return;
   }
   if (session.role !== "Administrator" && session.role !== "Supervisor") {
-    req.log?.warn({ actorId: session.employeeId, ip: req.ip, route: req.path, result: "forbidden" }, "security:forbidden_access");
+    console.error(`[requireSupervisorOrAdmin] User ${session.username || session.employeeId} denied. Role is: "${session.role}"`);
+    req.log?.warn({ actorId: session.employeeId, role: session.role, ip: req.ip, route: req.path, result: "forbidden" }, "security:forbidden_access");
     res.status(403).json({ error: "forbidden", message: "Supervisor or Administrator access required" });
     return;
   }
@@ -108,6 +109,29 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
   if (session.role !== "Administrator") {
     req.log?.warn({ actorId: session.employeeId, ip: req.ip, route: req.path, result: "forbidden" }, "security:forbidden_access");
     res.status(403).json({ error: "forbidden", message: "Administrator access required" });
+    return;
+  }
+  if (session.isDeactivated) {
+    req.log?.warn({ actorId: session.employeeId, ip: req.ip }, "security:deactivated_access_attempt");
+    res.status(403).json({ 
+      error: "forbidden", 
+      message: "Your account has been deactivated. Please contact your supervisor to reactivate your account." 
+    });
+    return;
+  }
+  req.employee = session;
+  next();
+};
+export const requireHR: RequestHandler = async (req, res, next) => {
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    req.log?.warn({ ip: req.ip, route: req.path }, "security:unauthorized_access");
+    res.status(401).json({ error: "unauthorized", message: "Authentication required" });
+    return;
+  }
+  if (session.role !== "Administrator" && session.role !== "HR") {
+    req.log?.warn({ actorId: session.employeeId, ip: req.ip, route: req.path, result: "forbidden" }, "security:forbidden_access");
+    res.status(403).json({ error: "forbidden", message: "HR or Administrator access required" });
     return;
   }
   if (session.isDeactivated) {

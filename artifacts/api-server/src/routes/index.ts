@@ -14,6 +14,9 @@ import employeesRouter from "./employees";
 import adminSessionsRouter from "./admin-sessions";
 import companiesRouter from "./companies";
 import branchesRouter from "./branches";
+import settingsRouter from "./settings";
+import hrRouter from "./hr";
+
 
 const router: IRouter = Router();
 
@@ -32,5 +35,8 @@ router.use(notesRouter);
 router.use(ticketsRouter);
 router.use(remindersRouter);
 router.use(dashboardRouter);
+router.use(settingsRouter);
+router.use(hrRouter);
+
 
 export default router;

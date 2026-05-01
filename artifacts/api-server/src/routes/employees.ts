@@ -91,7 +91,7 @@ router.get("/employees", async (req, res) => {
       }
 
       const conditions = [];
-      if (role === "Supervisor" || role === "HR") {
+      if (role === "Supervisor") {
         conditions.push(eq(employeesTable.companyId, session!.companyId!));
       } else if (role === "Administrator") {
         // No company filter for global admin

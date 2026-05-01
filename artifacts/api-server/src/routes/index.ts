@@ -16,6 +16,7 @@ import companiesRouter from "./companies";
 import branchesRouter from "./branches";
 import settingsRouter from "./settings";
 import hrRouter from "./hr";
+import reportsRouter from "./reports";
 
 
 const router: IRouter = Router();
@@ -37,6 +38,7 @@ router.use(remindersRouter);
 router.use(dashboardRouter);
 router.use(settingsRouter);
 router.use(hrRouter);
+router.use(reportsRouter);
 
 
 export default router;

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { eq, desc, and, sum, inArray } from "drizzle-orm";
-import { db, ticketsTable, ticketStatusHistoryTable, paymentsTable, customersTable, insertTicketSchema, updateTicketSchema, insertPaymentSchema } from "@workspace/db";
+import { db, ticketsTable, ticketStatusHistoryTable, paymentsTable, customersTable, invoicesTable, insertTicketSchema, updateTicketSchema, insertPaymentSchema } from "@workspace/db";
+
 import { requireAuth, requireAdmin, getTeamEmployeeIds } from "../middlewares/auth.js";
 
 const router = Router();
@@ -325,6 +326,98 @@ router.post("/tickets/:id/payments", requireAuth, async (req, res) => {
   }
   await handleAddPayment(ticketId, req.body as Record<string, unknown>, req, res, req.log);
 });
+
+router.get("/tickets/:id/invoice", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "validation_error", message: "Invalid ticket ID" });
+    return;
+  }
+
+  try {
+    const [row] = await db
+      .select({
+        ticket: ticketsTable,
+        customerName: customersTable.fullName,
+        customerPhone: customersTable.phone,
+        customerEmail: customersTable.email,
+      })
+      .from(ticketsTable)
+      .leftJoin(customersTable, eq(ticketsTable.customerId, customersTable.id))
+      .where(eq(ticketsTable.id, id));
+
+    if (!row) {
+      res.status(404).json({ error: "not_found", message: "Ticket not found" });
+      return;
+    }
+
+    // Auth Check
+    const role = getRole(req);
+    const myId = req.employee!.employeeId;
+    let isAuthorized = role === "Administrator";
+    
+    if (!isAuthorized) {
+      const teamIds = await getTeamEmployeeIds(myId);
+      isAuthorized = teamIds.includes(row.ticket.employeeId!);
+    }
+
+    if (!isAuthorized) {
+      res.status(404).json({ error: "not_found", message: "Ticket not found" });
+      return;
+    }
+
+    // Try to find existing invoice or return a virtual one
+    let [invoice] = await db
+      .select()
+      .from(invoicesTable)
+      .where(eq(invoicesTable.ticketId, id));
+
+    if (!invoice) {
+      // Return virtual invoice data based on ticket
+      invoice = {
+        id: 0,
+        invoiceNumber: `INV-${id}-${new Date().getFullYear()}`,
+        ticketId: id,
+        customerId: row.ticket.customerId,
+        issueDate: row.ticket.createdAt,
+        dueDate: null,
+        totalAmount: row.ticket.price || "0.00",
+        taxAmount: "0.00",
+        discountAmount: "0.00",
+        costPrice: row.ticket.costPrice,
+        profit: row.ticket.costPrice && row.ticket.price ? 
+          (parseFloat(row.ticket.price) - parseFloat(row.ticket.costPrice)).toFixed(2) : "0.00",
+        status: row.ticket.paymentStatus === "paid" ? "paid" : "draft",
+        notes: row.ticket.notes,
+        internalNotes: null,
+        createdAt: row.ticket.createdAt,
+        updatedAt: row.ticket.createdAt,
+      } as any;
+    }
+
+    // Isolation: Remove sensitive data if not Admin/Supervisor
+    const isAdminOrSupervisor = role === "Administrator" || role === "Supervisor";
+    if (!isAdminOrSupervisor) {
+      delete (invoice as any).costPrice;
+      delete (invoice as any).profit;
+      delete (invoice as any).internalNotes;
+    }
+
+    res.json({
+      invoice,
+      ticket: {
+        ...row.ticket,
+        customerName: row.customerName,
+        customerPhone: row.customerPhone,
+        customerEmail: row.customerEmail,
+      }
+    });
+  } catch (err) {
+    req.log.error({ err }, "Error getting invoice");
+    res.status(500).json({ error: "server_error", message: "Failed to get invoice" });
+  }
+});
+
 
 
 export default router;

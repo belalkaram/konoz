@@ -28,6 +28,8 @@ import {
 } from "@/lib/ticket-constants";
 import { authFetch, BASE } from "@/lib/api";
 import { useCurrentEmployee } from "@/contexts/employee-context";
+import { InvoiceView } from "@/components/InvoiceView";
+
 
 interface Ticket {
   id: number;
@@ -117,6 +119,13 @@ async function addPayment(ticketId: number, data: Record<string, unknown>): Prom
   const json = await res.json();
   if (!res.ok) throw new Error(json.message || "Failed to add payment");
 }
+
+async function fetchInvoiceData(id: number): Promise<any> {
+  const res = await authFetch(`${BASE}/api/tickets/${id}/invoice`);
+  if (!res.ok) throw new Error("Failed to fetch invoice");
+  return res.json();
+}
+
 
 function InfoRow({ label, value, icon }: { label: string; value: React.ReactNode; icon?: React.ReactNode }) {
   return (
@@ -264,15 +273,27 @@ export default function TicketDetail() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [invoiceMode, setInvoiceMode] = useState<"customer" | "admin">("customer");
   const [statusValue, setStatusValue] = useState("");
+
   const currentEmployee = useCurrentEmployee();
   const isAdmin = currentEmployee.role === "Administrator";
+  const isSupervisor = currentEmployee.role === "Supervisor";
+
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["ticket", id],
     queryFn: () => fetchTicketDetail(id),
     enabled: !isNaN(id),
   });
+
+  const { data: invoiceData, isLoading: isLoadingInvoice } = useQuery({
+    queryKey: ["invoice", id],
+    queryFn: () => fetchInvoiceData(id),
+    enabled: invoiceOpen,
+  });
+
 
   useEffect(() => {
     if (data?.ticket && !statusValue) {
@@ -376,6 +397,10 @@ export default function TicketDetail() {
           <Button variant="outline" size="sm" onClick={() => setPaymentOpen(true)}>
             <CreditCard className="h-4 w-4 mr-1.5" /> Add Payment
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setInvoiceOpen(true)}>
+            <FileText className="h-4 w-4 mr-1.5" /> View Invoice
+          </Button>
+
           <Link href={`/tickets/${id}/edit`}>
             <Button variant="outline" size="sm">
               <Edit className="h-4 w-4 mr-1.5" /> Edit
@@ -629,6 +654,62 @@ export default function TicketDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={invoiceOpen} onOpenChange={setInvoiceOpen}>
+        <DialogContent className="max-w-5xl h-[90vh] overflow-y-auto p-0 flex flex-col">
+          <DialogHeader className="p-6 pb-2 print:hidden flex flex-row items-center justify-between">
+            <DialogTitle>معاينة الفاتورة</DialogTitle>
+            {(isAdmin || isSupervisor) && (
+              <div className="flex bg-muted p-1 rounded-md">
+                <Button 
+                  variant={invoiceMode === "customer" ? "secondary" : "ghost"} 
+                  size="sm"
+                  onClick={() => setInvoiceMode("customer")}
+                  className="text-xs"
+                >
+                  نسخة العميل
+                </Button>
+                <Button 
+                  variant={invoiceMode === "admin" ? "secondary" : "ghost"} 
+                  size="sm"
+                  onClick={() => setInvoiceMode("admin")}
+                  className="text-xs"
+                >
+                  النسخة الإدارية
+                </Button>
+              </div>
+            )}
+          </DialogHeader>
+          <div className="flex-1">
+            {isLoadingInvoice ? (
+              <div className="p-8 space-y-4">
+                <Skeleton className="h-12 w-3/4" />
+                <Skeleton className="h-64 w-full" />
+              </div>
+            ) : invoiceData ? (
+              <InvoiceView 
+                invoice={invoiceData.invoice}
+                ticket={{
+                  ...invoiceData.ticket,
+                  passengerName: invoiceData.ticket.customerName
+                }}
+                customer={{
+                  name: invoiceData.ticket.customerName,
+                  email: invoiceData.ticket.customerEmail,
+                  phone: invoiceData.ticket.customerPhone
+                }}
+                isAdmin={invoiceMode === "admin"}
+              />
+            ) : (
+              <div className="p-8 text-center text-muted-foreground">
+                فشل في تحميل بيانات الفاتورة.
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
+

@@ -229,7 +229,7 @@ router.post("/hr/leaves", requireHR, async (req, res) => {
 // DELETE /hr/attendance/:id
 router.delete("/hr/attendance/:id", requireHR, async (req, res) => {
   try {
-    await db.delete(attendanceTable).where(eq(attendanceTable.id, parseInt(req.params.id)));
+    await db.delete(attendanceTable).where(eq(attendanceTable.id, parseInt(req.params.id as string)));
     res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Error deleting attendance");
@@ -240,7 +240,7 @@ router.delete("/hr/attendance/:id", requireHR, async (req, res) => {
 // DELETE /hr/leaves/:id
 router.delete("/hr/leaves/:id", requireHR, async (req, res) => {
   try {
-    await db.delete(leavesTable).where(eq(leavesTable.id, parseInt(req.params.id)));
+    await db.delete(leavesTable).where(eq(leavesTable.id, parseInt(req.params.id as string)));
     res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Error deleting leave");

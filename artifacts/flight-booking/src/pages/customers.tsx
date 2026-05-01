@@ -149,7 +149,7 @@ export default function Customers() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["customers", employeeIdParam],
     queryFn: () => fetchCustomers(employeeIdParam),
-    staleTime: 30_000,
+    staleTime: 5_000,
   });
 
   const allCustomers = data?.customers ?? [];
@@ -238,7 +238,7 @@ export default function Customers() {
       } else if (sortBy === "bookingDate") {
         const da = a.bookingDate ? new Date(a.bookingDate).getTime() : 0;
         const db = b.bookingDate ? new Date(b.bookingDate).getTime() : 0;
-        cmp = da - db;
+        cmp = (isNaN(da) ? 0 : da) - (isNaN(db) ? 0 : db);
       } else if (sortBy === "netProfit") {
         const pa = netProfit(a) ?? -Infinity;
         const pb = netProfit(b) ?? -Infinity;
@@ -246,7 +246,7 @@ export default function Customers() {
       } else {
         const da = new Date(a.createdAt).getTime();
         const db = new Date(b.createdAt).getTime();
-        cmp = da - db;
+        cmp = (isNaN(da) ? 0 : da) - (isNaN(db) ? 0 : db);
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -546,7 +546,7 @@ export default function Customers() {
       <CustomerFormSheet
         open={addOpen}
         onClose={() => setAddOpen(false)}
-        onSuccess={() => {}}
+        onSuccess={() => qc.invalidateQueries({ queryKey: ["customers"] })}
       />
 
       <ExcelImportDialog

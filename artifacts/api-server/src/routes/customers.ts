@@ -67,36 +67,40 @@ router.get("/customers", requireAuth, async (req, res) => {
         lastContactedAt: customersTable.lastContactedAt,
         createdAt: customersTable.createdAt,
         updatedAt: customersTable.updatedAt,
-        latestTicketId: sql<number | null>`(
-          SELECT id FROM tickets WHERE customer_id = ${customersTable.id}
-          ORDER BY created_at DESC, id DESC LIMIT 1
-        )`,
+        // Join latest ticket data
         pnr: sql<string | null>`(
-          SELECT pnr FROM tickets WHERE customer_id = ${customersTable.id}
-          ORDER BY created_at DESC, id DESC LIMIT 1
+          SELECT t.pnr FROM tickets t 
+          WHERE t.customer_id = ${customersTable.id} 
+          ORDER BY t.created_at DESC, t.id DESC LIMIT 1
         )`,
         bookingDate: sql<string | null>`(
-          SELECT COALESCE(booking_date::text, created_at::text) FROM tickets WHERE customer_id = ${customersTable.id}
-          ORDER BY created_at DESC, id DESC LIMIT 1
-        )`,
-        costPrice: sql<string | null>`(
-          SELECT cost_price FROM tickets WHERE customer_id = ${customersTable.id}
-          ORDER BY created_at DESC, id DESC LIMIT 1
-        )`,
-        sellingPrice: sql<string | null>`(
-          SELECT price FROM tickets WHERE customer_id = ${customersTable.id}
-          ORDER BY created_at DESC, id DESC LIMIT 1
-        )`,
-        ticketCurrency: sql<string | null>`(
-          SELECT currency FROM tickets WHERE customer_id = ${customersTable.id}
-          ORDER BY created_at DESC, id DESC LIMIT 1
+          SELECT COALESCE(t.booking_date::text, t.created_at::text) FROM tickets t 
+          WHERE t.customer_id = ${customersTable.id} 
+          ORDER BY t.created_at DESC, t.id DESC LIMIT 1
         )`,
         travelDate: sql<string | null>`(
-          SELECT departure_datetime::text FROM tickets WHERE customer_id = ${customersTable.id}
-          ORDER BY created_at DESC, id DESC LIMIT 1
+          SELECT t.departure_datetime::text FROM tickets t 
+          WHERE t.customer_id = ${customersTable.id} 
+          ORDER BY t.created_at DESC, t.id DESC LIMIT 1
+        )`,
+        costPrice: sql<string | null>`(
+          SELECT t.cost_price FROM tickets t 
+          WHERE t.customer_id = ${customersTable.id} 
+          ORDER BY t.created_at DESC, t.id DESC LIMIT 1
+        )`,
+        sellingPrice: sql<string | null>`(
+          SELECT t.price FROM tickets t 
+          WHERE t.customer_id = ${customersTable.id} 
+          ORDER BY t.created_at DESC, t.id DESC LIMIT 1
+        )`,
+        ticketCurrency: sql<string | null>`(
+          SELECT t.currency FROM tickets t 
+          WHERE t.customer_id = ${customersTable.id} 
+          ORDER BY t.created_at DESC, t.id DESC LIMIT 1
         )`,
         uploadedByName: sql<string | null>`(
-          SELECT name FROM employees WHERE id = ${customersTable.createdByEmployeeId}
+          SELECT e.name FROM employees e 
+          WHERE e.id = ${customersTable.createdByEmployeeId}
         )`,
       })
       .from(customersTable);

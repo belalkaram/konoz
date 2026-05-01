@@ -74,7 +74,7 @@ export async function sendNewTravelerNotification(employeeEmail: string, travele
             </tr>
             <tr>
               <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Travel Date</td>
-              <td style="padding: 8px 0; color: #1e293b; font-size: 15px;">${details.travelDate || "—"}</td>
+              <td style="padding: 8px 0; color: #1e293b; font-size: 15px;">${details.travelDate ? new Date(details.travelDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "—"}</td>
             </tr>
           </table>
         </div>

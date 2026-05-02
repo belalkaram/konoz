@@ -15,8 +15,12 @@ export const attendanceTable = pgTable("attendance", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertAttendanceSchema = createInsertSchema(attendanceTable);
-export const selectAttendanceSchema = createSelectSchema(attendanceTable);
+export const insertAttendanceSchema = (createInsertSchema(attendanceTable) as any).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const selectAttendanceSchema = createSelectSchema(attendanceTable) as any;
 
 export type Attendance = typeof attendanceTable.$inferSelect;
 export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;

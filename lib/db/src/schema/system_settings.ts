@@ -8,5 +8,5 @@ export const systemSettingsTable = pgTable("system_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertSystemSettingSchema = createInsertSchema(systemSettingsTable);
+export const insertSystemSettingSchema = createInsertSchema(systemSettingsTable) as any;
 export type SystemSetting = typeof systemSettingsTable.$inferSelect;

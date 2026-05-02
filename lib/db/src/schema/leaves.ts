@@ -15,8 +15,12 @@ export const leavesTable = pgTable("leaves", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertLeaveSchema = createInsertSchema(leavesTable);
-export const selectLeaveSchema = createSelectSchema(leavesTable);
+export const insertLeaveSchema = (createInsertSchema(leavesTable) as any).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const selectLeaveSchema = createSelectSchema(leavesTable) as any;
 
 export type Leave = typeof leavesTable.$inferSelect;
 export type InsertLeave = z.infer<typeof insertLeaveSchema>;

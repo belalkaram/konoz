@@ -82,7 +82,7 @@ export const requireSupervisorOrAdmin: RequestHandler = async (req, res, next) =
     return;
   }
   if (session.role !== "Administrator" && session.role !== "Supervisor") {
-    console.error(`[requireSupervisorOrAdmin] User ${session.username || session.employeeId} denied. Role is: "${session.role}"`);
+    console.error(`[requireSupervisorOrAdmin] User ${session.name || session.employeeId} denied. Role is: "${session.role}"`);
     req.log?.warn({ actorId: session.employeeId, role: session.role, ip: req.ip, route: req.path, result: "forbidden" }, "security:forbidden_access");
     res.status(403).json({ error: "forbidden", message: "Supervisor or Administrator access required" });
     return;

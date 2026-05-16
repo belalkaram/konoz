@@ -95,9 +95,17 @@ const writeLimiter = rateLimit({
 });
 
 app.use(cors({ credentials: true, origin: true }));
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cookieParser(COOKIE_SECRET));
+
+app.use((err: any, req: any, res: any, next: any) => {
+  if (err instanceof SyntaxError && (err as any).status === 400 && 'body' in err) {
+    logger.error({ err, body: err.body }, "JSON parsing error");
+    return res.status(400).json({ error: "invalid_json", message: err.message });
+  }
+  next();
+});
 
 const BLOCKED_PATHS = /\.(env|json|lock|map|ts|mjs|cjs|toml|yaml|yml|log)$/i;
 

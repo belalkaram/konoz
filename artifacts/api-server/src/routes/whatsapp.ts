@@ -173,24 +173,38 @@ router.get("/whatsapp/messages/:phone", requireAuth, async (req, res) => {
 router.post("/whatsapp/messages/:phone", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
   const phone = req.params.phone as string;
-  const { text } = req.body;
+  const { text, audio } = req.body;
+  
+  req.log.info({ hasText: !!text, hasAudio: !!audio, bodyKeys: Object.keys(req.body) }, "Incoming message payload");
 
-  if (!text) {
-    return res.status(400).json({ error: "validation_error", message: "Text is required" });
+  if (!text && !audio) {
+    return res.status(400).json({ error: "validation_error", message: "Text or audio is required" });
   }
 
   const instanceName = getInstanceName(employeeId);
 
   try {
-    const response = await WhatsappService.sendTextMessage(instanceName, phone, text);
+    let response;
+    let messageBody = "";
+    let messageType = "text";
+
+    if (audio) {
+      response = await WhatsappService.sendAudioMessage(instanceName, phone, audio);
+      messageBody = audio;
+      messageType = "audio";
+    } else {
+      response = await WhatsappService.sendTextMessage(instanceName, phone, text);
+      messageBody = text;
+      messageType = "text";
+    }
     
     // Save to DB
     const [message] = await db.insert(whatsappMessagesTable).values({
       employeeId,
       customerPhone: phone,
       messageId: response.key?.id || null,
-      messageBody: text,
-      messageType: "text",
+      messageBody: messageBody,
+      messageType: messageType,
       isFromMe: true,
       timestamp: new Date(),
     }).returning();
@@ -241,14 +255,19 @@ router.post("/whatsapp/webhook", async (req, res) => {
       
       const remoteJid = msg.key.remoteJid;
       // remoteJid format: 1234567890@s.whatsapp.net
-      if (remoteJid && remoteJid.includes("@s.whatsapp.net") && !msg.key.fromMe) {
+      if (remoteJid && remoteJid.includes("@s.whatsapp.net")) {
         const phone = remoteJid.split("@")[0];
         
         let messageText = "";
+        let messageType = "text";
+        
         if (msg.message?.conversation) {
           messageText = msg.message.conversation;
         } else if (msg.message?.extendedTextMessage?.text) {
           messageText = msg.message.extendedTextMessage.text;
+        } else if (msg.message?.audioMessage) {
+          messageType = "audio";
+          messageText = msg.message.audioMessage.base64 || msg.message.audioMessage.url || "[Audio Message]";
         }
         
         if (messageText) {
@@ -257,8 +276,8 @@ router.post("/whatsapp/webhook", async (req, res) => {
             customerPhone: phone,
             messageId: msg.key.id,
             messageBody: messageText,
-            messageType: "text",
-            isFromMe: false,
+            messageType: messageType,
+            isFromMe: msg.key.fromMe || false,
             timestamp: new Date(msg.messageTimestamp * 1000),
           });
         }

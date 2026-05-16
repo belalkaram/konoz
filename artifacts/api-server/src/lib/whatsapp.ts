@@ -95,17 +95,34 @@ export const WhatsappService = {
     try {
       const response = await apiClient.post(`/message/sendText/${instanceName}`, {
         number,
+        text,
         options: {
           delay: 1200,
           presence: "composing",
-        },
-        textMessage: {
-          text,
         },
       });
       return response.data;
     } catch (error: any) {
       logger.error("Error sending WhatsApp message:", error?.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  /**
+   * Send an audio message (Voice Note)
+   */
+  async sendAudioMessage(instanceName: string, number: string, audioBase64: string) {
+    try {
+      const response = await apiClient.post(`/message/sendWhatsAppAudio/${instanceName}`, {
+        number,
+        audio: audioBase64,
+        options: {
+          delay: 1200,
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      logger.error("Error sending WhatsApp audio:", error?.response?.data || error.message);
       throw error;
     }
   },
@@ -120,7 +137,7 @@ export const WhatsappService = {
           enabled: true,
           url: webhookUrl,
           byEvents: false,
-          base64: false,
+          base64: true,
           events: [
             "MESSAGES_UPSERT",
             "MESSAGES_UPDATE",

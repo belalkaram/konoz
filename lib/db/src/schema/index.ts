@@ -12,4 +12,5 @@ export * from "./invoices";
 export * from "./system_settings";
 export * from "./attendance";
 export * from "./leaves";
-
+export * from "./whatsapp_instances";
+export * from "./whatsapp_messages";

@@ -118,7 +118,7 @@ app.post("/api/auth/login", loginLimiter);
 
 app.use("/api", generalLimiter);
 
-const CSRF_EXEMPT = new Set(["/api/auth/login"]);
+const CSRF_EXEMPT = new Set(["/api/auth/login", "/api/whatsapp/webhook"]);
 
 app.use(async (req, res, next) => {
   if (!["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {

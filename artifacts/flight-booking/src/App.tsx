@@ -25,6 +25,8 @@ import CompaniesPage from "@/pages/companies";
 import HRManagement from "@/pages/hr";
 import Reports from "@/pages/reports";
 import NotAuthorized from "@/pages/not-authorized";
+import WhatsappSettings from "@/pages/whatsapp-settings";
+import Chat from "@/pages/chat";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -102,6 +104,8 @@ function Router() {
         <Route path="/orders" component={Orders} />
         <Route path="/orders/new" component={Checkout} />
         <Route path="/orders/:orderId" component={OrderDetail} />
+        <Route path="/settings/whatsapp" component={WhatsappSettings} />
+        <Route path="/chat" component={Chat} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

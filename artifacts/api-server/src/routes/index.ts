@@ -11,12 +11,14 @@ import remindersRouter from "./reminders";
 import dashboardRouter from "./dashboard";
 import authRouter from "./auth";
 import employeesRouter from "./employees";
+
 import adminSessionsRouter from "./admin-sessions";
 import companiesRouter from "./companies";
 import branchesRouter from "./branches";
 import settingsRouter from "./settings";
 import hrRouter from "./hr";
 import reportsRouter from "./reports";
+import whatsappRouter from "./whatsapp";
 
 
 const router: IRouter = Router();
@@ -39,6 +41,7 @@ router.use(dashboardRouter);
 router.use(settingsRouter);
 router.use(hrRouter);
 router.use(reportsRouter);
+router.use(whatsappRouter);
 
 
 export default router;

@@ -220,7 +220,7 @@ router.post("/whatsapp/webhook", async (req, res) => {
     }
 
     // Handle Connection Updates
-    if (event === "CONNECTION_UPDATE") {
+    if (event === "CONNECTION_UPDATE" || event === "connection.update") {
       const state = data.state; // open, connecting, close
       await db.update(whatsappInstancesTable)
         .set({ connectionStatus: state })
@@ -228,16 +228,16 @@ router.post("/whatsapp/webhook", async (req, res) => {
     }
     
     // Handle QR Code
-    if (event === "QRCODE_UPDATED") {
+    if (event === "QRCODE_UPDATED" || event === "qrcode.updated") {
       await db.update(whatsappInstancesTable)
         .set({ qrCode: data.qrcode.base64, connectionStatus: "connecting" })
         .where(eq(whatsappInstancesTable.employeeId, employeeId));
     }
 
     // Handle incoming messages
-    if (event === "MESSAGES_UPSERT") {
-      const msg = data.message;
-      if (!msg) return res.status(200).send("OK");
+    if (event === "MESSAGES_UPSERT" || event === "messages.upsert") {
+      const msg = data;
+      if (!msg || !msg.key) return res.status(200).send("OK");
       
       const remoteJid = msg.key.remoteJid;
       // remoteJid format: 1234567890@s.whatsapp.net

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Plane, Search, ListFilter, LayoutDashboard, Menu, X, Users, Tag, Bell, LogOut, UserCog, Building2, ShieldCheck, FileText, BarChart3, MessageSquare, QrCode, Layers, Sun, Moon } from "lucide-react";
+import { Plane, Search, ListFilter, LayoutDashboard, Menu, X, Users, Tag, Bell, LogOut, UserCog, Building2, ShieldCheck, FileText, BarChart3, MessageSquare, QrCode, Layers, Sun, Moon, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { Link } from "wouter";
@@ -20,6 +20,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("sidebar-collapsed");
+      return saved === "true";
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("sidebar-collapsed", String(collapsed));
+  }, [collapsed]);
 
   useEffect(() => {
     setMounted(true);
@@ -54,83 +65,95 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const isActive = (href: string) =>
     location === href || (href !== "/" && location.startsWith(href));
 
-  const SidebarContent = () => (
-    <>
-      {/* Logo */}
-      <div className="flex h-20 items-center px-6 border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{ background: GOLD_GRADIENT }}>
-            <Plane className="h-4 w-4 rotate-45" style={{ color: "#022c22" }} />
-          </div>
-          <div>
-            <div className="text-white font-bold text-base tracking-wide" style={{ fontFamily: "'Playfair Display', 'Georgia', serif" }}>
-              AeroOps
+  const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => {
+    const isCollapsed = !isMobile && collapsed;
+    return (
+      <>
+        {/* Logo */}
+        <div className={cn("flex h-20 items-center border-b transition-all duration-300", isCollapsed ? "justify-center px-0" : "px-6")} style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: GOLD_GRADIENT }}>
+              <Plane className="h-4 w-4 rotate-45" style={{ color: "#022c22" }} />
             </div>
-            <div className="text-xs tracking-widest uppercase font-medium" style={{ color: "#86efac" }}>
-              Premium
+            {!isCollapsed && (
+              <div className="animate-in fade-in duration-300">
+                <div className="text-white font-bold text-base tracking-wide" style={{ fontFamily: "'Playfair Display', 'Georgia', serif" }}>
+                  AeroOps
+                </div>
+                <div className="text-xs tracking-widest uppercase font-medium" style={{ color: "#86efac" }}>
+                  Premium
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 p-4 space-y-1">
+          {navItems.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  "flex items-center transition-all text-sm font-semibold",
+                  isCollapsed ? "justify-center h-12 w-12 mx-auto rounded-full" : "px-4 py-3 rounded-full",
+                  active
+                    ? "shadow-sm shadow-amber-500/10"
+                    : "text-white/60 hover:text-white hover:bg-white/5"
+                )}
+                style={active
+                  ? { background: GOLD_GRADIENT, color: "#022c22" }
+                  : undefined
+                }
+                title={isCollapsed ? item.label : undefined}
+              >
+                <item.icon className={cn("h-4 w-4 flex-shrink-0", !isCollapsed && "mr-3")} />
+                {!isCollapsed && <span className="animate-in fade-in duration-300">{item.label}</span>}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* User */}
+        <div className="p-4 border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+          <div className={cn("flex items-center transition-all duration-300", isCollapsed ? "flex-col justify-center gap-2" : "gap-3 px-2")}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+              style={{ background: GOLD_GRADIENT, color: "#022c22" }}>
+              {currentEmployee?.initials ?? "?"}
+            </div>
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0 animate-in fade-in duration-300">
+                <div className="text-white text-sm font-semibold truncate">{currentEmployee?.name ?? ""}</div>
+                <div className="text-xs truncate" style={{ color: "#86efac" }}>{currentEmployee?.role ?? ""}</div>
+              </div>
+            )}
+            <div className={cn("flex items-center", isCollapsed ? "flex-col gap-2 mt-1" : "gap-1")}>
+              {currentEmployee && <EmployeeSettingsDialog employee={currentEmployee} />}
+              <button
+                onClick={logout}
+                title="Sign out"
+                className="p-1.5 rounded-full transition-colors flex-shrink-0 text-white/40 hover:text-white/80 hover:bg-white/5"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Nav */}
-      <nav className="flex-1 p-4 space-y-1">
-        {navItems.map((item) => {
-          const active = isActive(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                "flex items-center px-4 py-3 rounded-full transition-all text-sm font-semibold",
-                active
-                  ? "shadow-sm shadow-amber-500/10"
-                  : "text-white/60 hover:text-white hover:bg-white/5"
-              )}
-              style={active
-                ? { background: GOLD_GRADIENT, color: "#022c22" }
-                : undefined
-              }
-            >
-              <item.icon className="h-4 w-4 mr-3 flex-shrink-0" />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* User */}
-      <div className="p-4 border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-        <div className="flex items-center gap-3 px-2">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-            style={{ background: GOLD_GRADIENT, color: "#022c22" }}>
-            {currentEmployee?.initials ?? "?"}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-white text-sm font-semibold truncate">{currentEmployee?.name ?? ""}</div>
-            <div className="text-xs truncate" style={{ color: "#86efac" }}>{currentEmployee?.role ?? ""}</div>
-          </div>
-          <div className="flex items-center gap-1">
-            {currentEmployee && <EmployeeSettingsDialog employee={currentEmployee} />}
-            <button
-              onClick={logout}
-              title="Sign out"
-              className="p-1.5 rounded-full transition-colors flex-shrink-0 text-white/40 hover:text-white/80 hover:bg-white/5"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
-  );
+      </>
+    );
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f0fdf4] dark:bg-background">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 flex-shrink-0 flex-col border-r border-[#d1fae5]/10 dark:border-border/30"
+      <aside className={cn(
+        "hidden md:flex flex-col flex-shrink-0 transition-all duration-300 border-r border-[#d1fae5]/10 dark:border-border/30",
+        collapsed ? "w-20" : "w-64"
+      )}
         style={{ background: sidebarBackground }}>
         <SidebarContent />
       </aside>
@@ -159,7 +182,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         >
           <X className="h-4 w-4" />
         </button>
-        <SidebarContent />
+        <SidebarContent isMobile />
       </aside>
 
       {/* Main Content */}
@@ -175,6 +198,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
               aria-label="Open menu"
             >
               <Menu className="h-5 w-5" />
+            </button>
+
+            {/* Desktop Sidebar Toggle */}
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="hidden md:flex p-2 rounded-full transition-all hover:bg-[#f0fdf4] dark:hover:bg-muted text-[#047857] dark:text-muted-foreground mr-2"
+              title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            >
+              {collapsed ? (
+                <ChevronRight className="h-5 w-5" />
+              ) : (
+                <ChevronLeft className="h-5 w-5" />
+              )}
             </button>
 
             {/* Mobile brand */}

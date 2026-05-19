@@ -19,6 +19,7 @@ import settingsRouter from "./settings";
 import hrRouter from "./hr";
 import reportsRouter from "./reports";
 import whatsappRouter from "./whatsapp";
+import whatsappCampaignsRouter from "./whatsapp-campaigns";
 
 
 const router: IRouter = Router();
@@ -42,6 +43,8 @@ router.use(settingsRouter);
 router.use(hrRouter);
 router.use(reportsRouter);
 router.use(whatsappRouter);
+router.use(whatsappCampaignsRouter);
+
 
 
 export default router;

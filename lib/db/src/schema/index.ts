@@ -14,3 +14,5 @@ export * from "./attendance";
 export * from "./leaves";
 export * from "./whatsapp_instances";
 export * from "./whatsapp_messages";
+export * from "./whatsapp_campaigns";
+export * from "./whatsapp_campaign_recipients";

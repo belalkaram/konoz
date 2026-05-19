@@ -24,29 +24,43 @@ router.get("/whatsapp/instance", requireAuth, async (req, res) => {
       .where(eq(whatsappInstancesTable.employeeId, employeeId));
 
     if (!instance) {
-      // First time, create instance in Evolution API
+      // First time: create in Evolution API then save to DB
       const evoInstance = await WhatsappService.createInstance(instanceName);
-      
-      // Save to db
       [instance] = await db.insert(whatsappInstancesTable).values({
         employeeId,
         instanceName,
         connectionStatus: evoInstance.instance?.status || "disconnected",
         qrCode: evoInstance.qrcode?.base64 || null,
       }).returning();
-      
-      // Set webhook
+
       const webhookUrl = `${req.protocol}://${req.get("host")}/api/whatsapp/webhook`;
       await WhatsappService.setWebhook(instanceName, webhookUrl).catch(e => {
         logger.error("Failed to set webhook automatically", e);
       });
     }
 
-    // Always fetch latest status from Evolution API
-    const state = await WhatsappService.getConnectionState(instanceName);
+    // Fetch latest status from Evolution API
+    let state = await WhatsappService.getConnectionState(instanceName);
+
+    // Instance missing from Evolution (e.g. after server restart) — recreate it
+    if (!state) {
+      logger.warn(`Instance ${instanceName} not found in Evolution, recreating…`);
+      const evoInstance = await WhatsappService.createInstance(instanceName);
+      state = { instance: { state: evoInstance.instance?.status || "disconnected" } };
+
+      // Clear stale QR so the user is prompted to regenerate
+      await db.update(whatsappInstancesTable)
+        .set({ connectionStatus: "disconnected", qrCode: null })
+        .where(eq(whatsappInstancesTable.employeeId, employeeId));
+      instance.qrCode = null;
+
+      const webhookUrl = `${req.protocol}://${req.get("host")}/api/whatsapp/webhook`;
+      await WhatsappService.setWebhook(instanceName, webhookUrl).catch(e => {
+        logger.error("Failed to set webhook after recreate", e);
+      });
+    }
+
     const status = state?.instance?.state || "disconnected";
-    
-    // Update DB if changed
     if (instance.connectionStatus !== status) {
       await db.update(whatsappInstancesTable)
         .set({ connectionStatus: status })
@@ -65,27 +79,71 @@ router.get("/whatsapp/instance", requireAuth, async (req, res) => {
 });
 
 /**
- * Request to connect (generates QR code if disconnected)
+ * Request to connect (generates QR code if disconnected).
+ * Tries to connect the existing instance first; only creates if missing.
  */
 router.post("/whatsapp/instance/connect", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
   const instanceName = getInstanceName(employeeId);
 
   try {
-    const data = await WhatsappService.connectInstance(instanceName);
-    
-    if (data.qrcode?.base64) {
+    let qrData: any = null;
+
+    // Step 1: Try connecting the existing instance (returns QR if not yet linked)
+    try {
+      qrData = await WhatsappService.connectInstance(instanceName);
+    } catch (connectErr: any) {
+      // 404 = instance not registered in Evolution memory → create it first
+      if (connectErr?.response?.status === 404) {
+        logger.warn(`Instance ${instanceName} not found on connect, creating…`);
+
+        // Create instance (may fail with 403 if name exists in DB but not memory)
+        try {
+          const created = await WhatsappService.createInstance(instanceName);
+          qrData = created; // createInstance usually includes qrcode
+        } catch (createErr: any) {
+          // 403 = name exists in Evolution DB. Use restart endpoint to load it into memory.
+          if (createErr?.response?.status === 403) {
+            logger.warn(`Instance ${instanceName} exists in DB, restarting…`);
+            try {
+              await WhatsappService.restartInstance(instanceName);
+              // Wait a moment for Evolution to load the instance
+              await new Promise(r => setTimeout(r, 2000));
+              qrData = await WhatsappService.connectInstance(instanceName);
+            } catch (restartErr: any) {
+              logger.error("Restart also failed:", restartErr?.response?.data || restartErr.message);
+              throw restartErr;
+            }
+          } else {
+            throw createErr;
+          }
+        }
+
+        // Set webhook for the new/restarted instance
+        const webhookUrl = `${req.protocol}://${req.get("host")}/api/whatsapp/webhook`;
+        await WhatsappService.setWebhook(instanceName, webhookUrl).catch(e => {
+          logger.error("Failed to set webhook", e);
+        });
+      } else {
+        throw connectErr;
+      }
+    }
+
+    // Step 2: Persist QR in our DB
+    const qrBase64 = qrData?.qrcode?.base64 ?? null;
+    if (qrBase64) {
       await db.update(whatsappInstancesTable)
-        .set({ qrCode: data.qrcode.base64, connectionStatus: "connecting" })
+        .set({ qrCode: qrBase64, connectionStatus: "connecting" })
         .where(eq(whatsappInstancesTable.employeeId, employeeId));
     }
 
-    return res.json(data);
+    return res.json(qrData || { status: "connecting" });
   } catch (err) {
     req.log.error({ err }, "Error connecting whatsapp instance");
     return res.status(500).json({ error: "server_error", message: "Failed to connect WhatsApp instance" });
   }
 });
+
 
 /**
  * Logout
@@ -250,8 +308,18 @@ router.post("/whatsapp/webhook", async (req, res) => {
 
     // Handle incoming messages
     if (event === "MESSAGES_UPSERT" || event === "messages.upsert") {
-      const msg = data;
-      if (!msg || !msg.key) return res.status(200).send("OK");
+      let msg = data;
+      if (data?.messages && Array.isArray(data.messages)) {
+        msg = data.messages[0];
+      } else if (data?.message) {
+        msg = data.message;
+      } else if (Array.isArray(data)) {
+        msg = data[0];
+      }
+
+      if (!msg || !msg.key || !msg.key.remoteJid) {
+        return res.status(200).send("OK");
+      }
       
       const remoteJid = msg.key.remoteJid;
       // remoteJid format: 1234567890@s.whatsapp.net

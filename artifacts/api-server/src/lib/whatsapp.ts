@@ -76,14 +76,28 @@ export const WhatsappService = {
   },
 
   /**
-   * Delete an instance
+   * Delete an instance — silently ignores errors (including 404)
    */
   async deleteInstance(instanceName: string) {
     try {
       const response = await apiClient.delete(`/instance/delete/${instanceName}`);
       return response.data;
     } catch (error: any) {
-      logger.error("Error deleting WhatsApp instance:", error?.response?.data || error.message);
+      // 404 = already gone, that's fine. Log but don't throw.
+      logger.warn(`deleteInstance ${instanceName}: ${error?.response?.status ?? error.message}`);
+      return null;
+    }
+  },
+
+  /**
+   * Restart an instance (loads it back into memory from DB)
+   */
+  async restartInstance(instanceName: string) {
+    try {
+      const response = await apiClient.post(`/instance/restart/${instanceName}`);
+      return response.data;
+    } catch (error: any) {
+      logger.error("Error restarting WhatsApp instance:", error?.response?.data || error.message);
       throw error;
     }
   },
@@ -96,10 +110,7 @@ export const WhatsappService = {
       const response = await apiClient.post(`/message/sendText/${instanceName}`, {
         number,
         text,
-        options: {
-          delay: 1200,
-          presence: "composing",
-        },
+        delay: 1200
       });
       return response.data;
     } catch (error: any) {
@@ -152,5 +163,34 @@ export const WhatsappService = {
       logger.error("Error setting webhook:", error?.response?.data || error.message);
       throw error;
     }
+  },
+
+  /**
+   * Check if a number is on WhatsApp
+   */
+  async checkNumber(instanceName: string, numbers: string[]) {
+    try {
+      const response = await apiClient.post(`/chat/whatsappNumbers/${instanceName}`, {
+        numbers
+      });
+      return response.data;
+    } catch (error: any) {
+      logger.error("Error checking WhatsApp numbers:", error?.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch all groups for an instance
+   */
+  async getGroups(instanceName: string) {
+    try {
+      const response = await apiClient.get(`/group/fetchAllGroups/${instanceName}`);
+      return response.data;
+    } catch (error: any) {
+      logger.error("Error fetching WhatsApp groups:", error?.response?.data || error.message);
+      throw error;
+    }
   }
 };
+

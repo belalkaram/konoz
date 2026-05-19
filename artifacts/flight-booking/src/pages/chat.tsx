@@ -78,7 +78,7 @@ export default function Chat() {
   const sendMessageMutation = useMutation({
     mutationFn: async (payload: { text?: string; audio?: string }) => {
       if (!selectedPhone) return;
-      const res = await authFetch(`${BASE}/api/whatsapp/messages/${selectedPhone}`, {
+      const res = await authFetch(`http://localhost:3000/api/whatsapp/messages/${selectedPhone}`, {
         method: "POST",
         body: JSON.stringify(payload),
       });

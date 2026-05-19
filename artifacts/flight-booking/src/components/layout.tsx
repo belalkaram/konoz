@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Plane, Search, ListFilter, LayoutDashboard, Menu, X, Users, Tag, Bell, LogOut, UserCog, Building2, ShieldCheck, FileText, BarChart3, MessageSquare, QrCode } from "lucide-react";
+import { Plane, Search, ListFilter, LayoutDashboard, Menu, X, Users, Tag, Bell, LogOut, UserCog, Building2, ShieldCheck, FileText, BarChart3, MessageSquare, QrCode, Layers } from "lucide-react";
 
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -31,6 +31,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/orders", label: "Orders", icon: ListFilter },
     { href: "/chat", label: "WhatsApp Chat", icon: MessageSquare },
     { href: "/settings/whatsapp", label: "WhatsApp Settings", icon: QrCode },
+    { href: "/whatsapp-controls", label: "WhatsApp Controls", icon: Layers },
     ...(!isHR ? [{ href: "/reports", label: "Reports", icon: BarChart3 }] : []),
     ...(isHR ? [{ href: "/hr", label: "HR Management", icon: ShieldCheck }] : []),
     ...(isSupervisorOrAdmin ? [{ href: "/employees", label: "Employees", icon: UserCog }] : []),

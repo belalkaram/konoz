@@ -108,7 +108,7 @@ router.get("/whatsapp/campaigns", requireAuth, async (req, res) => {
  */
 router.post("/whatsapp/campaigns/:id/resume", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
-  const campaignId = parseInt(req.params.id);
+  const campaignId = parseInt(req.params.id as string);
 
   try {
     const [campaign] = await db
@@ -147,7 +147,7 @@ router.post("/whatsapp/campaigns/:id/resume", requireAuth, async (req, res) => {
  */
 router.post("/whatsapp/campaigns/:id/pause", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
-  const campaignId = parseInt(req.params.id);
+  const campaignId = parseInt(req.params.id as string);
 
   try {
     const [campaign] = await db
@@ -313,7 +313,7 @@ export async function triggerCampaign(campaignId: number, employeeId: number) {
     }
 
   } catch (error) {
-    logger.error(`Error in campaign ${campaignId} loop:`, error);
+    logger.error(error as any, `Error in campaign ${campaignId} loop`);
   }
 }
 

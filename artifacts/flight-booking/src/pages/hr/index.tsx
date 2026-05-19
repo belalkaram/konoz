@@ -178,7 +178,7 @@ export default function HRManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white border border-border p-1 mb-6 rounded-full inline-flex">
+        <TabsList className="bg-white dark:bg-muted border border-border p-1 mb-6 rounded-full inline-flex">
           <TabsTrigger value="attendance" className="flex items-center gap-2 rounded-full px-6 data-[state=active]:bg-primary data-[state=active]:text-white">
             <Clock className="h-4 w-4" />
             Attendance

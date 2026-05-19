@@ -185,10 +185,36 @@ export const WhatsappService = {
    */
   async getGroups(instanceName: string) {
     try {
-      const response = await apiClient.get(`/group/fetchAllGroups/${instanceName}`);
+      const response = await apiClient.get(`/group/fetchAllGroups/${instanceName}?getParticipants=true`);
       return response.data;
     } catch (error: any) {
       logger.error("Error fetching WhatsApp groups:", error?.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch all contacts for an instance
+   */
+  async getContacts(instanceName: string) {
+    try {
+      const response = await apiClient.post(`/chat/findContacts/${instanceName}`, {});
+      return response.data;
+    } catch (error: any) {
+      logger.error("Error fetching WhatsApp contacts:", error?.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch all open chats for an instance
+   */
+  async getChats(instanceName: string) {
+    try {
+      const response = await apiClient.post(`/chat/findChats/${instanceName}`, {});
+      return response.data;
+    } catch (error: any) {
+      logger.error("Error fetching WhatsApp chats:", error?.response?.data || error.message);
       throw error;
     }
   }

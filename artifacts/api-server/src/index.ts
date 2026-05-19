@@ -3,6 +3,7 @@ import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { seedEmployees } from "./lib/seed-employees.js";
 import { startReminderCron } from "./lib/reminder-job.js";
+import { startCampaignCron } from "./lib/campaign-job.js";
 
 const rawPort = process.env.API_PORT || process.env.PORT || "3000";
 
@@ -22,6 +23,7 @@ if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) {
     logger.info({ port }, "Server listening");
     await seedEmployees();
     startReminderCron();
+    startCampaignCron();
   });
 }
 

@@ -165,6 +165,8 @@ router.delete("/whatsapp/instance", requireAuth, async (req, res) => {
   }
 });
 
+import { normalizeWhatsAppNumber } from "../lib/whatsapp-utils";
+
 /**
  * Get unique contacts (customers) the employee has chatted with
  */
@@ -196,6 +198,202 @@ router.get("/whatsapp/contacts", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Error getting contacts");
     return res.status(500).json({ error: "server_error", message: "Failed to get contacts" });
+  }
+});
+
+/**
+ * Get all chats/contacts from Evolution API for Extract
+ */
+router.get("/whatsapp/contacts/extract", requireAuth, async (req, res) => {
+  const employeeId = req.employee!.employeeId;
+  const instanceName = getInstanceName(employeeId);
+
+  try {
+    const state = await WhatsappService.getConnectionState(instanceName);
+    if (state?.instance?.state !== "open") {
+      return res.status(400).json({ success: false, message: "WhatsApp is not connected", total: 0, contacts: [], unresolved: [] }); 
+    }
+    
+    try {
+      // 1. Fetch from Evolution API (Only chats and contacts)
+      const contactsPromise = WhatsappService.getContacts(instanceName).catch(() => []);
+      const chatsPromise = WhatsappService.getChats(instanceName).catch(() => []);
+      
+      // 2. Fetch messages from database history (chats initiated/received in our app)
+      const dbMessagesPromise = db
+        .select()
+        .from(whatsappMessagesTable)
+        .where(eq(whatsappMessagesTable.employeeId, employeeId))
+        .catch(() => []);
+
+      const [contacts, chats, dbMessages] = await Promise.all([
+        contactsPromise,
+        chatsPromise,
+        dbMessagesPromise
+      ]);
+      
+      const contactsMap = new Map<string, any>();
+      const unresolvedList: any[] = [];
+
+      // Helper to add/merge contacts
+      const addContact = (phone: string, name: string | null, source: string, rawId: string | null) => {
+        const existing = contactsMap.get(phone);
+        if (existing) {
+          const sources = new Set(existing.source.split(", "));
+          sources.add(source);
+          contactsMap.set(phone, {
+            phone,
+            name: name || existing.name,
+            source: Array.from(sources).join(", "),
+            rawId: rawId || existing.rawId,
+            status: "resolved"
+          });
+        } else {
+          contactsMap.set(phone, {
+            phone,
+            name,
+            source,
+            rawId,
+            status: "resolved"
+          });
+        }
+      };
+      
+      // Process Evolution contacts
+      if (Array.isArray(contacts)) {
+        contacts.forEach((c: any) => {
+          const norm = normalizeWhatsAppNumber(c);
+          const name = c.name || c.pushName || c.notify || null;
+          
+          if (norm.isResolved && norm.phone) {
+            addContact(norm.phone, name, "contact", c.id || c.remoteJid);
+          } else {
+            unresolvedList.push({
+              rawId: c.id || c.remoteJid,
+              name: name,
+              source: "contact",
+              status: "unresolved",
+              reason: norm.reason
+            });
+          }
+        });
+      }
+      
+      // Process Evolution chats
+      if (Array.isArray(chats)) {
+        chats.forEach((c: any) => {
+          // Exclude group chats (JIDs ending with @g.us or similar)
+          const rawId = c.id || c.remoteJid || "";
+          if (rawId.endsWith("@g.us")) {
+            return;
+          }
+          
+          const norm = normalizeWhatsAppNumber(c);
+          const name = c.name || c.pushName || c.notify || null;
+          
+          if (norm.isResolved && norm.phone) {
+            addContact(norm.phone, name, "chat", rawId);
+          } else {
+            unresolvedList.push({
+              rawId: rawId,
+              name: name,
+              source: "chat",
+              status: "unresolved",
+              reason: norm.reason
+            });
+          }
+        });
+      }
+
+      // Process Database messages history
+      if (Array.isArray(dbMessages)) {
+        dbMessages.forEach((msg: any) => {
+          if (msg.customerPhone) {
+            const norm = normalizeWhatsAppNumber(msg.customerPhone);
+            if (norm.isResolved && norm.phone) {
+              addContact(norm.phone, null, "app chat history", `db_msg_${msg.id}`);
+            }
+          }
+        });
+      }
+
+      const resolvedContacts = Array.from(contactsMap.values());
+
+      return res.json({ 
+        success: true, 
+        total: resolvedContacts.length, 
+        contacts: resolvedContacts,
+        unresolved: unresolvedList 
+      });
+    } catch (apiErr: any) {
+      req.log.warn({ err: apiErr }, "Evolution API returned error for contacts extract");
+      return res.status(500).json({ success: false, message: "Evolution API error", total: 0, contacts: [], unresolved: [] });
+    }
+  } catch (err) {
+    req.log.error({ err }, "Error extracting contacts");
+    return res.status(500).json({ success: false, message: "Failed to extract contacts", total: 0, contacts: [], unresolved: [] });
+  }
+});
+
+/**
+ * Export members for a specific group
+ */
+router.get("/whatsapp/groups/:groupId/members/export", requireAuth, async (req, res) => {
+  const employeeId = req.employee!.employeeId;
+  const instanceName = getInstanceName(employeeId);
+  const groupId = req.params.groupId;
+
+  try {
+    const groups = await WhatsappService.getGroups(instanceName);
+    
+    if (!Array.isArray(groups)) {
+      return res.status(500).json({ success: false, message: "Failed to fetch groups from WhatsApp" });
+    }
+
+    const group = groups.find((g: any) => g.id === groupId);
+    
+    if (!group) {
+      return res.status(404).json({ success: false, message: "Group not found" });
+    }
+
+    const participants = group.participants || [];
+    const members: any[] = [];
+    const unresolved: any[] = [];
+
+    participants.forEach((p: any) => {
+      const norm = normalizeWhatsAppNumber(p);
+      
+      if (norm.isResolved && norm.phone) {
+        members.push({
+          groupName: group.subject || group.name,
+          memberName: p.name || p.pushName || p.notify || null,
+          phone: norm.phone,
+          role: p.admin ? (p.admin === "superadmin" ? "Super Admin" : "Admin") : "Member",
+          status: "resolved",
+          rawId: p.id || p.jid || p.participant || null
+        });
+      } else {
+        unresolved.push({
+          groupName: group.subject || group.name,
+          rawId: p.id || p.jid || p.participant || null,
+          role: p.admin ? "Admin" : "Member",
+          status: "unresolved",
+          reason: norm.reason
+        });
+      }
+    });
+
+    return res.json({
+      success: true,
+      totalMembers: participants.length,
+      resolvedTotal: members.length,
+      members,
+      unresolved
+    });
+    
+  } catch (err) {
+    req.log.error({ err }, "Error exporting group members");
+    return res.status(500).json({ success: false, message: "Failed to export group members" });
   }
 });
 

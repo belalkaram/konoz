@@ -10,8 +10,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload, Send, Clock, Layers, FileText, Play, CheckCircle, Users, Filter, Pause, CheckCircle2 } from "lucide-react";
 import { authFetch, BASE } from "@/lib/api";
 import * as XLSX from "xlsx";
+import { useLocation, useRoute } from "wouter";
 
 export default function WhatsappControls() {
+  const [, setLocation] = useLocation();
+  const [match, params] = useRoute("/whatsapp-controls/:tab");
+  const currentTab = match && params?.tab ? params.tab : "campaigns";
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [numbers, setNumbers] = useState<string[]>([]);
@@ -20,6 +25,7 @@ export default function WhatsappControls() {
   const [timeGapMax, setTimeGapMax] = useState(10);
   const [batchSize, setBatchSize] = useState(10);
   const [campaignName, setCampaignName] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
   const [checkingNumbers, setCheckingNumbers] = useState(false);
   const [filteredNumbers, setFilteredNumbers] = useState<string[]>([]);
 
@@ -43,6 +49,16 @@ export default function WhatsappControls() {
     }
   });
 
+  // ── Fetch Contacts Extract ─────────────────────────────────────────────────
+  const { data: contactsData, isLoading: contactsLoading, refetch: refetchContacts } = useQuery({
+    queryKey: ["whatsapp-all-contacts"],
+    queryFn: async () => {
+      const res = await authFetch(`${BASE}/api/whatsapp/contacts/extract`);
+      if (!res.ok) throw new Error("Failed to fetch contacts");
+      return res.json() as Promise<{ success: boolean; total: number; contacts: any[]; unresolved: any[] }>;
+    }
+  });
+
   // ── Create Campaign Mutation ───────────────────────────────────────────────
   const createCampaignMutation = useMutation({
     mutationFn: async () => {
@@ -55,7 +71,8 @@ export default function WhatsappControls() {
           numbers: filteredNumbers.length > 0 ? filteredNumbers : numbers,
           timeGapMin,
           timeGapMax,
-          batchSize
+          batchSize,
+          scheduledAt: scheduledAt || undefined
         })
       });
       if (!res.ok) {
@@ -65,12 +82,13 @@ export default function WhatsappControls() {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "✅ Campaign created and started!" });
+      toast({ title: "✅ Campaign created!" });
       queryClient.invalidateQueries({ queryKey: ["whatsapp-campaigns"] });
       setCampaignName("");
       setMessageTemplate("");
       setNumbers([]);
       setFilteredNumbers([]);
+      setScheduledAt("");
     },
     onError: (err: any) => {
       toast({ title: "❌ Error", description: err.message, variant: "destructive" });
@@ -180,11 +198,12 @@ export default function WhatsappControls() {
     <div className="max-w-6xl mx-auto p-4 space-y-6 animate-in fade-in zoom-in-95 duration-500">
       <h1 className="text-3xl font-bold text-foreground mb-6">WhatsApp Controls</h1>
 
-      <Tabs defaultValue="campaigns" className="space-y-6">
-        <TabsList className="flex flex-col sm:flex-row h-auto w-full max-w-2xl mx-auto gap-2 bg-muted/50 p-1 rounded-lg">
+      <Tabs value={currentTab} onValueChange={(val) => setLocation(`/whatsapp-controls/${val}`)} className="space-y-6">
+        <TabsList className="flex flex-col sm:flex-row h-auto w-full max-w-3xl mx-auto gap-2 bg-muted/50 p-1 rounded-lg">
           <TabsTrigger value="campaigns" className="text-sm font-medium w-full">Bulk Campaigns</TabsTrigger>
           <TabsTrigger value="reports" className="text-sm font-medium w-full">Reports</TabsTrigger>
           <TabsTrigger value="groups" className="text-sm font-medium w-full">Group Management</TabsTrigger>
+          <TabsTrigger value="contacts" className="text-sm font-medium w-full">Contacts Extract</TabsTrigger>
         </TabsList>
 
         {/* ── Campaigns Tab ────────────────────────────────────────────────── */}
@@ -235,13 +254,25 @@ export default function WhatsappControls() {
                 </div>
 
                 {/* 3. Campaign Details */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Campaign Name</label>
-                  <Input 
-                    placeholder="e.g. Ramdan Campaign" 
-                    value={campaignName}
-                    onChange={(e) => setCampaignName(e.target.value)}
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Campaign Name</label>
+                    <Input 
+                      placeholder="e.g. Ramdan Campaign" 
+                      value={campaignName}
+                      onChange={(e) => setCampaignName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-1">
+                      <Clock className="h-4 w-4" /> Scheduled Time (Optional)
+                    </label>
+                    <Input 
+                      type="datetime-local" 
+                      value={scheduledAt}
+                      onChange={(e) => setScheduledAt(e.target.value)}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -418,6 +449,7 @@ export default function WhatsappControls() {
                     <TableRow>
                       <TableHead>Group Name</TableHead>
                       <TableHead>Identifier (JID)</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -425,17 +457,144 @@ export default function WhatsappControls() {
                       <TableRow key={group.id}>
                         <TableCell className="font-medium">{group.subject}</TableCell>
                         <TableCell className="font-mono text-xs">{group.id}</TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                toast({ title: "⏳ Fetching members...", description: "Please wait while we extract group members." });
+                                const res = await authFetch(`${BASE}/api/whatsapp/groups/${group.id}/members/export`);
+                                if (!res.ok) throw new Error("Failed to export members");
+                                const data = await res.json();
+                                
+                                if (!data.members || data.members.length === 0) {
+                                  toast({ title: "⚠️ No members found", description: "No valid phone numbers could be extracted from this group." });
+                                  return;
+                                }
+
+                                const exportData = data.members.map((m: any) => ({
+                                  "Group Name": m.groupName,
+                                  "Member Name": m.memberName || "",
+                                  "Phone Number": m.phone,
+                                  "Role": m.role,
+                                  "Status": m.status
+                                }));
+
+                                const ws = XLSX.utils.json_to_sheet(exportData);
+                                const wb = XLSX.utils.book_new();
+                                XLSX.utils.book_append_sheet(wb, ws, "Members");
+                                XLSX.writeFile(wb, `${group.subject}_members.xlsx`);
+                                toast({ title: `✅ Exported ${data.members.length} members successfully` });
+                              } catch (err: any) {
+                                toast({ title: "❌ Export failed", description: err.message, variant: "destructive" });
+                              }
+                            }}
+                          >
+                            <Upload className="h-4 w-4 mr-1" /> Export Members
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                     {(!groupsData?.groups || groupsData.groups.length === 0) && (
                       <TableRow>
-                        <TableCell colSpan={2} className="text-center text-muted-foreground py-4">
+                        <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
                           No groups found or not loaded yet
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Contacts Extract Tab ─────────────────────────────────────────── */}
+        <TabsContent value="contacts" className="space-y-6">
+          <Card className="bg-card border-border shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <Users className="h-5 w-5 text-primary" />
+                All WhatsApp Contacts
+              </CardTitle>
+              <CardDescription>
+                View all chats and contacts from your WhatsApp account.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {contactsLoading ? (
+                <div className="flex justify-center p-4"><Loader2 className="h-6 w-6 animate-spin" /></div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center bg-muted/30 p-3 rounded-lg border border-border/50">
+                    <div>
+                      <h3 className="font-semibold text-foreground">Total Extracted: {contactsData?.total || 0}</h3>
+                      <p className="text-xs text-muted-foreground">Unique contacts found in your chats and contacts list.</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="secondary"
+                        onClick={() => refetchContacts()}
+                      >
+                        Refresh Extract
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          if (!contactsData?.contacts?.length) {
+                            toast({ title: "⚠️ No contacts to export" });
+                            return;
+                          }
+                          const ws = XLSX.utils.json_to_sheet(contactsData.contacts.map((c: any) => ({
+                            "Name": c.name || "",
+                            "Phone Number": c.phone,
+                            "Source": c.source,
+                            "Status": c.status
+                          })));
+                          const wb = XLSX.utils.book_new();
+                          XLSX.utils.book_append_sheet(wb, ws, "Contacts");
+                          XLSX.writeFile(wb, "whatsapp_contacts_extract.xlsx");
+                        }}
+                      >
+                        <Upload className="h-4 w-4 mr-2" /> Export to Excel
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-[700px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Contact Name</TableHead>
+                          <TableHead>Phone Number</TableHead>
+                          <TableHead>Source</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {contactsData?.contacts?.map((contact: any, i: number) => (
+                          <TableRow key={i}>
+                            <TableCell className="font-medium">{contact.name || "-"}</TableCell>
+                            <TableCell className="font-mono text-sm">{contact.phone}</TableCell>
+                            <TableCell className="capitalize">{contact.source}</TableCell>
+                            <TableCell>
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                {contact.status}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {(!contactsData?.contacts || contactsData.contacts.length === 0) && (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                              No contacts extracted yet. Ensure your WhatsApp is connected.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               )}
             </CardContent>

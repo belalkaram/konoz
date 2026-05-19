@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Plane, Search, ListFilter, LayoutDashboard, Menu, X, Users, Tag, Bell, LogOut, UserCog, Building2, ShieldCheck, FileText, BarChart3, MessageSquare, QrCode, Layers } from "lucide-react";
+import { Plane, Search, ListFilter, LayoutDashboard, Menu, X, Users, Tag, Bell, LogOut, UserCog, Building2, ShieldCheck, FileText, BarChart3, MessageSquare, QrCode, Layers, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
 
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { currentEmployee, logout } = useEmployee();
   const role = currentEmployee?.role;
+
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const sidebarBackground = mounted && theme === "dark"
+    ? "linear-gradient(180deg, #070f0d 0%, #0a1411 50%, #0d1a16 100%)"
+    : "linear-gradient(180deg, #011a13 0%, #022c22 40%, #064e3b 100%)";
 
   const isSupervisorOrAdmin = role === "Administrator" || role === "Supervisor";
   const isAdmin = role === "Administrator";
@@ -71,10 +83,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
               key={item.href}
               href={item.href}
               onClick={() => setMobileOpen(false)}
-              className="flex items-center px-4 py-3 rounded-full transition-all text-sm font-semibold"
+              className={cn(
+                "flex items-center px-4 py-3 rounded-full transition-all text-sm font-semibold",
+                active
+                  ? "shadow-sm shadow-amber-500/10"
+                  : "text-white/60 hover:text-white hover:bg-white/5"
+              )}
               style={active
                 ? { background: GOLD_GRADIENT, color: "#022c22" }
-                : { color: "rgba(255,255,255,0.65)" }
+                : undefined
               }
             >
               <item.icon className="h-4 w-4 mr-3 flex-shrink-0" />
@@ -100,10 +117,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <button
               onClick={logout}
               title="Sign out"
-              className="p-1.5 rounded-full transition-colors flex-shrink-0"
-              style={{ color: "rgba(255,255,255,0.4)" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.8)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.4)" }}
+              className="p-1.5 rounded-full transition-colors flex-shrink-0 text-white/40 hover:text-white/80 hover:bg-white/5"
             >
               <LogOut className="h-4 w-4" />
             </button>
@@ -114,10 +128,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#f0fdf4" }}>
+    <div className="flex h-screen overflow-hidden bg-[#f0fdf4] dark:bg-background">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 flex-shrink-0 flex-col"
-        style={{ background: SIDEBAR_GRADIENT }}>
+      <aside className="hidden md:flex w-64 flex-shrink-0 flex-col border-r border-[#d1fae5]/10 dark:border-border/30"
+        style={{ background: sidebarBackground }}>
         <SidebarContent />
       </aside>
 
@@ -133,10 +147,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile Drawer */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 flex flex-col transform transition-transform duration-300 md:hidden",
+          "fixed inset-y-0 left-0 z-50 w-64 flex flex-col transform transition-transform duration-300 md:hidden border-r border-[#d1fae5]/10 dark:border-border/30",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
-        style={{ background: SIDEBAR_GRADIENT }}
+        style={{ background: sidebarBackground }}
       >
         <button
           onClick={() => setMobileOpen(false)}
@@ -152,12 +166,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <ConnectivityBanner />
         {/* Topbar */}
-        <header className="h-16 flex items-center justify-between px-4 md:px-8 flex-shrink-0 bg-white border-b" style={{ borderColor: "#d1fae5" }}>
+        <header className="h-16 flex items-center justify-between px-4 md:px-8 flex-shrink-0 bg-white dark:bg-card border-b border-[#d1fae5] dark:border-border">
           <div className="flex items-center gap-3">
             {/* Hamburger */}
             <button
-              className="md:hidden p-2 rounded-full transition-colors"
-              style={{ background: "#f0fdf4", color: "#047857" }}
+              className="md:hidden p-2 rounded-full transition-colors bg-[#f0fdf4] dark:bg-muted text-[#047857] dark:text-foreground"
               onClick={() => setMobileOpen(true)}
               aria-label="Open menu"
             >
@@ -169,17 +182,30 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: GOLD_GRADIENT }}>
                 <Plane className="h-3.5 w-3.5 rotate-45" style={{ color: "#022c22" }} />
               </div>
-              <span className="font-bold tracking-wide text-sm" style={{ color: "#022c22", fontFamily: "'Playfair Display', 'Georgia', serif" }}>AeroOps</span>
+              <span className="font-bold tracking-wide text-sm text-[#022c22] dark:text-foreground" style={{ fontFamily: "'Playfair Display', 'Georgia', serif" }}>AeroOps</span>
             </div>
 
             {/* Desktop env label */}
             <div className="hidden md:flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-sm font-medium" style={{ color: "#047857" }}>Konooz Live System</span>
+              <span className="text-sm font-medium text-[#047857] dark:text-[#86efac]">Konooz Live System</span>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Theme Toggle Button */}
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-2 rounded-full transition-all text-sm font-semibold flex items-center justify-center hover:bg-[#f0fdf4] dark:hover:bg-muted text-[#047857] dark:text-muted-foreground"
+              title={mounted && theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {mounted && theme === "dark" ? (
+                <Sun className="h-4 w-4 text-amber-500" />
+              ) : (
+                <Moon className="h-4 w-4 text-emerald-800 dark:text-muted-foreground" />
+              )}
+            </button>
+
             <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold"
               style={{ background: GOLD_GRADIENT, color: "#022c22" }}>
               {currentEmployee?.initials ?? "?"}
@@ -187,10 +213,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <button
               onClick={logout}
               title="Sign out"
-              className="hidden md:flex p-2 rounded-full transition-colors items-center gap-1.5 text-xs font-medium"
-              style={{ color: "#047857" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#f0fdf4"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+              className="hidden md:flex p-2 rounded-full transition-colors items-center gap-1.5 text-xs font-medium text-[#047857] dark:text-muted-foreground hover:bg-[#f0fdf4] dark:hover:bg-muted"
             >
               <LogOut className="h-4 w-4" />
               Sign out

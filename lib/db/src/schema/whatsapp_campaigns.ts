@@ -13,7 +13,8 @@ export const whatsappCampaignsTable = pgTable("whatsapp_campaigns", {
   timeGapMin: integer("time_gap_min").notNull().default(5),
   timeGapMax: integer("time_gap_max").notNull().default(10),
   batchSize: integer("batch_size").notNull().default(10),
-  status: text("status").notNull().default("pending"), // pending, running, paused, completed
+  status: text("status").notNull().default("pending"), // pending, running, paused, completed, scheduled
+  scheduledAt: timestamp("scheduled_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

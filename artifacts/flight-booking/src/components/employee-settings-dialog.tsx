@@ -51,10 +51,7 @@ export function EmployeeSettingsDialog({ employee }: Props) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button
-          className="p-1.5 rounded-full transition-colors flex-shrink-0"
-          style={{ color: "rgba(255,255,255,0.4)" }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.8)"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.4)"; }}
+          className="p-1.5 rounded-full transition-colors flex-shrink-0 text-white/40 hover:text-white/80 hover:bg-white/5"
           title="Notification Settings"
         >
           <Settings className="h-4 w-4" />

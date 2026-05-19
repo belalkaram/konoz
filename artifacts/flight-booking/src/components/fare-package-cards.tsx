@@ -40,7 +40,7 @@ export function FarePackageCards({ packages, displayCurrency, onSelect }: FarePa
           >
             <div className={`p-3 text-center ${isCheapest ? "bg-blue-100/50 dark:bg-blue-900/30" : "bg-muted/30"}`}>
               <h4 className="font-bold text-base text-foreground">{pkg.name}</h4>
-              <div className="text-xs text-muted-foreground uppercase mt-0.5">{pkg.cabin.replace("_", " ")}</div>
+              <div className="text-xs text-muted-foreground uppercase mt-0.5">{pkg.cabin?.replace("_", " ") || ""}</div>
             </div>
 
             <div className="p-4 flex-1 flex flex-col gap-3">

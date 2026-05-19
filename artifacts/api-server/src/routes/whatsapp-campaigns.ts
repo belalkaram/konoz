@@ -14,7 +14,7 @@ const getInstanceName = (employeeId: number) => `emp_${employeeId}`;
  */
 router.post("/whatsapp/campaigns", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
-  const { name, messageTemplate, numbers, timeGapMin, timeGapMax, batchSize } = req.body;
+  const { name, messageTemplate, numbers, timeGapMin, timeGapMax, batchSize, scheduledAt } = req.body;
 
   if (!name || !messageTemplate || !numbers || !Array.isArray(numbers)) {
     return res.status(400).json({ error: "validation_error", message: "Name, template, and numbers array are required" });
@@ -27,6 +27,19 @@ router.post("/whatsapp/campaigns", requireAuth, async (req, res) => {
     if (state?.instance?.state !== "open") {
       return res.status(400).json({ error: "not_connected", message: "WhatsApp instance is not connected" });
     }
+
+    let initialStatus = "running";
+    let parsedDate: Date | null = null;
+    
+    if (scheduledAt) {
+      parsedDate = new Date(scheduledAt);
+      if (parsedDate.getTime() > Date.now()) {
+        initialStatus = "scheduled";
+      } else {
+        parsedDate = null;
+      }
+    }
+
     // 1. Create Campaign
     const [campaign] = await db.insert(whatsappCampaignsTable).values({
       employeeId,
@@ -35,7 +48,8 @@ router.post("/whatsapp/campaigns", requireAuth, async (req, res) => {
       timeGapMin: timeGapMin || 5,
       timeGapMax: timeGapMax || 10,
       batchSize: batchSize || 10,
-      status: "running",
+      status: initialStatus,
+      scheduledAt: parsedDate,
     }).returning();
 
     // 2. Create Recipients
@@ -48,7 +62,9 @@ router.post("/whatsapp/campaigns", requireAuth, async (req, res) => {
     await db.insert(whatsappCampaignRecipientsTable).values(recipientsData);
 
     // 3. Trigger async sending loop
-    triggerCampaign(campaign.id, employeeId);
+    if (initialStatus === "running") {
+      triggerCampaign(campaign.id, employeeId);
+    }
 
     return res.json({ campaign });
   } catch (err) {
@@ -216,7 +232,7 @@ router.get("/whatsapp/groups", requireAuth, async (req, res) => {
 });
 
 // Helper function for background sending
-async function triggerCampaign(campaignId: number, employeeId: number) {
+export async function triggerCampaign(campaignId: number, employeeId: number) {
   const instanceName = getInstanceName(employeeId);
   
   try {

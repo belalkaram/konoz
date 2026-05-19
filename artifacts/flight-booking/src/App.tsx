@@ -1,6 +1,7 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
@@ -107,6 +108,7 @@ function Router() {
         <Route path="/orders/:orderId" component={OrderDetail} />
         <Route path="/settings/whatsapp" component={WhatsappSettings} />
         <Route path="/whatsapp-controls" component={WhatsappControls} />
+        <Route path="/whatsapp-controls/:tab" component={WhatsappControls} />
         <Route path="/chat" component={Chat} />
         <Route component={NotFound} />
       </Switch>
@@ -117,18 +119,20 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <EmployeeProvider>
-          <TooltipProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <ErrorBoundary>
-                <Router />
-              </ErrorBoundary>
-            </WouterRouter>
-            <Toaster />
-          </TooltipProvider>
-        </EmployeeProvider>
-      </QueryClientProvider>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <QueryClientProvider client={queryClient}>
+          <EmployeeProvider>
+            <TooltipProvider>
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                <ErrorBoundary>
+                  <Router />
+                </ErrorBoundary>
+              </WouterRouter>
+              <Toaster />
+            </TooltipProvider>
+          </EmployeeProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

@@ -38,35 +38,35 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-[#f0fdf4]">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border border-emerald-100 text-center relative overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#f0fdf4] dark:bg-background">
+        <div className="max-w-md w-full bg-white dark:bg-card rounded-2xl shadow-2xl p-8 border border-emerald-100 dark:border-border text-center relative overflow-hidden">
           {/* Background decoration */}
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-amber-400 to-emerald-500" />
           
           <div className="flex justify-center mb-6">
             <div className={
-              `w-20 h-20 rounded-full flex items-center justify-center ${this.state.isNetworkError ? 'bg-amber-50' : 'bg-red-50'}`
+              `w-20 h-20 rounded-full flex items-center justify-center ${this.state.isNetworkError ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-red-50 dark:bg-red-950/20'}`
             }>
               {this.state.isNetworkError ? (
-                <Globe className="w-10 h-10 text-amber-600 animate-pulse" />
+                <Globe className="w-10 h-10 text-amber-600 dark:text-amber-400 animate-pulse" />
               ) : (
-                <AlertTriangle className="w-10 h-10 text-red-600" />
+                <AlertTriangle className="w-10 h-10 text-red-600 dark:text-red-400" />
               )}
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground mb-2">
             {this.state.isNetworkError ? "Connection Issue" : "Application Error"}
           </h1>
           
-          <p className="text-gray-600 mb-6 leading-relaxed">
+          <p className="text-gray-600 dark:text-muted-foreground mb-6 leading-relaxed">
             {this.state.isNetworkError 
               ? "We're having trouble connecting to the system. This is usually caused by an unstable internet connection."
               : "An unexpected error occurred while processing your request. Our system logs have been updated."}
           </p>
 
-          <div className="rounded-xl p-4 mb-8 text-left text-xs font-mono bg-gray-50 border border-gray-100 text-gray-500 break-all">
-            <div className="font-bold text-gray-400 uppercase mb-1 tracking-tighter">Error Details:</div>
+          <div className="rounded-xl p-4 mb-8 text-left text-xs font-mono bg-gray-50 dark:bg-muted border border-gray-100 dark:border-border text-gray-500 dark:text-muted-foreground break-all">
+            <div className="font-bold text-gray-400 dark:text-muted-foreground/60 uppercase mb-1 tracking-tighter">Error Details:</div>
             {this.state.message}
           </div>
 
@@ -85,14 +85,14 @@ export class ErrorBoundary extends Component<Props, State> {
                 this.handleReset();
                 window.location.href = "/";
               }}
-              className="w-full border-emerald-100 text-emerald-700 hover:bg-emerald-50"
+              className="w-full border-emerald-100 dark:border-border text-emerald-700 dark:text-foreground hover:bg-emerald-50 dark:hover:bg-muted"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Return to Dashboard
             </Button>
           </div>
           
-          <div className="mt-8 pt-6 border-t border-gray-50 text-[10px] text-gray-400 uppercase tracking-widest font-bold">
+          <div className="mt-8 pt-6 border-t border-gray-50 dark:border-border text-[10px] text-gray-400 uppercase tracking-widest font-bold">
             AeroOps Premium Reliability System
           </div>
         </div>

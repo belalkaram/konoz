@@ -62,23 +62,23 @@ export function ConnectivityBanner() {
 
 export function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-[#f0fdf4]">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border-2 border-red-500/20 text-center">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <AlertTriangle className="h-8 w-8 text-red-600" />
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[#f0fdf4] dark:bg-background">
+      <div className="max-w-md w-full bg-white dark:bg-card rounded-2xl shadow-xl p-8 border-2 border-red-500/20 text-center">
+        <div className="w-16 h-16 bg-red-100 dark:bg-red-950/40 rounded-full flex items-center justify-center mx-auto mb-6">
+          <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h2>
-        <p className="text-gray-600 mb-6 italic">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-foreground mb-2">Something went wrong</h2>
+        <p className="text-gray-600 dark:text-muted-foreground mb-6 italic">
           "{error.message}"
         </p>
-        <p className="text-sm text-gray-500 mb-8">
+        <p className="text-sm text-gray-500 dark:text-muted-foreground/80 mb-8">
           This could be due to a poor internet connection or a temporary server issue.
         </p>
         <div className="space-y-3">
           <Button onClick={resetErrorBoundary} className="w-full bg-emerald-700 hover:bg-emerald-800 py-6 text-lg">
             <RefreshCw className="h-5 w-5 mr-2" /> Try Again
           </Button>
-          <Button variant="ghost" onClick={() => window.location.href = "/"} className="w-full">
+          <Button variant="ghost" onClick={() => window.location.href = "/"} className="w-full text-foreground hover:bg-muted">
             Back to Dashboard
           </Button>
         </div>

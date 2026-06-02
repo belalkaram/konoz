@@ -16,3 +16,6 @@ export * from "./whatsapp_instances";
 export * from "./whatsapp_messages";
 export * from "./whatsapp_campaigns";
 export * from "./whatsapp_campaign_recipients";
+export * from "./whatsapp_routing";
+export * from "./expenses";
+export * from "./payrolls";

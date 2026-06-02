@@ -20,7 +20,8 @@ import hrRouter from "./hr";
 import reportsRouter from "./reports";
 import whatsappRouter from "./whatsapp";
 import whatsappCampaignsRouter from "./whatsapp-campaigns";
-
+import supervisorRouter from "./supervisor";
+import accountingRouter from "./accounting";
 
 const router: IRouter = Router();
 
@@ -44,7 +45,10 @@ router.use(hrRouter);
 router.use(reportsRouter);
 router.use(whatsappRouter);
 router.use(whatsappCampaignsRouter);
-
+router.use(supervisorRouter);
+import whatsappRoutingRouter from "./whatsapp_routing.js";
+router.use(whatsappRoutingRouter);
+router.use(accountingRouter);
 
 
 export default router;

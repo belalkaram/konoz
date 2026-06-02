@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, and, or, desc } from "drizzle-orm";
-import { db, whatsappInstancesTable, whatsappMessagesTable, customersTable } from "@workspace/db";
+import { db, whatsappInstancesTable, whatsappMessagesTable, customersTable, systemSettingsTable, whatsappRoutingAgentsTable, whatsappRoutingCustomersTable, employeesTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth.js";
 import { WhatsappService } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
@@ -22,6 +22,9 @@ router.get("/whatsapp/instance", requireAuth, async (req, res) => {
       .select()
       .from(whatsappInstancesTable)
       .where(eq(whatsappInstancesTable.employeeId, employeeId));
+
+    const [mainInstanceSetting] = await db.select().from(systemSettingsTable).where(eq(systemSettingsTable.key, "MAIN_WHATSAPP_INSTANCE_NAME"));
+    const isMainInstance = mainInstanceSetting?.value === instanceName;
 
     if (!instance) {
       // First time: create in Evolution API then save to DB
@@ -71,6 +74,7 @@ router.get("/whatsapp/instance", requireAuth, async (req, res) => {
       instanceName,
       status,
       qrCode: instance.qrCode,
+      isMainInstance,
     });
   } catch (err) {
     req.log.error({ err }, "Error getting whatsapp instance");
@@ -170,6 +174,25 @@ import { normalizeWhatsAppNumber } from "../lib/whatsapp-utils";
 /**
  * Get unique contacts (customers) the employee has chatted with
  */
+// Set current instance as Main Instance
+router.post("/whatsapp/instance/set-main", requireAuth, async (req, res) => {
+  const employeeId = req.employee!.employeeId;
+  const instance = getInstanceName(employeeId);
+  try {
+    await db
+      .insert(systemSettingsTable)
+      .values({ key: "MAIN_WHATSAPP_INSTANCE_NAME", value: instance, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: systemSettingsTable.key,
+        set: { value: instance, updatedAt: new Date() },
+      });
+    return res.json({ success: true, instance });
+  } catch (err) {
+    logger.error({ err }, "Error setting main instance");
+    return res.status(500).json({ error: "server_error" });
+  }
+});
+
 router.get("/whatsapp/contacts", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
 
@@ -509,8 +532,6 @@ router.post("/whatsapp/webhook", async (req, res) => {
       let msg = data;
       if (data?.messages && Array.isArray(data.messages)) {
         msg = data.messages[0];
-      } else if (data?.message) {
-        msg = data.message;
       } else if (Array.isArray(data)) {
         msg = data[0];
       }
@@ -546,9 +567,59 @@ router.post("/whatsapp/webhook", async (req, res) => {
             isFromMe: msg.key.fromMe || false,
             timestamp: new Date(msg.messageTimestamp * 1000),
           });
-        }
-      }
-    }
+
+          // --- Round Robin Routing Logic ---
+          if (!msg.key.fromMe) {
+            const [mainInstanceSetting] = await db.select().from(systemSettingsTable).where(eq(systemSettingsTable.key, "MAIN_WHATSAPP_INSTANCE_NAME"));
+            
+            if (mainInstanceSetting && mainInstanceSetting.value === instance) {
+              const [routedCust] = await db.select().from(whatsappRoutingCustomersTable).where(eq(whatsappRoutingCustomersTable.customerPhone, phone));
+              
+              let targetAgentPhone: string | null = null;
+              
+              if (routedCust) {
+                const [agent] = await db.select().from(whatsappRoutingAgentsTable).where(eq(whatsappRoutingAgentsTable.id, routedCust.assignedAgentId));
+                if (agent && agent.isActive) {
+                  targetAgentPhone = agent.agentPhone;
+                }
+              } else {
+                // Find next active agent
+                const agents = await db.select().from(whatsappRoutingAgentsTable)
+                  .where(eq(whatsappRoutingAgentsTable.isActive, true))
+                  .orderBy(whatsappRoutingAgentsTable.lastAssignedAt);
+                
+                if (agents.length > 0) {
+                  const nextAgent = agents[0];
+                  targetAgentPhone = nextAgent.agentPhone;
+                  
+                  await db.insert(whatsappRoutingCustomersTable).values({
+                    customerPhone: phone,
+                    assignedAgentId: nextAgent.id,
+                  });
+                  
+                  // Drizzle raw sql workaround
+                  await db.update(whatsappRoutingAgentsTable)
+                    .set({ 
+                      lastAssignedAt: new Date(), 
+                    })
+                    .where(eq(whatsappRoutingAgentsTable.id, nextAgent.id));
+                }
+              }
+
+              if (targetAgentPhone) {
+                // Forward message to the agent from the Main WhatsApp
+                const forwardText = `*New message from Lead (Phone: ${phone})*\n\n${messageText}`;
+                try {
+                  await WhatsappService.sendTextMessage(instance, targetAgentPhone, forwardText);
+                } catch (fwErr) {
+                  logger.error({ fwErr, targetAgentPhone }, "Failed to forward lead message to agent");
+                }
+              }
+            }
+          } // end !fromMe
+        } // end if (messageText)
+      } // end if (remoteJid.includes)
+    } // end if (MESSAGES_UPSERT)
 
     return res.status(200).send("OK");
   } catch (err) {

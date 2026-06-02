@@ -159,6 +159,20 @@
     letter-spacing: -0.02em;
   }
 
+  html[dir="rtl"] {
+    --app-font-sans: 'IBM Plex Sans Arabic', sans-serif;
+  }
+
+  html[dir="rtl"] h1,
+  html[dir="rtl"] h2,
+  html[dir="rtl"] h3,
+  html[dir="rtl"] h4,
+  html[dir="rtl"] h5,
+  html[dir="rtl"] h6 {
+    font-family: 'IBM Plex Sans Arabic', sans-serif;
+    letter-spacing: normal;
+  }
+
   /* ── Pill shape for all interactive controls ── */
   button:not([class*="rounded-none"]),
   [role="button"]:not([class*="rounded-none"]) {
@@ -171,4 +185,28 @@
   [data-radix-select-trigger]:not([class*="rounded-none"]) {
     border-radius: 9999px;
   }
+
+  /* ── Global RTL Alignment Overrides ── */
+  html[dir="rtl"] .text-left:not(.keep-ltr):not(.dir-ltr) {
+    text-align: right;
+  }
+  html[dir="rtl"] .sm\:text-left:not(.keep-ltr):not(.dir-ltr) {
+    text-align: right;
+  }
+  html[dir="rtl"] .md\:text-left:not(.keep-ltr):not(.dir-ltr) {
+    text-align: right;
+  }
+  html[dir="rtl"] .text-right:not(.keep-rtl):not(.dir-ltr) {
+    text-align: left;
+  }
+  html[dir="rtl"] .sm\:text-right:not(.keep-rtl):not(.dir-ltr) {
+    text-align: left;
+  }
+  html[dir="rtl"] .md\:text-right:not(.keep-rtl):not(.dir-ltr) {
+    text-align: left;
+  }
+  .dir-ltr {
+    direction: ltr !important;
+  }
 }
+

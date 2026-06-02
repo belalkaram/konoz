@@ -1,6 +1,8 @@
 import express from "express";
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
+import customersRouter from "./routes/customers.js";
+import whatsappRoutingRouter from "./routes/whatsapp_routing.js";
 import { seedEmployees } from "./lib/seed-employees.js";
 import { startReminderCron } from "./lib/reminder-job.js";
 import { startCampaignCron } from "./lib/campaign-job.js";

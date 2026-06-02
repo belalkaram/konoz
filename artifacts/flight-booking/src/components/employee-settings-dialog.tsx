@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { authFetch, BASE } from "@/lib/api";
 import { Employee, useEmployee } from "@/contexts/employee-context";
+import { useLanguage } from "@/contexts/language-context";
 
 interface Props {
   employee: Employee;
@@ -18,6 +19,7 @@ export function EmployeeSettingsDialog({ employee }: Props) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const { refreshCurrentEmployee } = useEmployee();
+  const { isRtl, t } = useLanguage();
 
   const mutation = useMutation({
     mutationFn: async (newEmail: string) => {
@@ -28,17 +30,24 @@ export function EmployeeSettingsDialog({ employee }: Props) {
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || "Failed to update email");
+        throw new Error(error.message || (isRtl ? "فشل تحديث البريد الإلكتروني" : "Failed to update email"));
       }
       return res.json();
     },
     onSuccess: () => {
       refreshCurrentEmployee();
-      toast({ title: "Settings updated", description: "Your notification email has been saved." });
+      toast({
+        title: isRtl ? "تم تحديث الإعدادات" : "Settings updated",
+        description: isRtl ? "تم حفظ بريدك الإلكتروني بنجاح." : "Your notification email has been saved."
+      });
       setOpen(false);
     },
     onError: (error: Error) => {
-      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      toast({
+        title: isRtl ? "فشل التحديث" : "Update failed",
+        description: error.message,
+        variant: "destructive"
+      });
     },
   });
 
@@ -52,27 +61,29 @@ export function EmployeeSettingsDialog({ employee }: Props) {
       <DialogTrigger asChild>
         <button
           className="p-1.5 rounded-full transition-colors flex-shrink-0 text-white/40 hover:text-white/80 hover:bg-white/5"
-          title="Notification Settings"
+          title={isRtl ? "إعدادات الإشعارات" : "Notification Settings"}
         >
           <Settings className="h-4 w-4" />
         </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <form onSubmit={handleSubmit} className={isRtl ? "text-right" : "text-left"}>
+          <DialogHeader className={isRtl ? "text-right" : "text-left"}>
+            <DialogTitle className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
               <Settings className="h-5 w-5" />
-              Notification Settings
+              {isRtl ? "إعدادات الإشعارات" : "Notification Settings"}
             </DialogTitle>
-            <DialogDescription>
-              Update your email address to receive traveler notifications and trip reminders.
+            <DialogDescription className={isRtl ? "text-right" : "text-left"}>
+              {isRtl
+                ? "قم بتحديث بريدك الإلكتروني لتلقي إشعارات المسافرين وتذكيرات الرحلات."
+                : "Update your email address to receive traveler notifications and trip reminders."}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center gap-2">
+              <Label htmlFor="email" className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
                 <Mail className="h-4 w-4 text-muted-foreground" />
-                Notification Email
+                {isRtl ? "البريد الإلكتروني للإشعارات" : "Notification Email"}
               </Label>
               <Input
                 id="email"
@@ -81,19 +92,22 @@ export function EmployeeSettingsDialog({ employee }: Props) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={mutation.isPending}
+                className={isRtl ? "text-right dir-ltr" : "text-left"}
               />
               <p className="text-[0.8rem] text-muted-foreground">
-                This is where you'll receive alerts for new travelers and 24-hour reminders.
+                {isRtl
+                  ? "هنا ستتلقى تنبيهات المسافرين الجدد وتذكيرات الـ 24 ساعة."
+                  : "This is where you'll receive alerts for new travelers and 24-hour reminders."}
               </p>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className={`flex gap-2 ${isRtl ? "flex-row-reverse" : ""}`}>
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={mutation.isPending}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={mutation.isPending} className="gap-2">
               {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Save Changes
+              {isRtl ? "حفظ التغييرات" : "Save Changes"}
             </Button>
           </DialogFooter>
         </form>
@@ -101,3 +115,4 @@ export function EmployeeSettingsDialog({ employee }: Props) {
     </Dialog>
   );
 }
+

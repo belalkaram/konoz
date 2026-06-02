@@ -142,43 +142,18 @@ router.get("/reports", requireAuth, async (req, res) => {
       .from(customersTable)
       .where(filters.customerFilter(eq(customersTable.status, "booked")));
 
-    // ── KPI: Revenue ──
-    const revenueJoinConditions: (SQL | undefined)[] = [
-      eq(paymentsTable.ticketId, ticketsTable.id),
-    ];
-    const revWhere: (SQL | undefined)[] = [
-      filters.dateFilter(paymentsTable.createdAt),
-      eq(paymentsTable.paymentStatus, "paid"),
-    ];
-    if (filters.allowedEmployeeIds) {
-      revWhere.push(inArray(ticketsTable.employeeId, filters.allowedEmployeeIds));
-    }
-
+    // ── KPI: Revenue (tickets price for confirmed/paid/issued tickets) ──
     const revenueResult = await db
-      .select({ total: sql<string>`COALESCE(SUM(${paymentsTable.amount}), 0)::text` })
-      .from(paymentsTable)
-      .innerJoin(ticketsTable, and(...revenueJoinConditions))
-      .where(and(...revWhere));
-
+      .select({ total: sql<string>`COALESCE(SUM(COALESCE(${ticketsTable.price}, 0)), 0)::text` })
+      .from(ticketsTable)
+      .where(filters.ticketFilter(inArray(ticketsTable.ticketStatus, ["confirmed", "paid", "issued"])));
     const totalRevenue = revenueResult[0]?.total ?? "0";
 
-    // ── KPI: Profit (from invoices) ──
-    const profitWhere: (SQL | undefined)[] = [
-      filters.dateFilter(invoicesTable.createdAt),
-    ];
-    if (filters.allowedEmployeeIds) {
-      profitWhere.push(
-        sql`EXISTS (
-          SELECT 1 FROM ${ticketsTable}
-          WHERE ${ticketsTable.id} = ${invoicesTable.ticketId}
-          AND ${inArray(ticketsTable.employeeId, filters.allowedEmployeeIds!)}
-        )`
-      );
-    }
+    // ── KPI: Profit (actual profit from tickets: price - cost_price) ──
     const profitResult = await db
-      .select({ total: sql<string>`COALESCE(SUM(${invoicesTable.profit}), 0)::text` })
-      .from(invoicesTable)
-      .where(and(...profitWhere));
+      .select({ total: sql<string>`COALESCE(SUM(COALESCE(${ticketsTable.price}, 0) - COALESCE(${ticketsTable.costPrice}, 0)), 0)::text` })
+      .from(ticketsTable)
+      .where(filters.ticketFilter(inArray(ticketsTable.ticketStatus, ["confirmed", "paid", "issued"])));
     const totalProfit = profitResult[0]?.total ?? "0";
 
     // ── Avg ticket value ──

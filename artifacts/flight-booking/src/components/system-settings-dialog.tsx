@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { authFetch, BASE } from "@/lib/api";
+import { useLanguage } from "@/contexts/language-context";
 
 interface SmtpSettings {
   host: string;
@@ -19,6 +20,7 @@ interface SmtpSettings {
 export function SystemSettingsDialog() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { isRtl, t } = useLanguage();
   const [form, setForm] = useState({
     host: "",
     port: 587,
@@ -31,7 +33,7 @@ export function SystemSettingsDialog() {
     queryKey: ["system-settings-email"],
     queryFn: async () => {
       const res = await authFetch(`${BASE}/api/settings/email`);
-      if (!res.ok) throw new Error("Failed to fetch settings");
+      if (!res.ok) throw new Error(isRtl ? "فشل جلب الإعدادات" : "Failed to fetch settings");
       return res.json();
     },
     enabled: open,
@@ -58,16 +60,23 @@ export function SystemSettingsDialog() {
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || "Failed to update settings");
+        throw new Error(error.message || (isRtl ? "فشل تحديث الإعدادات" : "Failed to update settings"));
       }
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Settings saved", description: "Global email settings have been updated in the database." });
+      toast({
+        title: isRtl ? "تم حفظ الإعدادات" : "Settings saved",
+        description: isRtl ? "تم تحديث إعدادات البريد الإلكتروني العامة بنجاح." : "Global email settings have been updated in the database."
+      });
       setOpen(false);
     },
     onError: (error: Error) => {
-      toast({ title: "Save failed", description: error.message, variant: "destructive" });
+      toast({
+        title: isRtl ? "فشل الحفظ" : "Save failed",
+        description: error.message,
+        variant: "destructive"
+      });
     },
   });
 
@@ -81,18 +90,20 @@ export function SystemSettingsDialog() {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Settings className="h-4 w-4" />
-          System Settings
+          {isRtl ? "إعدادات النظام" : "System Settings"}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <form onSubmit={handleSubmit} className={isRtl ? "text-right" : "text-left"}>
+          <DialogHeader className={isRtl ? "text-right" : "text-left"}>
+            <DialogTitle className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
               <Server className="h-5 w-5" />
-              Global System Settings
+              {isRtl ? "إعدادات النظام العامة" : "Global System Settings"}
             </DialogTitle>
-            <DialogDescription>
-              Configure SMTP and other system-wide parameters. These are saved permanently in the database.
+            <DialogDescription className={isRtl ? "text-right" : "text-left"}>
+              {isRtl
+                ? "تكوين إعدادات SMTP والمعلمات العامة الأخرى للنظام. يتم حفظها بشكل دائم في قاعدة البيانات."
+                : "Configure SMTP and other system-wide parameters. These are saved permanently in the database."}
             </DialogDescription>
           </DialogHeader>
           
@@ -104,77 +115,82 @@ export function SystemSettingsDialog() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
+                  <Label className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
                     <Server className="h-3.5 w-3.5 text-muted-foreground" />
-                    SMTP Host
+                    {isRtl ? "خادم SMTP" : "SMTP Host"}
                   </Label>
                   <Input
                     placeholder="smtp.gmail.com"
                     value={form.host}
                     onChange={(e) => setForm({ ...form, host: e.target.value })}
+                    className={isRtl ? "text-right dir-ltr" : "text-left"}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
+                  <Label className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
                     <Type className="h-3.5 w-3.5 text-muted-foreground" />
-                    SMTP Port
+                    {isRtl ? "منفذ SMTP" : "SMTP Port"}
                   </Label>
                   <Input
                     type="number"
                     placeholder="587"
                     value={form.port}
                     onChange={(e) => setForm({ ...form, port: parseInt(e.target.value) || 0 })}
+                    className={isRtl ? "text-right dir-ltr" : "text-left"}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-2">
+                <Label className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
                   <User className="h-3.5 w-3.5 text-muted-foreground" />
-                  SMTP User (Email)
+                  {isRtl ? "اسم المستخدم (البريد الإكتروني) لـ SMTP" : "SMTP User (Email)"}
                 </Label>
                 <Input
                   type="email"
                   placeholder="system@gmail.com"
                   value={form.user}
                   onChange={(e) => setForm({ ...form, user: e.target.value })}
+                  className={isRtl ? "text-right dir-ltr" : "text-left"}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-2">
+                <Label className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
                   <Key className="h-3.5 w-3.5 text-muted-foreground" />
-                  SMTP Password {settings?.hasPass && "(Stored)"}
+                  {isRtl ? "كلمة مرور SMTP" : "SMTP Password"} {settings?.hasPass && (isRtl ? "(مخزنة)" : "(Stored)")}
                 </Label>
                 <Input
                   type="password"
-                  placeholder={settings?.hasPass ? "Leave blank to keep current" : "Enter App Password"}
+                  placeholder={settings?.hasPass ? (isRtl ? "اتركه فارغاً للاحتفاظ بالحالية" : "Leave blank to keep current") : (isRtl ? "أدخل كلمة مرور التطبيق" : "Enter App Password")}
                   value={form.pass}
                   onChange={(e) => setForm({ ...form, pass: e.target.value })}
+                  className={isRtl ? "text-right dir-ltr" : "text-left"}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-2">
+                <Label className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
                   <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                  Sender Name
+                  {isRtl ? "اسم المرسل" : "Sender Name"}
                 </Label>
                 <Input
                   placeholder="AeroOps System"
                   value={form.fromName}
                   onChange={(e) => setForm({ ...form, fromName: e.target.value })}
+                  className={isRtl ? "text-right" : "text-left"}
                 />
               </div>
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className={`flex gap-2 ${isRtl ? "flex-row-reverse" : ""}`}>
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={mutation.isPending}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={mutation.isPending || isLoading} className="gap-2">
               {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Save to Database
+              {isRtl ? "حفظ في قاعدة البيانات" : "Save to Database"}
             </Button>
           </DialogFooter>
         </form>
@@ -182,3 +198,4 @@ export function SystemSettingsDialog() {
     </Dialog>
   );
 }
+

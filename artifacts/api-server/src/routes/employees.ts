@@ -110,6 +110,8 @@ router.get("/employees", async (req, res) => {
           isActive: employeesTable.isActive,
           supervisorId: employeesTable.supervisorId,
           createdAt: employeesTable.createdAt,
+          baseSalary: employeesTable.baseSalary,
+          commissionPercentage: employeesTable.commissionPercentage,
           activeCustomers: sql<number>`(
             SELECT COUNT(*)::int FROM ${customersTable}
             WHERE ${customersTable.assignedEmployeeId} = ${employeesTable.id}
@@ -136,6 +138,8 @@ router.get("/employees", async (req, res) => {
         initials: employeesTable.initials,
         role: employeesTable.role,
         email: employeesTable.email,
+        baseSalary: employeesTable.baseSalary,
+        commissionPercentage: employeesTable.commissionPercentage,
       })
       .from(employeesTable)
       .where(eq(employeesTable.isActive, true))

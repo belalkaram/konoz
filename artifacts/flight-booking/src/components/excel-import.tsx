@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { authFetch, BASE } from "@/lib/api";
+import { useLanguage } from "@/contexts/language-context";
 
 interface ImportRow {
   fullName: string;
@@ -67,6 +68,7 @@ interface Props {
 
 export function ExcelImportDialog({ open, onClose, onSuccess }: Props) {
   const { toast } = useToast();
+  const { t, isRtl } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [fileName, setFileName] = useState("");
@@ -103,7 +105,7 @@ export function ExcelImportDialog({ open, onClose, onSuccess }: Props) {
         const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
 
         if (raw.length === 0) {
-          setParseError("The sheet appears to be empty.");
+          setParseError(isRtl ? "يبدو أن الملف فارغ." : "The sheet appears to be empty.");
           return;
         }
 
@@ -163,12 +165,12 @@ export function ExcelImportDialog({ open, onClose, onSuccess }: Props) {
         }).filter((r) => r.fullName.trim() !== "");
 
         if (parsed.length === 0) {
-          setParseError('No valid rows found. Make sure "Customer Name" or "اسم العميل" column is filled.');
+          setParseError(isRtl ? "لم يتم العثور على صفوف صالحة. تأكد من ملء عمود الاسم." : 'No valid rows found. Make sure "Customer Name" or "اسم العميل" column is filled.');
           return;
         }
         setRows(parsed);
       } catch (err) {
-        setParseError("Failed to parse the file. Make sure it is a valid Excel (.xlsx/.xls) file.");
+        setParseError(isRtl ? "فشل تحليل الملف. تأكد من أنه ملف Excel صالح." : "Failed to parse the file. Make sure it is a valid Excel (.xlsx/.xls) file.");
       }
     };
     reader.readAsArrayBuffer(file);
@@ -202,14 +204,14 @@ export function ExcelImportDialog({ open, onClose, onSuccess }: Props) {
 
       setResults(json.results);
       toast({
-        title: "Import complete",
-        description: `${json.succeeded} of ${json.total} rows imported successfully.`,
+        title: isRtl ? "اكتمل الاستيراد" : "Import complete",
+        description: isRtl ? `تم استيراد ${json.succeeded} من أصل ${json.total} صفوف بنجاح.` : `${json.succeeded} of ${json.total} rows imported successfully.`,
       });
       onSuccess();
     } catch (err: unknown) {
       toast({
-        title: "Import failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: isRtl ? "فشل الاستيراد" : "Import failed",
+        description: err instanceof Error ? err.message : (isRtl ? "حدث خطأ غير معروف" : "Unknown error"),
         variant: "destructive",
       });
     } finally {
@@ -224,9 +226,9 @@ export function ExcelImportDialog({ open, onClose, onSuccess }: Props) {
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-right rtl:text-right ltr:text-left">
             <FileSpreadsheet className="h-5 w-5 text-green-600" />
-            Import Employee Data from Excel
+            {isRtl ? "استيراد بيانات العملاء من ملف Excel" : "Import Customer Data from Excel"}
           </DialogTitle>
         </DialogHeader>
 
@@ -238,8 +240,8 @@ export function ExcelImportDialog({ open, onClose, onSuccess }: Props) {
                 onClick={() => inputRef.current?.click()}
               >
                 <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
-                <p className="font-medium text-sm">Click to choose an Excel file</p>
-                <p className="text-xs text-muted-foreground mt-1">Supports .xlsx and .xls files</p>
+                <p className="font-medium text-sm">{isRtl ? "اضغط لاختيار ملف Excel" : "Click to choose an Excel file"}</p>
+                <p className="text-xs text-muted-foreground mt-1">{isRtl ? "يدعم صيغ .xlsx و .xls" : "Supports .xlsx and .xls files"}</p>
                 {fileName && (
                   <p className="text-xs text-primary font-medium mt-2">{fileName}</p>
                 )}
@@ -262,11 +264,13 @@ export function ExcelImportDialog({ open, onClose, onSuccess }: Props) {
               {rows.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{rows.length} rows ready to import</p>
-                    <Button variant="ghost" size="sm" onClick={reset}>Clear</Button>
+                    <p className="text-sm font-medium">
+                      {rows.length} {isRtl ? "صفوف جاهزة للاستيراد" : "rows ready to import"}
+                    </p>
+                    <Button variant="ghost" size="sm" onClick={reset}>{isRtl ? "مسح" : "Clear"}</Button>
                   </div>
 
-                  <p className="text-xs text-muted-foreground">Expected columns (flexible header names accepted):</p>
+                  <p className="text-xs text-muted-foreground">{isRtl ? "الأعمدة المتوقعة (أسماء الأعمدة مرنة):" : "Expected columns (flexible header names accepted):"}</p>
                   <div className="flex flex-wrap gap-1">
                     {EXPECTED_HEADERS.map((h) => (
                       <span key={h} className="text-xs bg-muted px-2 py-0.5 rounded">{h}</span>
@@ -277,14 +281,14 @@ export function ExcelImportDialog({ open, onClose, onSuccess }: Props) {
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b bg-muted/50">
-                          <th className="text-left px-3 py-2 font-semibold">Name</th>
-                          <th className="text-left px-3 py-2 font-semibold">Phone</th>
-                          <th className="text-left px-3 py-2 font-semibold">Destination</th>
-                          <th className="text-left px-3 py-2 font-semibold">PNR</th>
-                          <th className="text-left px-3 py-2 font-semibold">Airline</th>
-                          <th className="text-right px-3 py-2 font-semibold">Cost (KWD)</th>
-                          <th className="text-right px-3 py-2 font-semibold">Sell (KWD)</th>
-                          <th className="text-right px-3 py-2 font-semibold">Profit</th>
+                          <th className="text-left rtl:text-right px-3 py-2 font-semibold">{t("common.name")}</th>
+                          <th className="text-left rtl:text-right px-3 py-2 font-semibold">{t("common.phone")}</th>
+                          <th className="text-left rtl:text-right px-3 py-2 font-semibold">{isRtl ? "الوجهة" : "Destination"}</th>
+                          <th className="text-left rtl:text-right px-3 py-2 font-semibold">PNR</th>
+                          <th className="text-left rtl:text-right px-3 py-2 font-semibold">{t("common.airline")}</th>
+                          <th className="text-right rtl:text-left px-3 py-2 font-semibold">{isRtl ? "التكلفة (د.ك)" : "Cost (KWD)"}</th>
+                          <th className="text-right rtl:text-left px-3 py-2 font-semibold">{isRtl ? "البيع (د.ك)" : "Sell (KWD)"}</th>
+                          <th className="text-right rtl:text-left px-3 py-2 font-semibold">{t("common.profit")}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -292,14 +296,14 @@ export function ExcelImportDialog({ open, onClose, onSuccess }: Props) {
                           const profit = r.ticketProfit ?? ((r.price != null && r.costPrice != null) ? r.price - r.costPrice : null);
                           return (
                             <tr key={i} className="hover:bg-muted/20">
-                              <td className="px-3 py-1.5 max-w-[120px] truncate">{r.fullName}</td>
-                              <td className="px-3 py-1.5 text-muted-foreground">{r.phone || "—"}</td>
-                              <td className="px-3 py-1.5 text-muted-foreground max-w-[100px] truncate">{r.flightRoute || "—"}</td>
-                              <td className="px-3 py-1.5 font-mono text-xs">{r.pnr || "—"}</td>
-                              <td className="px-3 py-1.5 text-muted-foreground">{r.airline || "—"}</td>
-                              <td className="px-3 py-1.5 text-right">{r.costPrice != null ? r.costPrice.toFixed(3) : "—"}</td>
-                              <td className="px-3 py-1.5 text-right">{r.price != null ? r.price.toFixed(3) : "—"}</td>
-                              <td className={`px-3 py-1.5 text-right font-medium ${profit != null && profit >= 0 ? "text-green-600" : "text-red-500"}`}>
+                              <td className="px-3 py-1.5 max-w-[120px] truncate text-left rtl:text-right">{r.fullName}</td>
+                              <td className="px-3 py-1.5 text-muted-foreground text-left rtl:text-right">{r.phone || "—"}</td>
+                              <td className="px-3 py-1.5 text-muted-foreground max-w-[100px] truncate text-left rtl:text-right">{r.flightRoute || "—"}</td>
+                              <td className="px-3 py-1.5 font-mono text-xs text-left rtl:text-right">{r.pnr || "—"}</td>
+                              <td className="px-3 py-1.5 text-muted-foreground text-left rtl:text-right">{r.airline || "—"}</td>
+                              <td className="px-3 py-1.5 text-right rtl:text-left">{r.costPrice != null ? r.costPrice.toFixed(3) : "—"}</td>
+                              <td className="px-3 py-1.5 text-right rtl:text-left">{r.price != null ? r.price.toFixed(3) : "—"}</td>
+                              <td className={`px-3 py-1.5 text-right rtl:text-left font-medium ${profit != null && profit >= 0 ? "text-green-600" : "text-red-500"}`}>
                                 {profit != null ? profit.toFixed(3) : "—"}
                               </td>
                             </tr>
@@ -309,7 +313,7 @@ export function ExcelImportDialog({ open, onClose, onSuccess }: Props) {
                     </table>
                     {rows.length > 20 && (
                       <p className="text-xs text-muted-foreground text-center py-2 border-t">
-                        Showing first 20 of {rows.length} rows
+                        {isRtl ? `عرض أول 20 من أصل ${rows.length} صفاً` : `Showing first 20 of ${rows.length} rows`}
                       </p>
                     )}
                   </div>
@@ -323,12 +327,12 @@ export function ExcelImportDialog({ open, onClose, onSuccess }: Props) {
               <div className="flex gap-4">
                 <div className="flex items-center gap-2 text-green-600 font-medium">
                   <CheckCircle className="h-5 w-5" />
-                  {succeeded} imported
+                  {succeeded} {isRtl ? "تم استيرادها" : "imported"}
                 </div>
                 {failed > 0 && (
                   <div className="flex items-center gap-2 text-red-500 font-medium">
                     <XCircle className="h-5 w-5" />
-                    {failed} failed
+                    {failed} {isRtl ? "فشلت" : "failed"}
                   </div>
                 )}
               </div>
@@ -348,24 +352,24 @@ export function ExcelImportDialog({ open, onClose, onSuccess }: Props) {
           )}
         </div>
 
-        <DialogFooter className="border-t pt-4">
+        <DialogFooter className="border-t pt-4 flex-row gap-2">
           {!results ? (
             <>
-              <Button variant="outline" onClick={handleClose} disabled={importing}>Cancel</Button>
+              <Button variant="outline" onClick={handleClose} disabled={importing}>{t("common.cancel")}</Button>
               <Button
                 onClick={handleImport}
                 disabled={rows.length === 0 || importing}
                 className="gap-2"
               >
                 {importing ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> Importing...</>
+                  <><Loader2 className="h-4 w-4 animate-spin" /> {isRtl ? "جاري الاستيراد..." : "Importing..."}</>
                 ) : (
-                  <><Upload className="h-4 w-4" /> Import {rows.length > 0 ? `${rows.length} rows` : ""}</>
+                  <><Upload className="h-4 w-4" /> {isRtl ? "استيراد" : "Import"} {rows.length > 0 ? (isRtl ? `${rows.length} صفاً` : `${rows.length} rows`) : ""}</>
                 )}
               </Button>
             </>
           ) : (
-            <Button onClick={handleClose}>Done</Button>
+            <Button onClick={handleClose}>{isRtl ? "تم" : "Done"}</Button>
           )}
         </DialogFooter>
       </DialogContent>

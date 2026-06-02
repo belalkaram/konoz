@@ -26,6 +26,8 @@ import { ExcelImportDialog } from "@/components/excel-import";
 import { STATUS_COLORS, STATUS_LABELS, CUSTOMER_STATUSES } from "@/lib/customer-constants";
 import { authFetch, BASE } from "@/lib/api";
 import { useCurrentEmployee } from "@/contexts/employee-context";
+import { useLanguage } from "@/contexts/language-context";
+import { cn } from "@/lib/utils";
 
 interface Customer {
   id: number;
@@ -85,6 +87,21 @@ function netProfit(c: Customer): number | null {
   return sell - cost;
 }
 
+function formatDaysLeft(label: string, days: number | null, language: string) {
+  if (language !== "ar") return label;
+  if (!label || label === "—") return "—";
+  if (label === "Departed") return "غادرت";
+  if (label === "Travels Today") return "يسافر اليوم";
+  if (label === "1 Day Left") return "متبقي يوم واحد";
+  if (days != null) {
+    const absDays = Math.abs(days);
+    if (absDays === 2) return "متبقي يومان";
+    if (absDays >= 3 && absDays <= 10) return `متبقي ${absDays} أيام`;
+    return `متبقي ${absDays} يوم`;
+  }
+  return label;
+}
+
 export function CustomerFormSheet({
   open,
   onClose,
@@ -95,18 +112,22 @@ export function CustomerFormSheet({
   onSuccess: () => void;
 }) {
   const { toast } = useToast();
+  const { t, language } = useLanguage();
   const qc = useQueryClient();
 
   const mutation = useMutation({
     mutationFn: createCustomer,
     onSuccess: (data) => {
-      toast({ title: "Customer added", description: `${data.customer.fullName} has been added.` });
+      toast({ 
+        title: language === "ar" ? "تم إضافة العميل" : "Customer added", 
+        description: language === "ar" ? `تم إضافة المسافر ${data.customer.fullName} بنجاح.` : `${data.customer.fullName} has been added.` 
+      });
       qc.invalidateQueries({ queryKey: ["customers"] });
       onSuccess();
       onClose();
     },
     onError: (e: Error) => {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({ title: language === "ar" ? "خطأ" : "Error", description: e.message, variant: "destructive" });
     },
   });
 
@@ -114,11 +135,11 @@ export function CustomerFormSheet({
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Add New Customer</SheetTitle>
+          <SheetTitle>{t("customers.dialogs.addTitle")}</SheetTitle>
         </SheetHeader>
         <CustomerForm
           initialValues={EMPTY_CUSTOMER_FORM}
-          submitLabel="Add Customer"
+          submitLabel={t("customers.addBtn")}
           isPending={mutation.isPending}
           onSubmit={(data) => mutation.mutate(data)}
           onCancel={onClose}
@@ -140,6 +161,7 @@ export default function Customers() {
   const [isDeleting, setIsDeleting] = useState(false);
   const qc = useQueryClient();
   const { toast } = useToast();
+  const { t, language, isRtl } = useLanguage();
   const currentEmployee = useCurrentEmployee();
   const isAdmin = currentEmployee.role === "Administrator";
 
@@ -179,7 +201,6 @@ export default function Customers() {
       return [
         escape(c.id),
         escape(c.fullName),
-        escape(c.phone),
         escape(c.email),
         escape(c.status),
         escape(c.pnr),
@@ -213,10 +234,10 @@ export default function Customers() {
   }
 
   function SortIcon({ col }: { col: typeof sortBy }) {
-    if (sortBy !== col) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40 inline" />;
+    if (sortBy !== col) return <ArrowUpDown className={cn("h-3 w-3 opacity-40 inline", isRtl ? "mr-1" : "ml-1")} />;
     return sortDir === "asc"
-      ? <ArrowUp className="h-3 w-3 ml-1 text-primary inline" />
-      : <ArrowDown className="h-3 w-3 ml-1 text-primary inline" />;
+      ? <ArrowUp className={cn("h-3 w-3 text-primary inline", isRtl ? "mr-1" : "ml-1")} />
+      : <ArrowDown className={cn("h-3 w-3 text-primary inline", isRtl ? "mr-1" : "ml-1")} />;
   }
 
   const customers = allCustomers
@@ -280,13 +301,19 @@ export default function Customers() {
     qc.invalidateQueries({ queryKey: ["customers"] });
 
     if (failed.length === 0) {
-      toast({ title: `${succeeded} customer${succeeded !== 1 ? "s" : ""} deleted` });
+      toast({ 
+        title: language === "ar" 
+          ? `تم حذف عدد ${succeeded} مسافر` 
+          : `${succeeded} customer${succeeded !== 1 ? "s" : ""} deleted` 
+      });
     } else {
       const blockedMsg = failed.some((r) => r.message?.includes("ticket"))
-        ? " Some couldn't be deleted because they have existing tickets."
+        ? (language === "ar" ? " لا يمكن حذف بعض المسافرين لارتباطهم بتذاكر نشطة." : " Some couldn't be deleted because they have existing tickets.")
         : "";
       toast({
-        title: `${succeeded} deleted, ${failed.length} failed`,
+        title: language === "ar" 
+          ? `نجح حذف ${succeeded}، وفشل ${failed.length}` 
+          : `${succeeded} deleted, ${failed.length} failed`,
         description: `${blockedMsg}`,
         variant: "destructive",
       });
@@ -300,8 +327,8 @@ export default function Customers() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Customers</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Manage all your customer bookings and travel records.</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t("customers.title")}</h1>
+          <p className="text-muted-foreground mt-1 text-sm">{t("customers.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && selectedIds.size > 0 && (
@@ -312,7 +339,7 @@ export default function Customers() {
               disabled={isDeleting}
             >
               <Trash2 className="h-4 w-4" />
-              Delete Selected ({selectedIds.size})
+              {t("customers.deleteSelected")} ({selectedIds.size})
             </Button>
           )}
           <Button
@@ -320,7 +347,7 @@ export default function Customers() {
             onClick={exportToExcel}
             className="flex items-center gap-2"
           >
-            <Download className="h-4 w-4" /> Export Excel
+            <Download className="h-4 w-4" /> {t("customers.exportBtn")}
           </Button>
           <Button
             variant="outline"
@@ -328,10 +355,10 @@ export default function Customers() {
             className="flex items-center gap-2"
           >
             <FileSpreadsheet className="h-4 w-4 text-green-600" />
-            Import from Excel
+            {t("customers.importBtn")}
           </Button>
           <Button onClick={() => setAddOpen(true)} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" /> Add Customer
+            <Plus className="h-4 w-4" /> {t("customers.addBtn")}
           </Button>
         </div>
       </div>
@@ -340,22 +367,22 @@ export default function Customers() {
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
             <div className="relative flex-1 min-w-48">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                className="pl-9"
-                placeholder="Search by name, phone, PNR, or passport..."
+                className="pl-9 rtl:pl-3 rtl:pr-9"
+                placeholder={t("customers.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-44">
-                <SelectValue placeholder="All statuses" />
+                <SelectValue placeholder={t("customers.allStatuses")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="all">{t("customers.allStatuses")}</SelectItem>
                 {CUSTOMER_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
+                  <SelectItem key={s} value={s}>{t(`statuses.${s}`)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -377,17 +404,19 @@ export default function Customers() {
           )}
 
           {isError && (
-            <div className="text-center py-12 text-destructive">Failed to load customers.</div>
+            <div className="text-center py-12 text-destructive">{t("common.failedToLoad")}</div>
           )}
 
           {!isLoading && !isError && customers.length === 0 && (
             <div className="flex flex-col items-center py-16 text-center">
               <Users className="h-12 w-12 text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground font-medium">No customers found</p>
+              <p className="text-muted-foreground font-medium">
+                {language === "ar" ? "لم يتم العثور على عملاء" : "No customers found"}
+              </p>
               <p className="text-sm text-muted-foreground/70 mt-1">
                 {search || statusFilter !== "all"
-                  ? "Try adjusting your search or filters."
-                  : "Add your first customer or import from Excel."}
+                  ? (language === "ar" ? "جرّب تعديل البحث أو المرشحات المحددة." : "Try adjusting your search or filters.")
+                  : (language === "ar" ? "أضف مسافراً جديداً أو استورد من ملف إكسيل." : "Add your first customer or import from Excel.")}
               </p>
             </div>
           )}
@@ -409,26 +438,26 @@ export default function Customers() {
                 )}
                 <div className="flex-1 grid grid-cols-[2fr_1fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_1fr_1fr_0.9fr_auto] gap-3 px-6 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                   <button type="button" onClick={() => toggleSort("name")} className="flex items-center hover:text-foreground transition-colors text-left">
-                    Name<SortIcon col="name" />
+                    {t("customers.table.name")}<SortIcon col="name" />
                   </button>
-                  <span>Uploaded By</span>
-                  <span>Phone</span>
-                  <span>Status</span>
-                  <span>Passport</span>
-                  <span>PNR</span>
+                  <span>{t("customers.table.uploadedBy")}</span>
+                  <span>{t("customers.table.phone")}</span>
+                  <span>{t("customers.table.status")}</span>
+                  <span>{t("customers.table.passport")}</span>
+                  <span>{t("customers.table.pnr")}</span>
                   <button type="button" onClick={() => toggleSort("bookingDate")} className="flex items-center hover:text-foreground transition-colors text-left">
-                    Booking Date<SortIcon col="bookingDate" />
+                    {t("customers.table.bookingDate")}<SortIcon col="bookingDate" />
                   </button>
-                  <span>Travel Date</span>
-                  <span>Days Left</span>
+                  <span>{t("customers.table.travelDate")}</span>
+                  <span>{t("customers.table.daysLeft")}</span>
                   <button type="button" onClick={() => toggleSort("netProfit")} className="flex items-center hover:text-foreground transition-colors text-left">
-                    Net Profit<SortIcon col="netProfit" />
+                    {t("customers.table.netProfit")}<SortIcon col="netProfit" />
                   </button>
                   <span className="w-4" />
                 </div>
               </div>
 
-              <div className="divide-y">
+              <div className="divide-y animate-in fade-in duration-300">
                 {customers.map((c) => {
                   const profit = netProfit(c);
                   const selected = selectedIds.has(c.id);
@@ -450,7 +479,7 @@ export default function Customers() {
                         </div>
                       )}
                       <Link href={`/customers/${c.id}`} className="flex-1 min-w-0">
-                        <div className="grid md:grid-cols-[2fr_1fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_1fr_1fr_0.9fr_auto] grid-cols-1 gap-2 md:gap-3 px-6 py-3.5 cursor-pointer group items-center">
+                        <div className="grid md:grid-cols-[2fr_1fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_1fr_1fr_0.9fr_auto] grid-cols-1 gap-2 md:gap-3 px-6 py-3.5 cursor-pointer group items-center text-start">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
                               style={{ background: "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)", color: "#022c22" }}>
@@ -475,7 +504,7 @@ export default function Customers() {
 
                           <div>
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[c.status] ?? "bg-gray-100 text-gray-600"}`}>
-                              {STATUS_LABELS[c.status] ?? c.status}
+                              {t(`statuses.${c.status}`)}
                             </span>
                           </div>
 
@@ -497,8 +526,8 @@ export default function Customers() {
 
                           <div className="hidden md:block">
                             {(() => {
-                              const { label, color } = calculateDaysRemaining(c.travelDate);
-                              return <span className={`text-xs ${color}`}>{label}</span>;
+                              const { label, color, days } = calculateDaysRemaining(c.travelDate);
+                              return <span className={`text-xs ${color}`}>{formatDaysLeft(label, days, language)}</span>;
                             })()}
                           </div>
 
@@ -520,7 +549,7 @@ export default function Customers() {
                           </div>
 
                           <div className="hidden md:flex justify-end">
-                            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <ChevronRight className={cn("h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors", isRtl && "rotate-180")} />
                           </div>
                         </div>
                       </Link>
@@ -530,12 +559,18 @@ export default function Customers() {
               </div>
 
               <div className="px-6 py-3 border-t text-xs text-muted-foreground flex items-center gap-3">
-                <span>{customers.length} customer{customers.length !== 1 ? "s" : ""}</span>
+                <span>
+                  {customers.length} {language === "ar" ? "مسافر" : `customer${customers.length !== 1 ? "s" : ""}`}
+                </span>
                 {customers.length !== allCustomers.length && (
-                  <span className="text-muted-foreground/70">(filtered from {allCustomers.length})</span>
+                  <span className="text-muted-foreground/70">
+                    {language === "ar" ? `(تمت تصفيتهم من إجمالي ${allCustomers.length})` : `(filtered from ${allCustomers.length})`}
+                  </span>
                 )}
                 {isAdmin && selectedIds.size > 0 && (
-                  <span className="text-primary font-medium">{selectedIds.size} selected</span>
+                  <span className="text-primary font-medium">
+                    {language === "ar" ? `تم تحديد ${selectedIds.size}` : `${selectedIds.size} selected`}
+                  </span>
                 )}
               </div>
             </>
@@ -558,19 +593,23 @@ export default function Customers() {
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {selectedIds.size} customer{selectedIds.size !== 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {language === "ar" ? `حذف ${selectedIds.size} عميل؟` : `Delete ${selectedIds.size} customer${selectedIds.size !== 1 ? "s" : ""}?`}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. Customers with existing tickets cannot be deleted — those will be skipped and reported.
+              {language === "ar" 
+                ? "هذا الإجراء لا يمكن التراجع عنه. العملاء الذين لديهم تذاكر طيران نشطة لا يمكن حذفهم — سيتم تخطي أولئك العملاء." 
+                : "This action cannot be undone. Customers with existing tickets cannot be deleted — those will be skipped and reported."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleBulkDelete}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? "Deleting…" : "Delete"}
+              {isDeleting ? (language === "ar" ? "جاري الحذف..." : "Deleting…") : t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

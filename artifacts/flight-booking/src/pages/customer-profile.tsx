@@ -23,6 +23,8 @@ import { formatShortDate, formatDateTime, formatDate } from "@/lib/formatters";
 import { STATUS_COLORS, STATUS_LABELS, CUSTOMER_STATUSES } from "@/lib/customer-constants";
 import { CustomerForm } from "@/components/customer-form";
 import { authFetch, BASE } from "@/lib/api";
+import { useLanguage } from "@/contexts/language-context";
+import { cn } from "@/lib/utils";
 
 const FOLLOW_UP_STATUS_STYLES: Record<string, { cls: string; label: string; icon: React.ReactNode }> = {
   pending: { cls: "bg-yellow-100 text-yellow-800", label: "Pending", icon: <Clock className="h-3 w-3" /> },
@@ -133,25 +135,37 @@ async function updateNote(noteId: number, data: { followUpStatus?: string }): Pr
   return json;
 }
 
-function EditCustomerSheet({ customer, open, onClose }: { customer: Customer; open: boolean; onClose: () => void }) {
+function EditCustomerSheet({
+  customer,
+  latestTicket,
+  open,
+  onClose,
+}: {
+  customer: Customer;
+  latestTicket: CustomerTicket | null;
+  open: boolean;
+  onClose: () => void;
+}) {
   const { toast } = useToast();
+  const { t, language } = useLanguage();
   const qc = useQueryClient();
 
   const mutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => updateCustomer(customer.id, data),
     onSuccess: () => {
-      toast({ title: "Customer updated" });
+      toast({ title: language === "ar" ? "تم تحديث المسافر" : "Customer updated" });
       qc.invalidateQueries({ queryKey: ["customer", customer.id] });
       qc.invalidateQueries({ queryKey: ["customers"] });
+      qc.invalidateQueries({ queryKey: ["customer-tickets", customer.id] });
       onClose();
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: language === "ar" ? "خطأ" : "Error", description: e.message, variant: "destructive" }),
   });
 
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader><SheetTitle>Edit Customer</SheetTitle></SheetHeader>
+        <SheetHeader><SheetTitle>{t("customers.dialogs.editTitle")}</SheetTitle></SheetHeader>
         <CustomerForm
           initialValues={{
             fullName: customer.fullName,
@@ -163,8 +177,13 @@ function EditCustomerSheet({ customer, open, onClose }: { customer: Customer; op
             nationalId: customer.nationalId ?? "",
             address: customer.address ?? "",
             status: customer.status,
+            pnr: latestTicket?.pnr ?? "",
+            bookingDate: latestTicket?.bookingDate ? latestTicket.bookingDate.split("T")[0] : "",
+            travelDate: latestTicket?.departureDatetime ? latestTicket.departureDatetime.split("T")[0] : "",
+            costPrice: latestTicket?.costPrice ?? "",
+            ticketPrice: latestTicket?.price ?? "",
           }}
-          submitLabel="Save Changes"
+          submitLabel={t("ticketForm.btnSave")}
           isPending={mutation.isPending}
           onSubmit={(data) => mutation.mutate(data)}
           onCancel={onClose}
@@ -190,13 +209,14 @@ function AddNoteForm({
   const [ticketId, setTicketId] = useState("");
   const [expanded, setExpanded] = useState(autoFocus ?? false);
   const { toast } = useToast();
+  const { t, language } = useLanguage();
   const qc = useQueryClient();
 
   const mutation = useMutation({
     mutationFn: (data: { note: string; followUpDate?: string; followUpStatus?: string; ticketId?: number }) =>
       createNote(customerId, data),
     onSuccess: () => {
-      toast({ title: "Note added" });
+      toast({ title: language === "ar" ? "تم إضافة الملاحظة" : "Note added" });
       setNoteText("");
       setFollowUpDate("");
       setFollowUpStatus("pending");
@@ -206,13 +226,13 @@ function AddNoteForm({
       qc.invalidateQueries({ queryKey: ["customer", customerId] });
       onSuccess();
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: language === "ar" ? "خطأ" : "Error", description: e.message, variant: "destructive" }),
   });
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!noteText.trim()) {
-      setNoteError("Note text is required.");
+      setNoteError(language === "ar" ? "محتوى الملاحظة مطلوب." : "Note text is required.");
       return;
     }
     setNoteError("");
@@ -233,7 +253,7 @@ function AddNoteForm({
         onClick={() => setExpanded(true)}
         className="w-full flex items-center gap-2 px-4 py-3 rounded-lg border border-dashed border-border text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
       >
-        <Plus className="h-4 w-4" /> Add a note...
+        <Plus className="h-4 w-4" /> {t("customerProfile.quickActions.addNote")}...
       </button>
     );
   }
@@ -242,16 +262,16 @@ function AddNoteForm({
     <form onSubmit={handleSubmit} className="border rounded-lg p-4 space-y-3 bg-muted/20">
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <Label>Note *</Label>
+          <Label>{t("customerProfile.noteForm.label")}</Label>
           <VoiceInputButton
-            onTranscript={(t) => { setNoteText((prev) => prev ? prev + " " + t : t); if (noteError) setNoteError(""); }}
-            title="Dictate note"
+            onTranscript={(transcriptText) => { setNoteText((prev) => prev ? prev + " " + transcriptText : transcriptText); if (noteError) setNoteError(""); }}
+            title={language === "ar" ? "إملاء صوتي للملاحظة" : "Dictate note"}
           />
         </div>
         <Textarea
           value={noteText}
           onChange={(e) => { setNoteText(e.target.value); if (noteError) setNoteError(""); }}
-          placeholder="Write a note about this customer..."
+          placeholder={t("customerProfile.noteForm.placeholder")}
           rows={3}
           autoFocus
           className={noteError ? "border-destructive focus-visible:ring-destructive" : ""}
@@ -260,7 +280,7 @@ function AddNoteForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label>Follow-up Date</Label>
+          <Label>{t("customerProfile.noteForm.followupDate")}</Label>
           <Input
             type="datetime-local"
             value={followUpDate}
@@ -268,32 +288,32 @@ function AddNoteForm({
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Linked Ticket ID</Label>
+          <Label>{t("customerProfile.noteForm.linkedTicket")}</Label>
           <Input
             type="number"
             min={1}
             value={ticketId}
             onChange={(e) => setTicketId(e.target.value)}
-            placeholder="Optional ticket #"
+            placeholder={language === "ar" ? "رقم التذكرة (اختياري)" : "Optional ticket #"}
           />
         </div>
       </div>
       {followUpDate && (
         <div className="space-y-1.5">
-          <Label>Follow-up Status</Label>
+          <Label>{t("customerProfile.noteForm.followupStatus")}</Label>
           <Select value={followUpStatus} onValueChange={setFollowUpStatus}>
             <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="done">Done</SelectItem>
+              <SelectItem value="pending">{t("customerProfile.noteForm.pending")}</SelectItem>
+              <SelectItem value="done">{t("customerProfile.noteForm.done")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
       )}
       <div className="flex gap-2 justify-end">
-        <Button type="button" variant="ghost" size="sm" onClick={() => setExpanded(false)}>Cancel</Button>
+        <Button type="button" variant="ghost" size="sm" onClick={() => setExpanded(false)}>{t("common.cancel")}</Button>
         <Button type="submit" size="sm" disabled={mutation.isPending}>
-          {mutation.isPending ? "Saving..." : "Add Note"}
+          {mutation.isPending ? (language === "ar" ? "جاري الحفظ..." : "Saving...") : t("customerProfile.noteForm.btnSave")}
         </Button>
       </div>
     </form>
@@ -302,15 +322,16 @@ function AddNoteForm({
 
 function NoteCard({ note, customerId }: { note: Note; customerId: number }) {
   const { toast } = useToast();
+  const { t, language } = useLanguage();
   const qc = useQueryClient();
 
   const markDone = useMutation({
     mutationFn: () => updateNote(note.id, { followUpStatus: "done" }),
     onSuccess: () => {
-      toast({ title: "Follow-up marked as done" });
+      toast({ title: language === "ar" ? "تم تحديد المتابعة كمكتملة" : "Follow-up marked as done" });
       qc.invalidateQueries({ queryKey: ["notes", customerId] });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: language === "ar" ? "خطأ" : "Error", description: e.message, variant: "destructive" }),
   });
 
   const fuStyle = note.followUpStatus ? FOLLOW_UP_STATUS_STYLES[note.followUpStatus] : null;
@@ -324,26 +345,26 @@ function NoteCard({ note, customerId }: { note: Note; customerId: number }) {
         <div className="w-px flex-1 bg-border mt-2" />
       </div>
       <div className="flex-1 pb-4">
-        <div className="bg-card border rounded-lg p-3 shadow-sm">
+        <div className="bg-card border rounded-lg p-3 shadow-sm text-start">
           <p className="text-sm whitespace-pre-wrap">{note.note}</p>
           {(note.followUpDate || note.followUpStatus || note.ticketId) && (
             <div className="mt-2 pt-2 border-t space-y-1.5">
               {note.ticketId && (
                 <div className="text-xs text-muted-foreground flex items-center gap-1">
                   <Ticket className="h-3 w-3" />
-                  Linked to Ticket #{note.ticketId}
+                  {language === "ar" ? `مرتبط بالتذكرة رقم #${note.ticketId}` : `Linked to Ticket #${note.ticketId}`}
                 </div>
               )}
               {note.followUpDate && (
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
-                  Follow-up: {formatShortDate(note.followUpDate)}
+                  {language === "ar" ? `المتابعة: ${formatShortDate(note.followUpDate)}` : `Follow-up: ${formatShortDate(note.followUpDate)}`}
                 </div>
               )}
               {fuStyle && (
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${fuStyle.cls}`}>
-                    {fuStyle.icon} {fuStyle.label}
+                    {fuStyle.icon} {t(`customerProfile.noteForm.${note.followUpStatus}`)}
                   </span>
                   {note.followUpStatus === "pending" && (
                     <Button
@@ -353,7 +374,7 @@ function NoteCard({ note, customerId }: { note: Note; customerId: number }) {
                       disabled={markDone.isPending}
                       onClick={() => markDone.mutate()}
                     >
-                      <Check className="h-3 w-3 mr-1" /> Mark Done
+                      <Check className="h-3 w-3 mr-1 rtl:mr-0 rtl:ml-1" /> {t("customerProfile.noteForm.markDone")}
                     </Button>
                   )}
                 </div>
@@ -361,9 +382,9 @@ function NoteCard({ note, customerId }: { note: Note; customerId: number }) {
             </div>
           )}
         </div>
-        <div className="text-xs text-muted-foreground mt-1 ml-1 flex items-center gap-2">
+        <div className="text-xs text-muted-foreground mt-1 ml-1 rtl:ml-0 rtl:mr-1 flex items-center gap-2">
           <span>{formatDateTime(note.createdAt)}</span>
-          {note.employeeId && <span>· Employee #{note.employeeId}</span>}
+          {note.employeeId && <span>{language === "ar" ? ` · موظف #${note.employeeId}` : ` · Employee #${note.employeeId}`}</span>}
         </div>
       </div>
     </div>
@@ -373,7 +394,7 @@ function NoteCard({ note, customerId }: { note: Note; customerId: number }) {
 function InfoRow({ label, value, icon }: { label: string; value?: string | null; icon?: React.ReactNode }) {
   if (!value) return null;
   return (
-    <div className="flex gap-2 text-sm">
+    <div className="flex gap-2 text-sm text-start">
       <span className="text-muted-foreground w-32 flex-shrink-0 flex items-center gap-1">{icon}{label}</span>
       <span className="font-medium break-all">{value}</span>
     </div>
@@ -392,6 +413,7 @@ export default function CustomerProfile() {
 
   const notesSectionRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { t, language, isRtl } = useLanguage();
   const qc = useQueryClient();
 
   const { data: customerData, isLoading, isError } = useQuery({
@@ -415,23 +437,23 @@ export default function CustomerProfile() {
   const statusMutation = useMutation({
     mutationFn: (status: string) => updateCustomer(id, { status }),
     onSuccess: () => {
-      toast({ title: "Status updated" });
+      toast({ title: language === "ar" ? "تم تحديث الحالة" : "Status updated" });
       qc.invalidateQueries({ queryKey: ["customer", id] });
       qc.invalidateQueries({ queryKey: ["customers"] });
       setChangingStatus(false);
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: language === "ar" ? "خطأ" : "Error", description: e.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteCustomer(id),
     onSuccess: () => {
-      toast({ title: "Customer deleted" });
+      toast({ title: language === "ar" ? "تم حذف المسافر" : "Customer deleted" });
       qc.invalidateQueries({ queryKey: ["customers"] });
       navigate("/customers");
     },
     onError: (e: Error) => {
-      toast({ title: "Cannot delete", description: e.message, variant: "destructive" });
+      toast({ title: language === "ar" ? "تعذر الحذف" : "Cannot delete", description: e.message, variant: "destructive" });
       setDeleteOpen(false);
     },
   });
@@ -442,7 +464,7 @@ export default function CustomerProfile() {
   }
 
   if (isNaN(id)) {
-    return <div className="text-destructive">Invalid customer ID.</div>;
+    return <div className="text-destructive">{language === "ar" ? "معرف العميل غير صحيح." : "Invalid customer ID."}</div>;
   }
 
   if (isLoading) {
@@ -457,7 +479,7 @@ export default function CustomerProfile() {
   }
 
   if (isError || !customerData) {
-    return <div className="text-destructive">Customer not found.</div>;
+    return <div className="text-destructive">{language === "ar" ? "المسافر غير موجود." : "Customer not found."}</div>;
   }
 
   const c = customerData.customer;
@@ -468,15 +490,15 @@ export default function CustomerProfile() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/customers">
-          <Button variant="ghost" size="sm" className="flex items-center gap-1.5 -ml-2">
-            <ArrowLeft className="h-4 w-4" /> Customers
+          <Button variant="ghost" size="sm" className="flex items-center gap-1.5 -ml-2 rtl:-mr-2 rtl:ml-0">
+            <ArrowLeft className="h-4 w-4" /> {t("customerProfile.backBtn")}
           </Button>
         </Link>
       </div>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 text-start">
           <div className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0 text-xl font-bold"
             style={{ background: "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)", color: "#022c22" }}>
             {c.fullName.charAt(0).toUpperCase()}
@@ -496,24 +518,24 @@ export default function CustomerProfile() {
                     </SelectTrigger>
                     <SelectContent>
                       {CUSTOMER_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
+                        <SelectItem key={s} value={s}>{t(`statuses.${s}`)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setChangingStatus(false)}>
-                    Cancel
+                    {t("common.cancel")}
                   </button>
                 </>
               ) : (
                 <>
                   <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLORS[c.status] ?? "bg-gray-100 text-gray-600"}`}>
-                    {STATUS_LABELS[c.status] ?? c.status}
+                    {t(`statuses.${c.status}`)}
                   </span>
                   <button
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors underline"
                     onClick={() => setChangingStatus(true)}
                   >
-                    Change Status
+                    {t("customerProfile.changeStatus")}
                   </button>
                 </>
               )}
@@ -526,7 +548,7 @@ export default function CustomerProfile() {
           {c.phone && (
             <a href={`tel:${c.phone}`}>
               <Button variant="outline" size="sm" className="flex items-center gap-1.5">
-                <Phone className="h-4 w-4" /> Call
+                <Phone className="h-4 w-4" /> {t("customerProfile.quickActions.call")}
               </Button>
             </a>
           )}
@@ -537,27 +559,27 @@ export default function CustomerProfile() {
               rel="noopener noreferrer"
             >
               <Button variant="outline" size="sm" className="flex items-center gap-1.5 text-green-700 border-green-300 hover:bg-green-50">
-                <ExternalLink className="h-4 w-4" /> WhatsApp
+                <ExternalLink className="h-4 w-4" /> {t("customerProfile.quickActions.whatsapp")}
               </Button>
             </a>
           )}
           <Button variant="outline" size="sm" className="flex items-center gap-1.5" onClick={handleAddNote}>
-            <MessageSquare className="h-4 w-4" /> Add Note
+            <MessageSquare className="h-4 w-4" /> {t("customerProfile.quickActions.addNote")}
           </Button>
           <Link href={`/tickets/new?customerId=${c.id}`}>
             <Button variant="outline" size="sm" className="flex items-center gap-1.5">
-              <Ticket className="h-4 w-4" /> Add Ticket
+              <Ticket className="h-4 w-4" /> {t("customerProfile.quickActions.addTicket")}
             </Button>
           </Link>
           <Button variant="outline" size="sm" className="flex items-center gap-1.5" onClick={() => setEditOpen(true)}>
-            <Pencil className="h-4 w-4" /> Edit
+            <Pencil className="h-4 w-4" /> {t("customerProfile.quickActions.edit")}
           </Button>
           <Button
             variant="outline" size="sm"
             className="flex items-center gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10"
             onClick={() => setDeleteOpen(true)}
           >
-            <Trash2 className="h-4 w-4" /> Delete
+            <Trash2 className="h-4 w-4" /> {t("customerProfile.quickActions.delete")}
           </Button>
         </div>
       </div>
@@ -567,28 +589,28 @@ export default function CustomerProfile() {
 
         {/* Left column: Customer Details */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4" /> Customer Details</CardTitle>
+          <CardHeader className="pb-3 text-start">
+            <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4" /> {t("customerProfile.detailsTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-y-3">
-              <InfoRow label="Phone" value={c.phone} icon={<Phone className="h-3.5 w-3.5" />} />
-              <InfoRow label="WhatsApp" value={c.whatsapp} icon={<Phone className="h-3.5 w-3.5" />} />
-              <InfoRow label="Email" value={c.email} icon={<Mail className="h-3.5 w-3.5" />} />
-              <InfoRow label="Nationality" value={c.nationality} icon={<Globe className="h-3.5 w-3.5" />} />
-              <InfoRow label="Passport No." value={c.passportNumber} icon={<CreditCard className="h-3.5 w-3.5" />} />
-              <InfoRow label="National ID" value={c.nationalId} icon={<CreditCard className="h-3.5 w-3.5" />} />
-              <InfoRow label="Address" value={c.address} icon={<MapPin className="h-3.5 w-3.5" />} />
-              <InfoRow label="Added" value={formatShortDate(c.createdAt)} />
+              <InfoRow label={t("customerProfile.labels.phone")} value={c.phone} icon={<Phone className="h-3.5 w-3.5" />} />
+              <InfoRow label={t("customerProfile.labels.whatsapp")} value={c.whatsapp} icon={<Phone className="h-3.5 w-3.5" />} />
+              <InfoRow label={t("customerProfile.labels.email")} value={c.email} icon={<Mail className="h-3.5 w-3.5" />} />
+              <InfoRow label={t("customerProfile.labels.nationality")} value={c.nationality} icon={<Globe className="h-3.5 w-3.5" />} />
+              <InfoRow label={t("customerProfile.labels.passportNo")} value={c.passportNumber} icon={<CreditCard className="h-3.5 w-3.5" />} />
+              <InfoRow label={t("customerProfile.labels.nationalId")} value={c.nationalId} icon={<CreditCard className="h-3.5 w-3.5" />} />
+              <InfoRow label={t("customerProfile.labels.address")} value={c.address} icon={<MapPin className="h-3.5 w-3.5" />} />
+              <InfoRow label={t("customerProfile.labels.added")} value={formatShortDate(c.createdAt)} />
             </div>
           </CardContent>
         </Card>
 
         {/* Right column: Tickets */}
         <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 text-start">
           <CardTitle className="text-base flex items-center gap-2">
-            <Ticket className="h-4 w-4" /> Flight Tickets
+            <Ticket className="h-4 w-4" /> {t("customerProfile.ticketsTitle")}
             {customerTickets.length > 0 && (
               <span className="text-sm font-normal text-muted-foreground">({customerTickets.length})</span>
             )}
@@ -601,79 +623,79 @@ export default function CustomerProfile() {
             </div>
           )}
           {!ticketsLoading && customerTickets.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-3">No tickets found.</p>
+            <p className="text-sm text-muted-foreground text-center py-3">{t("customerProfile.noTickets")}</p>
           )}
           {!ticketsLoading && customerTickets.length > 0 && (
-            <div className="divide-y">
-              {customerTickets.map((t) => {
-                const cost = t.costPrice ? parseFloat(t.costPrice) : null;
-                const sell = t.price ? parseFloat(t.price) : null;
+            <div className="divide-y animate-in fade-in duration-300">
+              {customerTickets.map((ticket) => {
+                const cost = ticket.costPrice ? parseFloat(ticket.costPrice) : null;
+                const sell = ticket.price ? parseFloat(ticket.price) : null;
                 const profit = cost != null && sell != null ? sell - cost : null;
-                const paymentNote = t.notes?.startsWith("Payment method:") ? t.notes.replace("Payment method:", "").trim() : null;
+                const paymentNote = ticket.notes?.startsWith("Payment method:") ? ticket.notes.replace("Payment method:", "").trim() : null;
                 return (
-                  <div key={t.id} className="py-3 first:pt-0 last:pb-0">
+                  <div key={ticket.id} className="py-3 first:pt-0 last:pb-0 text-start">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          {t.pnr && (
-                            <span className="font-mono text-xs bg-muted px-2 py-0.5 rounded font-medium">PNR: {t.pnr}</span>
+                          {ticket.pnr && (
+                            <span className="font-mono text-xs bg-muted px-2 py-0.5 rounded font-medium">{t("customerProfile.ticketCard.pnr")}: {ticket.pnr}</span>
                           )}
-                          {t.airline && (
-                            <span className="text-sm font-medium">{t.airline}</span>
+                          {ticket.airline && (
+                            <span className="text-sm font-medium">{ticket.airline}</span>
                           )}
-                          {t.flightRoute && (
-                            <span className="text-sm text-muted-foreground">{t.flightRoute}</span>
+                          {ticket.flightRoute && (
+                            <span className="text-sm text-muted-foreground">{ticket.flightRoute}</span>
                           )}
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1.5 text-sm">
-                          {t.bookingDate && (
+                          {ticket.bookingDate && (
                             <div className="flex gap-1">
-                              <span className="text-muted-foreground w-24 flex-shrink-0">Booking Date</span>
-                              <span className="font-medium">{formatDate(t.bookingDate)}</span>
+                              <span className="text-muted-foreground w-24 flex-shrink-0">{t("customerProfile.ticketCard.bookingDate")}</span>
+                              <span className="font-medium">{formatDate(ticket.bookingDate)}</span>
                             </div>
                           )}
-                          {!t.bookingDate && (
+                          {!ticket.bookingDate && (
                             <div className="flex gap-1">
-                              <span className="text-muted-foreground w-24 flex-shrink-0">Booking Date</span>
-                              <span className="font-medium">{formatDate(t.createdAt)}</span>
+                              <span className="text-muted-foreground w-24 flex-shrink-0">{t("customerProfile.ticketCard.bookingDate")}</span>
+                              <span className="font-medium">{formatDate(ticket.createdAt)}</span>
                             </div>
                           )}
-                          {t.departureDatetime && (
+                          {ticket.departureDatetime && (
                             <div className="flex gap-1">
-                              <span className="text-muted-foreground w-24 flex-shrink-0">Travel Date</span>
-                              <span className="font-medium">{formatDate(t.departureDatetime)}</span>
+                              <span className="text-muted-foreground w-24 flex-shrink-0">{t("customerProfile.ticketCard.travelDate")}</span>
+                              <span className="font-medium">{formatDate(ticket.departureDatetime)}</span>
                             </div>
                           )}
                           {sell != null && (
                             <div className="flex gap-1">
-                              <span className="text-muted-foreground w-24 flex-shrink-0">Sell Price</span>
-                              <span className="font-medium">{sell.toFixed(3)} {t.currency}</span>
+                              <span className="text-muted-foreground w-24 flex-shrink-0">{t("customerProfile.ticketCard.sellPrice")}</span>
+                              <span className="font-medium">{sell.toFixed(3)} {ticket.currency}</span>
                             </div>
                           )}
                           {cost != null && (
                             <div className="flex gap-1">
-                              <span className="text-muted-foreground w-24 flex-shrink-0">Cost Price</span>
-                              <span className="font-medium">{cost.toFixed(3)} {t.currency}</span>
+                              <span className="text-muted-foreground w-24 flex-shrink-0">{t("customerProfile.ticketCard.costPrice")}</span>
+                              <span className="font-medium">{cost.toFixed(3)} {ticket.currency}</span>
                             </div>
                           )}
                           {profit != null && (
                             <div className="flex gap-1">
-                              <span className="text-muted-foreground w-24 flex-shrink-0">Net Profit</span>
+                              <span className="text-muted-foreground w-24 flex-shrink-0">{t("customerProfile.ticketCard.netProfit")}</span>
                               <span className={`font-semibold ${profit >= 0 ? "text-green-600" : "text-red-500"}`}>
-                                {profit.toFixed(3)} {t.currency}
+                                {profit.toFixed(3)} {ticket.currency}
                               </span>
                             </div>
                           )}
                           {paymentNote && (
                             <div className="flex gap-1">
-                              <span className="text-muted-foreground w-24 flex-shrink-0">Payment</span>
-                              <span className="font-medium capitalize">{paymentNote}</span>
+                              <span className="text-muted-foreground w-24 flex-shrink-0">{t("customerProfile.ticketCard.payment")}</span>
+                              <span className="font-medium capitalize">{t(`statuses.${paymentNote}`) || paymentNote}</span>
                             </div>
                           )}
                         </div>
                       </div>
-                      <Link href={`/tickets/${t.id}`}>
-                        <Button variant="outline" size="sm" className="flex-shrink-0">View</Button>
+                      <Link href={`/tickets/${ticket.id}`}>
+                        <Button variant="outline" size="sm" className="flex-shrink-0">{t("common.view")}</Button>
                       </Link>
                     </div>
                   </div>
@@ -687,10 +709,10 @@ export default function CustomerProfile() {
       </div>{/* end grid */}
 
       {/* Notes Section */}
-      <div className="space-y-4" ref={notesSectionRef}>
+      <div className="space-y-4 text-start" ref={notesSectionRef}>
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" /> Notes
+            <MessageSquare className="h-5 w-5" /> {t("customerProfile.notesTitle")}
             {notes.length > 0 && (
               <span className="text-sm font-normal text-muted-foreground">({notes.length})</span>
             )}
@@ -712,7 +734,7 @@ export default function CustomerProfile() {
 
         {!notesLoading && notes.length === 0 && (
           <div className="text-center py-8 text-muted-foreground text-sm border rounded-lg border-dashed">
-            No notes yet. Add the first note above.
+            {t("customerProfile.noNotes")}
           </div>
         )}
 
@@ -726,26 +748,32 @@ export default function CustomerProfile() {
       </div>
 
       {editOpen && (
-        <EditCustomerSheet customer={c} open={editOpen} onClose={() => setEditOpen(false)} />
+        <EditCustomerSheet
+          customer={c}
+          latestTicket={customerTickets.length > 0 ? customerTickets[0] : null}
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+        />
       )}
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Customer</AlertDialogTitle>
+            <AlertDialogTitle>{language === "ar" ? "حذف المسافر" : "Delete Customer"}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{c.fullName}</strong>? This action cannot be undone.
-              Customers with existing tickets cannot be deleted.
+              {language === "ar" 
+                ? `هل أنت متأكد أنك تريد حذف المسافر ${c.fullName}؟ هذا الإجراء لا يمكن التراجع عنه ولا يمكن حذف المسافرين الذين لديهم تذاكر طيران نشطة.` 
+                : `Are you sure you want to delete ${c.fullName}? This action cannot be undone. Customers with existing tickets cannot be deleted.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteMutation.mutate()}
               disabled={deleteMutation.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete Customer"}
+              {deleteMutation.isPending ? (language === "ar" ? "جاري الحذف..." : "Deleting...") : t("customerProfile.quickActions.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

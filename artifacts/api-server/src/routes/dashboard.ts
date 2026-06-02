@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, gte, lt, and, isNotNull, count, sql, type SQL } from "drizzle-orm";
+import { eq, gte, lt, and, isNotNull, count, sql, inArray, type SQL } from "drizzle-orm";
 import { db, customersTable, customerNotesTable, ticketsTable, paymentsTable, employeesTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth.js";
 
@@ -116,10 +116,12 @@ router.get("/dashboard/stats", requireAuth, async (req, res) => {
       .groupBy(customersTable.status);
 
     const revenueResult = await db
-      .select({ total: sql<string>`COALESCE(SUM(${paymentsTable.amount}), 0)::text` })
-      .from(paymentsTable)
-      .innerJoin(customersTable, eq(paymentsTable.customerId, customersTable.id))
-      .where(and(customerFilter, eq(paymentsTable.paymentStatus, "paid")));
+      .select({ total: sql<string>`COALESCE(SUM(COALESCE(${ticketsTable.price}, 0)), 0)::text` })
+      .from(ticketsTable)
+      .where(and(
+        ticketFilter,
+        inArray(ticketsTable.ticketStatus, ["confirmed", "paid", "issued"])
+      ));
 
     const totalRevenue = revenueResult[0]?.total ?? "0";
 

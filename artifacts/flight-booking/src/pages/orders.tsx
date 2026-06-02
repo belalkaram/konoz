@@ -7,6 +7,8 @@ import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Eye, Plane } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/language-context";
+import { cn } from "@/lib/utils";
 
 function statusVariant(status: string) {
   if (status === "confirmed") return "default";
@@ -16,19 +18,20 @@ function statusVariant(status: string) {
 
 export default function Orders() {
   const { data, isLoading, isError } = useListOrders({ limit: 50 });
+  const { t, language, isRtl } = useLanguage();
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Orders</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t("orders.title")}</h1>
         <p className="text-muted-foreground mt-1 text-sm md:text-base">
-          Manage all flight bookings and reservations.
+          {t("orders.subtitle")}
         </p>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle>All Bookings</CardTitle>
+          <CardTitle>{t("orders.allBookings")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
@@ -38,14 +41,14 @@ export default function Orders() {
               ))}
             </div>
           ) : isError || !data ? (
-            <div className="text-destructive py-8 text-center p-6">Failed to load orders</div>
+            <div className="text-destructive py-8 text-center p-6">{t("orders.failedToLoad")}</div>
           ) : data.orders.length === 0 ? (
             <div className="text-center py-16 px-6">
-              <Plane className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-20" />
-              <p className="font-medium">No orders yet</p>
-              <p className="text-sm text-muted-foreground mt-1">Book a flight to get started.</p>
+              <Plane className={cn("h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-20", isRtl && "scale-x-[-1]")} />
+              <p className="font-medium">{t("orders.noOrders")}</p>
+              <p className="text-sm text-muted-foreground mt-1">{t("orders.bookFlightToGetStarted")}</p>
               <Link href="/search">
-                <Button className="mt-4" size="sm">Search Flights</Button>
+                <Button className="mt-4" size="sm">{t("orders.searchFlights")}</Button>
               </Link>
             </div>
           ) : (
@@ -55,12 +58,12 @@ export default function Orders() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Reference</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Route</TableHead>
-                      <TableHead>Passenger</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead>{t("orders.reference")}</TableHead>
+                      <TableHead>{t("orders.date")}</TableHead>
+                      <TableHead>{t("orders.route")}</TableHead>
+                      <TableHead>{t("orders.passenger")}</TableHead>
+                      <TableHead>{t("orders.status")}</TableHead>
+                      <TableHead className="text-right rtl:text-left">{t("orders.total")}</TableHead>
                       <TableHead />
                     </TableRow>
                   </TableHeader>
@@ -69,7 +72,7 @@ export default function Orders() {
                       const passenger = order.passengers?.[0] as Record<string, string> | undefined;
                       const paxName = passenger
                         ? `${passenger.givenName ?? ""} ${passenger.familyName ?? ""}`.trim()
-                        : "Unknown";
+                        : t("orders.unknown");
                       const slice = order.slices?.[0];
 
                       return (
@@ -80,19 +83,19 @@ export default function Orders() {
                           </TableCell>
                           <TableCell>
                             {slice
-                              ? `${slice.origin.iataCode} → ${slice.destination.iataCode}`
+                              ? `${slice.origin.iataCode} ${isRtl ? "←" : "→"} ${slice.destination.iataCode}`
                               : "N/A"}
                           </TableCell>
                           <TableCell className="text-sm">{paxName}</TableCell>
                           <TableCell>
                             <Badge variant={statusVariant(order.status ?? "")}>
-                              {order.status}
+                              {t(`statuses.${order.status?.toLowerCase()}`) || order.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right font-medium">
+                          <TableCell className="text-right rtl:text-left font-medium">
                             {formatCurrency(order.totalAmount, order.totalCurrency)}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right rtl:text-left">
                             <Link href={`/orders/${order.id}`}>
                               <Button variant="ghost" size="icon">
                                 <Eye className="h-4 w-4" />
@@ -112,7 +115,7 @@ export default function Orders() {
                   const passenger = order.passengers?.[0] as Record<string, string> | undefined;
                   const paxName = passenger
                     ? `${passenger.givenName ?? ""} ${passenger.familyName ?? ""}`.trim()
-                    : "Unknown";
+                    : t("orders.unknown");
                   const slice = order.slices?.[0];
 
                   return (
@@ -122,19 +125,19 @@ export default function Orders() {
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-sm">{order.bookingReference}</span>
                             <Badge variant={statusVariant(order.status ?? "")} className="text-xs">
-                              {order.status}
+                              {t(`statuses.${order.status?.toLowerCase()}`) || order.status}
                             </Badge>
                           </div>
                           {slice && (
                             <div className="flex items-center gap-1 text-sm font-medium">
                               <span>{slice.origin.iataCode}</span>
-                              <Plane className="h-3 w-3 text-muted-foreground" />
+                              <Plane className={cn("h-3 w-3 text-muted-foreground", isRtl && "scale-x-[-1]")} />
                               <span>{slice.destination.iataCode}</span>
                             </div>
                           )}
                           <div className="text-xs text-muted-foreground">{paxName}</div>
                         </div>
-                        <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-3">
+                        <div className={cn("flex flex-col items-end gap-1 flex-shrink-0 ml-3", isRtl && "items-start ml-0 mr-3")}>
                           <div className="font-bold text-primary">
                             {formatCurrency(order.totalAmount, order.totalCurrency)}
                           </div>

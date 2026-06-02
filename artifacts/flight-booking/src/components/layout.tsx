@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Plane, Search, ListFilter, LayoutDashboard, Menu, X, Users, Tag, Bell, LogOut, UserCog, Building2, ShieldCheck, FileText, BarChart3, MessageSquare, QrCode, Layers, Sun, Moon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plane, Search, ListFilter, LayoutDashboard, Menu, X, Users, Tag, Bell, LogOut, UserCog, Building2, ShieldCheck, FileText, BarChart3, MessageSquare, QrCode, Layers, Sun, Moon, ChevronLeft, ChevronRight, Wallet } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { Link } from "wouter";
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useEmployee } from "@/contexts/employee-context";
 import { EmployeeSettingsDialog } from "./employee-settings-dialog";
 import { ConnectivityBanner } from "./connectivity-banner";
+import { useLanguage } from "@/contexts/language-context";
 
 const SIDEBAR_GRADIENT = "linear-gradient(180deg, #011a13 0%, #022c22 40%, #064e3b 100%)";
 const GOLD_GRADIENT = "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)";
@@ -19,6 +20,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const role = currentEmployee?.role;
 
   const { theme, setTheme } = useTheme();
+  const { language, setLanguage, t, isRtl } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
@@ -44,21 +46,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const isAdmin = role === "Administrator";
   const isHR = role === "HR" || isAdmin;
 
-
   const navItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/customers", label: "Customers", icon: Users },
-    { href: "/tickets", label: "Tickets", icon: Tag },
-    { href: "/reminders", label: "Reminders", icon: Bell },
-    { href: "/search", label: "Flight Search", icon: Search },
-    { href: "/orders", label: "Orders", icon: ListFilter },
-    { href: "/chat", label: "WhatsApp Chat", icon: MessageSquare },
-    { href: "/settings/whatsapp", label: "WhatsApp Settings", icon: QrCode },
-    { href: "/whatsapp-controls", label: "WhatsApp Controls", icon: Layers },
-    ...(!isHR ? [{ href: "/reports", label: "Reports", icon: BarChart3 }] : []),
-    ...(isHR ? [{ href: "/hr", label: "HR Management", icon: ShieldCheck }] : []),
-    ...(isSupervisorOrAdmin ? [{ href: "/employees", label: "Employees", icon: UserCog }] : []),
-    ...(isAdmin ? [{ href: "/companies", label: "Companies", icon: Building2 }] : []),
+    { href: "/", label: t("common.dashboard"), icon: LayoutDashboard },
+    ...(isSupervisorOrAdmin ? [{ href: "/supervisor", label: t("common.performance"), icon: FileText }] : []),
+    { href: "/customers", label: t("common.customers"), icon: Users },
+    { href: "/tickets", label: t("common.tickets"), icon: Tag },
+    { href: "/reminders", label: t("common.reminders"), icon: Bell },
+    { href: "/search", label: t("common.flightSearch"), icon: Search },
+    { href: "/orders", label: t("common.orders"), icon: ListFilter },
+    { href: "/chat", label: t("common.whatsappChat"), icon: MessageSquare },
+    { href: "/whatsapp-controls", label: t("common.whatsappControls"), icon: Layers },
+    ...(!isHR ? [{ href: "/reports", label: t("common.reports"), icon: BarChart3 }] : []),
+    ...(isHR ? [{ href: "/hr", label: t("common.hrManagement"), icon: ShieldCheck }] : []),
+    ...(isSupervisorOrAdmin ? [{ href: "/employees", label: t("common.employees"), icon: UserCog }] : []),
+    ...(isSupervisorOrAdmin ? [{ href: "/accounting", label: language === "ar" ? "الحسابات" : "Accounting", icon: Wallet }] : []),
+    ...(isAdmin ? [{ href: "/companies", label: t("common.companies"), icon: Building2 }] : []),
   ];
 
 
@@ -74,15 +76,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
               style={{ background: GOLD_GRADIENT }}>
-              <Plane className="h-4 w-4 rotate-45" style={{ color: "#022c22" }} />
+              <Plane className={cn("h-4 w-4", isRtl ? "-rotate-45" : "rotate-45")} style={{ color: "#022c22" }} />
             </div>
             {!isCollapsed && (
               <div className="animate-in fade-in duration-300">
-                <div className="text-white font-bold text-base tracking-wide" style={{ fontFamily: "'Playfair Display', 'Georgia', serif" }}>
-                  AeroOps
+                <div className="text-white font-bold text-base tracking-wide" style={isRtl ? undefined : { fontFamily: "'Playfair Display', 'Georgia', serif" }}>
+                  {t("common.aeroOps")}
                 </div>
                 <div className="text-xs tracking-widest uppercase font-medium" style={{ color: "#86efac" }}>
-                  Premium
+                  {t("common.premium")}
                 </div>
               </div>
             )}
@@ -111,7 +113,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 }
                 title={isCollapsed ? item.label : undefined}
               >
-                <item.icon className={cn("h-4 w-4 flex-shrink-0", !isCollapsed && "mr-3")} />
+                <item.icon className={cn("h-4 w-4 flex-shrink-0", !isCollapsed && (isRtl ? "ml-3" : "mr-3"))} />
                 {!isCollapsed && <span className="animate-in fade-in duration-300">{item.label}</span>}
               </Link>
             );
@@ -135,10 +137,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {currentEmployee && <EmployeeSettingsDialog employee={currentEmployee} />}
               <button
                 onClick={logout}
-                title="Sign out"
+                title={t("common.signOut")}
                 className="p-1.5 rounded-full transition-colors flex-shrink-0 text-white/40 hover:text-white/80 hover:bg-white/5"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-4 w-4 animate-flip-x" />
               </button>
             </div>
           </div>
@@ -151,7 +153,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden bg-[#f0fdf4] dark:bg-background">
       {/* Desktop Sidebar */}
       <aside className={cn(
-        "hidden md:flex flex-col flex-shrink-0 transition-all duration-300 border-r border-[#d1fae5]/10 dark:border-border/30",
+        "hidden md:flex flex-col flex-shrink-0 transition-all duration-300 border-r rtl:border-r-0 rtl:border-l border-[#d1fae5]/10 dark:border-border/30",
         collapsed ? "w-20" : "w-64"
       )}
         style={{ background: sidebarBackground }}>
@@ -170,14 +172,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile Drawer */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 flex flex-col transform transition-transform duration-300 md:hidden border-r border-[#d1fae5]/10 dark:border-border/30",
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 rtl:left-auto rtl:right-0 z-50 w-64 flex flex-col transform transition-transform duration-300 md:hidden border-r rtl:border-r-0 rtl:border-l border-[#d1fae5]/10 dark:border-border/30",
+          mobileOpen 
+            ? "translate-x-0" 
+            : (isRtl ? "translate-x-full" : "-translate-x-full")
         )}
         style={{ background: sidebarBackground }}
       >
         <button
           onClick={() => setMobileOpen(false)}
-          className="absolute top-4 right-4 p-1.5 rounded-full transition-colors"
+          className="absolute top-4 right-4 rtl:right-auto rtl:left-4 p-1.5 rounded-full transition-colors"
           style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
         >
           <X className="h-4 w-4" />
@@ -203,32 +207,42 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {/* Desktop Sidebar Toggle */}
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="hidden md:flex p-2 rounded-full transition-all hover:bg-[#f0fdf4] dark:hover:bg-muted text-[#047857] dark:text-muted-foreground mr-2"
-              title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+              className="hidden md:flex p-2 rounded-full transition-all hover:bg-[#f0fdf4] dark:hover:bg-muted text-[#047857] dark:text-muted-foreground mr-2 rtl:mr-0 rtl:ml-2"
+              title={collapsed ? t("common.expandSidebar") : t("common.collapseSidebar")}
             >
               {collapsed ? (
-                <ChevronRight className="h-5 w-5" />
+                isRtl ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />
               ) : (
-                <ChevronLeft className="h-5 w-5" />
+                isRtl ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />
               )}
             </button>
 
             {/* Mobile brand */}
             <div className="flex items-center gap-2 md:hidden">
               <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: GOLD_GRADIENT }}>
-                <Plane className="h-3.5 w-3.5 rotate-45" style={{ color: "#022c22" }} />
+                <Plane className={cn("h-3.5 w-3.5", isRtl ? "-rotate-45" : "rotate-45")} style={{ color: "#022c22" }} />
               </div>
-              <span className="font-bold tracking-wide text-sm text-[#022c22] dark:text-foreground" style={{ fontFamily: "'Playfair Display', 'Georgia', serif" }}>AeroOps</span>
+              <span className="font-bold tracking-wide text-sm text-[#022c22] dark:text-foreground" style={isRtl ? undefined : { fontFamily: "'Playfair Display', 'Georgia', serif" }}>{t("common.aeroOps")}</span>
             </div>
 
             {/* Desktop env label */}
             <div className="hidden md:flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-sm font-medium text-[#047857] dark:text-[#86efac]">Konooz Live System</span>
+              <span className="text-sm font-medium text-[#047857] dark:text-[#86efac]">{t("common.konoozLive")}</span>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Language Switcher */}
+            <button
+              onClick={() => setLanguage(language === "ar" ? "en" : "ar")}
+              className="px-2.5 py-1.5 rounded-full border border-emerald-100 dark:border-border transition-all text-xs font-bold flex items-center justify-center hover:bg-[#f0fdf4] dark:hover:bg-muted text-[#047857] dark:text-muted-foreground gap-1"
+              title={language === "ar" ? "Switch to English" : "تغيير إلى العربية"}
+            >
+              <span className="text-sm">🌐</span>
+              <span>{language === "ar" ? "EN" : "عربي"}</span>
+            </button>
+
             {/* Theme Toggle Button */}
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -248,11 +262,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </div>
             <button
               onClick={logout}
-              title="Sign out"
+              title={t("common.signOut")}
               className="hidden md:flex p-2 rounded-full transition-colors items-center gap-1.5 text-xs font-medium text-[#047857] dark:text-muted-foreground hover:bg-[#f0fdf4] dark:hover:bg-muted"
             >
               <LogOut className="h-4 w-4" />
-              Sign out
+              {t("common.signOut")}
             </button>
           </div>
         </header>

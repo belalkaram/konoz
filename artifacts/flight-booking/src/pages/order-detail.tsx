@@ -19,10 +19,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLanguage } from "@/contexts/language-context";
 
 export default function OrderDetail() {
   const [, params] = useRoute("/orders/:orderId");
   const orderId = params?.orderId;
+  const { t, language, isRtl } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -39,53 +41,67 @@ export default function OrderDetail() {
     if (!orderId) return;
     cancelOrder.mutate({ orderId } as any, {
       onSuccess: () => {
-        toast({ title: "Order Cancelled", description: "The booking has been successfully cancelled." });
+        toast({
+          title: language === "ar" ? "تم إلغاء الطلب" : "Order Cancelled",
+          description: language === "ar" ? "تم إلغاء حجز الطيران بنجاح." : "The booking has been successfully cancelled."
+        });
         queryClient.invalidateQueries({ queryKey: getGetOrderQueryKey(orderId) });
       },
       onError: (err) => {
-        toast({ title: "Cancellation Failed", description: err.message, variant: "destructive" });
+        toast({
+          title: language === "ar" ? "فشل إلغاء الحجز" : "Cancellation Failed",
+          description: err.message,
+          variant: "destructive"
+        });
       }
     });
   };
 
   if (isLoading) return <Skeleton className="h-96 w-full" />;
-  if (isError || !order) return <div>Failed to load order details</div>;
+  if (isError || !order) return <div className="text-center py-12 text-muted-foreground">{language === "ar" ? "فشل تحميل تفاصيل الطلب" : "Failed to load order details"}</div>;
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="space-y-8 max-w-5xl mx-auto text-start">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-3xl font-bold tracking-tight">Order {order.bookingReference}</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {language === "ar" ? `طلب ${order.bookingReference}` : `Order ${order.bookingReference}`}
+            </h1>
             <Badge variant={
               order.status === 'CONFIRMED' ? 'default' :
               order.status === 'CANCELLED' ? 'destructive' :
               'secondary'
             } className="text-sm">
-              {order.status}
+              {language === "ar" ? t("statuses." + order.status.toLowerCase()) : order.status}
             </Badge>
           </div>
-          <p className="text-muted-foreground">Booked on {formatDateTime(order.createdAt)}</p>
+          <p className="text-muted-foreground">
+            {language === "ar" ? `تم الحجز في ${formatDateTime(order.createdAt)}` : `Booked on ${formatDateTime(order.createdAt)}`}
+          </p>
         </div>
         
         {order.status !== 'CANCELLED' && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive">
-                <XCircle className="w-4 h-4 mr-2" /> Cancel Booking
+                <XCircle className="w-4 h-4 mr-2 rtl:mr-0 rtl:ml-2" />
+                {language === "ar" ? "إلغاء الحجز" : "Cancel Booking"}
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
+            <AlertDialogContent className="text-start">
               <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogTitle>{language === "ar" ? "هل أنت متأكد تماماً؟" : "Are you absolutely sure?"}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action cannot be undone. This will permanently cancel the booking reference {order.bookingReference}.
+                  {language === "ar"
+                    ? `هذا الإجراء لا يمكن التراجع عنه. سيؤدي هذا إلى إلغاء حجز الطيران ذو المرجع ${order.bookingReference} بشكل نهائي.`
+                    : `This action cannot be undone. This will permanently cancel the booking reference ${order.bookingReference}.`}
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Keep Booking</AlertDialogCancel>
+              <AlertDialogFooter className="gap-2">
+                <AlertDialogCancel>{language === "ar" ? "الاحتفاظ بالحجز" : "Keep Booking"}</AlertDialogCancel>
                 <AlertDialogAction onClick={handleCancel} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Yes, cancel booking
+                  {language === "ar" ? "نعم، إلغاء الحجز" : "Yes, cancel booking"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -93,25 +109,27 @@ export default function OrderDetail() {
         )}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-3 text-start">
         <div className="md:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Itinerary</CardTitle>
+              <CardTitle>{language === "ar" ? "خط سير الرحلة" : "Itinerary"}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {order.slices?.map((slice, i) => (
                 <div key={slice.id || i} className="p-4 border rounded-lg bg-muted/20">
-                  <div className="font-medium mb-2">
-                    {slice.origin.name} ({slice.origin.iataCode}) &rarr; {slice.destination.name} ({slice.destination.iataCode})
+                  <div className="font-medium mb-2 flex flex-wrap items-center gap-1.5">
+                    <span>{slice.origin.name} ({slice.origin.iataCode})</span>
+                    <span>{isRtl ? "←" : "→"}</span>
+                    <span>{slice.destination.name} ({slice.destination.iataCode})</span>
                   </div>
                   <div className="text-sm space-y-1">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Departure</span>
+                      <span className="text-muted-foreground">{language === "ar" ? "المغادرة" : "Departure"}</span>
                       <span>{formatDateTime(slice.departureDateTime)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Arrival</span>
+                      <span className="text-muted-foreground">{language === "ar" ? "الوصول" : "Arrival"}</span>
                       <span>{formatDateTime(slice.arrivalDateTime)}</span>
                     </div>
                   </div>
@@ -122,7 +140,7 @@ export default function OrderDetail() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Passengers</CardTitle>
+              <CardTitle>{language === "ar" ? "المسافرين" : "Passengers"}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -132,7 +150,9 @@ export default function OrderDetail() {
                       <div className="font-medium">{p.title} {p.givenName} {p.familyName}</div>
                       <div className="text-sm text-muted-foreground">{p.email} &bull; {p.phoneNumber}</div>
                     </div>
-                    <Badge variant="outline" className="uppercase">{p.type || 'ADULT'}</Badge>
+                    <Badge variant="outline" className="uppercase">
+                      {p.type === "CHILD" ? (language === "ar" ? "طفل" : "CHILD") : p.type === "INFANT" ? (language === "ar" ? "رضيع" : "INFANT") : (language === "ar" ? "بالغ" : "ADULT")}
+                    </Badge>
                   </div>
                 ))}
               </div>
@@ -143,17 +163,17 @@ export default function OrderDetail() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Payment Details</CardTitle>
+              <CardTitle>{language === "ar" ? "تفاصيل الدفع" : "Payment Details"}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center pb-4 border-b">
-                <span className="text-muted-foreground">Status</span>
+                <span className="text-muted-foreground">{language === "ar" ? "الحالة" : "Status"}</span>
                 <Badge variant={order.paymentStatus?.awaitingPayment ? "outline" : "default"}>
-                  {order.paymentStatus?.awaitingPayment ? "Awaiting Payment" : "Paid"}
+                  {order.paymentStatus?.awaitingPayment ? (language === "ar" ? "بانتظار الدفع" : "Awaiting Payment") : (language === "ar" ? "مدفوع" : "Paid")}
                 </Badge>
               </div>
               <div className="flex justify-between font-bold pt-2">
-                <span>Total Amount</span>
+                <span>{language === "ar" ? "المبلغ الإجمالي" : "Total Amount"}</span>
                 <span className="text-primary text-xl">{formatCurrency(order.totalAmount, order.totalCurrency)}</span>
               </div>
             </CardContent>
@@ -161,16 +181,16 @@ export default function OrderDetail() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Documents</CardTitle>
+              <CardTitle>{language === "ar" ? "المستندات" : "Documents"}</CardTitle>
             </CardHeader>
             <CardContent>
               {order.documents && order.documents.length > 0 ? (
                 <div className="space-y-2">
                   {order.documents.map((doc: any, i) => (
                     <Button key={i} variant="outline" className="w-full justify-start" asChild>
-                      <a href={doc.url} target="_blank" rel="noreferrer">
-                        <FileText className="mr-2 h-4 w-4" />
-                        {doc.type} Document
+                      <a href={doc.url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5">
+                        <FileText className="h-4 w-4" />
+                        <span>{language === "ar" ? `مستند ${doc.type}` : `${doc.type} Document`}</span>
                       </a>
                     </Button>
                   ))}
@@ -178,7 +198,7 @@ export default function OrderDetail() {
               ) : (
                 <div className="text-sm text-muted-foreground text-center py-4 flex flex-col items-center">
                   <AlertTriangle className="h-8 w-8 mb-2 opacity-50" />
-                  No documents available yet
+                  {language === "ar" ? "لا تتوفر مستندات حالياً" : "No documents available yet"}
                 </div>
               )}
             </CardContent>

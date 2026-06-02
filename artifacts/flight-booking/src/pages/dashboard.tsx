@@ -13,6 +13,8 @@ import { TICKET_STATUS_COLORS, TICKET_STATUS_LABELS, PAYMENT_STATUS_COLORS, PAYM
 import { STATUS_COLORS, STATUS_LABELS } from "@/lib/customer-constants";
 import { useCurrentEmployee } from "@/contexts/employee-context";
 import { authFetch, BASE } from "@/lib/api";
+import { useLanguage } from "@/contexts/language-context";
+import { cn } from "@/lib/utils";
 
 interface DashboardStats {
   customers: {
@@ -117,6 +119,7 @@ function SectionSkeleton() {
 export default function Dashboard() {
   const [, navigate] = useLocation();
   const currentEmployee = useCurrentEmployee();
+  const { t, language, isRtl } = useLanguage();
   const isHR = currentEmployee.role === "HR";
 
   const { data: crmData, isLoading: crmLoading, isError: crmError } = useQuery({
@@ -137,8 +140,8 @@ export default function Dashboard() {
     return (
       <div className="space-y-10">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Welcome, {currentEmployee.name}.</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("dashboard.title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("dashboard.welcome")} {currentEmployee.name}.</p>
         </div>
 
         <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 dark:border-emerald-800">
@@ -147,9 +150,9 @@ export default function Dashboard() {
               <UserCheck className="h-8 w-8 text-emerald-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-300">HR Management Portal</h2>
+              <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-300">{t("dashboard.hrPortal")}</h2>
               <p className="text-muted-foreground mt-1 text-sm max-w-md">
-                Your dedicated workspace for managing employee attendance, leaves, and HR records.
+                {t("dashboard.hrSubtitle")}
               </p>
             </div>
             <button
@@ -157,7 +160,7 @@ export default function Dashboard() {
               className="mt-2 px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition-colors flex items-center gap-2"
             >
               <UserCheck className="h-4 w-4" />
-              Open HR Section
+              {t("dashboard.openHr")}
             </button>
           </CardContent>
         </Card>
@@ -168,11 +171,11 @@ export default function Dashboard() {
               <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
                 <Clock className="h-5 w-5 text-blue-600" />
               </div>
-              <div>
-                <div className="text-sm font-medium">Attendance Records</div>
-                <div className="text-xs text-muted-foreground">Log check-in / check-out</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium">{t("dashboard.attendanceRecords")}</div>
+                <div className="text-xs text-muted-foreground truncate">{t("dashboard.attendanceSub")}</div>
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
+              <ChevronRight className={cn("h-4 w-4 text-muted-foreground", isRtl ? "rotate-180 mr-auto ml-0" : "ml-auto")} />
             </CardContent>
           </Card>
 
@@ -181,11 +184,11 @@ export default function Dashboard() {
               <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
                 <Bell className="h-5 w-5 text-amber-600" />
               </div>
-              <div>
-                <div className="text-sm font-medium">Leave Requests</div>
-                <div className="text-xs text-muted-foreground">Manage employee leave</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium">{t("dashboard.leaveRequests")}</div>
+                <div className="text-xs text-muted-foreground truncate">{t("dashboard.leaveSub")}</div>
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
+              <ChevronRight className={cn("h-4 w-4 text-muted-foreground", isRtl ? "rotate-180 mr-auto ml-0" : "ml-auto")} />
             </CardContent>
           </Card>
 
@@ -194,11 +197,11 @@ export default function Dashboard() {
               <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
                 <Users className="h-5 w-5 text-emerald-600" />
               </div>
-              <div>
-                <div className="text-sm font-medium">HR Reports</div>
-                <div className="text-xs text-muted-foreground">Export attendance &amp; leave logs</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium">{t("dashboard.hrReports")}</div>
+                <div className="text-xs text-muted-foreground truncate">{t("dashboard.hrReportsSub")}</div>
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
+              <ChevronRight className={cn("h-4 w-4 text-muted-foreground", isRtl ? "rotate-180 mr-auto ml-0" : "ml-auto")} />
             </CardContent>
           </Card>
         </div>
@@ -210,34 +213,36 @@ export default function Dashboard() {
   return (
     <div className="space-y-10">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">CRM and flight booking overview.</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t("dashboard.title")}</h1>
+        <p className="text-muted-foreground mt-1">
+          {language === "ar" ? "نظرة عامة على إدارة العملاء وحجوزات الطيران." : "CRM and flight booking overview."}
+        </p>
       </div>
 
       <section className="space-y-5">
         <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
-          <Users className="h-5 w-5 text-primary" /> CRM Stats
+          <Users className="h-5 w-5 text-primary" /> {language === "ar" ? "إحصائيات إدارة العملاء" : "CRM Stats"}
         </h2>
 
         {crmLoading && <SectionSkeleton />}
-        {crmError && <div className="text-destructive text-sm">Failed to load CRM stats.</div>}
+        {crmError && <div className="text-destructive text-sm">{t("common.failedToLoad")}</div>}
 
         {crmData && (
           <>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              <StatCard title="Total Customers" value={crmData.customers.total} icon={<Users className="h-4 w-4" />} color="text-primary" href="/customers" />
-              <StatCard title="New Today" value={crmData.customers.newToday} icon={<Users className="h-4 w-4" />} color="text-blue-500" href="/customers" />
-              <StatCard title="CRM Revenue" value={formatCurrency(crmData.totalRevenue, "USD")} icon={<TrendingUp className="h-4 w-4" />} color="text-green-600" />
-              <StatCard title="Follow-ups Today" value={crmData.customers.followUpsToday} icon={<Bell className="h-4 w-4" />} color="text-yellow-500" href="/reminders" />
-              <StatCard title="Missed Follow-ups" value={crmData.customers.missedFollowUps} icon={<AlertCircle className="h-4 w-4" />} color="text-destructive" href="/reminders" />
+              <StatCard title={t("supervisor.kpis.totalCustomers")} value={crmData.customers.total} icon={<Users className="h-4 w-4" />} color="text-primary" href="/customers" />
+              <StatCard title={t("dashboard.newCustomersToday")} value={crmData.customers.newToday} icon={<Users className="h-4 w-4" />} color="text-blue-500" href="/customers" />
+              <StatCard title={t("supervisor.kpis.totalRevenue")} value={formatCurrency(crmData.totalRevenue, "USD")} icon={<TrendingUp className="h-4 w-4" />} color="text-green-600" />
+              <StatCard title={t("dashboard.pendingFollowups")} value={crmData.customers.followUpsToday} icon={<Bell className="h-4 w-4" />} color="text-yellow-500" href="/reminders" />
+              <StatCard title={t("dashboard.missedFollowups")} value={crmData.customers.missedFollowUps} icon={<AlertCircle className="h-4 w-4" />} color="text-destructive" href="/reminders" />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              <StatCard title="Total Tickets" value={crmData.tickets.total} icon={<Tag className="h-4 w-4" />} color="text-primary" href="/tickets" />
-              <StatCard title="Confirmed" value={crmData.tickets.confirmed} icon={<CheckCircle2 className="h-4 w-4" />} color="text-green-500" href="/tickets" />
-              <StatCard title="Issued" value={crmData.tickets.issued} icon={<CheckCircle2 className="h-4 w-4" />} color="text-emerald-500" href="/tickets" />
-              <StatCard title="Cancelled" value={crmData.tickets.cancelled} icon={<XCircle className="h-4 w-4" />} color="text-destructive" href="/tickets" />
-              <StatCard title="Unpaid" value={crmData.tickets.unpaid} icon={<CreditCard className="h-4 w-4" />} color="text-yellow-600" href="/tickets" />
+              <StatCard title={t("supervisor.kpis.totalTickets")} value={crmData.tickets.total} icon={<Tag className="h-4 w-4" />} color="text-primary" href="/tickets" />
+              <StatCard title={t("supervisor.kpis.confirmedTickets")} value={crmData.tickets.confirmed} icon={<CheckCircle2 className="h-4 w-4" />} color="text-green-500" href="/tickets" />
+              <StatCard title={t("supervisor.kpis.issuedTickets")} value={crmData.tickets.issued} icon={<CheckCircle2 className="h-4 w-4" />} color="text-emerald-500" href="/tickets" />
+              <StatCard title={t("supervisor.kpis.cancelledTickets")} value={crmData.tickets.cancelled} icon={<XCircle className="h-4 w-4" />} color="text-destructive" href="/tickets" />
+              <StatCard title={t("statuses.unpaid")} value={crmData.tickets.unpaid} icon={<CreditCard className="h-4 w-4" />} color="text-yellow-600" href="/tickets" />
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -245,21 +250,23 @@ export default function Dashboard() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <UserCheck className="h-4 w-4 text-primary" />
-                    My Follow-ups Today
-                    <span className="ml-auto text-xs font-normal text-muted-foreground">{currentEmployee.name}</span>
+                    <span>{t("dashboard.myFollowups")}</span>
+                    <span className={cn("text-xs font-normal text-muted-foreground", isRtl ? "mr-auto ml-0" : "ml-auto")}>{currentEmployee.name}</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   {myFollowUpsToday.length === 0 ? (
-                    <p className="text-sm text-muted-foreground px-6 pb-4">No follow-ups assigned to you today.</p>
+                    <p className="text-sm text-muted-foreground px-6 pb-4">
+                      {language === "ar" ? "لا توجد متابعات مسندة إليك اليوم." : "No follow-ups assigned to you today."}
+                    </p>
                   ) : (
                     <>
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Customer</TableHead>
-                            <TableHead>Note</TableHead>
-                            <TableHead className="text-right">Time</TableHead>
+                            <TableHead>{t("common.name")}</TableHead>
+                            <TableHead>{language === "ar" ? "الملاحظة" : "Note"}</TableHead>
+                            <TableHead className={cn("text-right", isRtl && "text-left")}>{language === "ar" ? "الوقت" : "Time"}</TableHead>
                             <TableHead></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -270,14 +277,14 @@ export default function Dashboard() {
                                 {f.customerName ?? "Unknown"}
                               </TableCell>
                               <TableCell className="text-xs text-muted-foreground line-clamp-1 max-w-[100px]">{f.note}</TableCell>
-                              <TableCell className="text-xs text-muted-foreground text-right whitespace-nowrap">
+                              <TableCell className={cn("text-xs text-muted-foreground whitespace-nowrap text-right", isRtl && "text-left")}>
                                 {f.followUpDate ? formatDateTime(f.followUpDate).split(",")[1]?.trim() ?? "" : "—"}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className={cn("text-right", isRtl && "text-left")}>
                                 {f.customerId ? (
                                   <Link href={`/customers/${f.customerId}`}>
-                                    <span className="text-xs text-primary hover:underline flex items-center justify-end gap-0.5 cursor-pointer">
-                                      View <ChevronRight className="h-3 w-3" />
+                                    <span className={cn("text-xs text-primary hover:underline flex items-center justify-end gap-0.5 cursor-pointer", isRtl && "justify-start")}>
+                                      {t("common.view")} <ChevronRight className={cn("h-3 w-3", isRtl && "rotate-180")} />
                                     </span>
                                   </Link>
                                 ) : null}
@@ -287,7 +294,9 @@ export default function Dashboard() {
                         </TableBody>
                       </Table>
                       <div className="px-6 py-2 border-t">
-                        <Link href="/reminders" className="text-xs text-primary hover:underline">View all reminders →</Link>
+                        <Link href="/reminders" className="text-xs text-primary hover:underline">
+                          {language === "ar" ? "عرض جميع التذكيرات ←" : "View all reminders →"}
+                        </Link>
                       </div>
                     </>
                   )}
@@ -297,20 +306,20 @@ export default function Dashboard() {
               <Card className="lg:col-span-1">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Bell className="h-4 w-4 text-muted-foreground" /> Today's Follow-ups
+                    <Bell className="h-4 w-4 text-muted-foreground" /> {t("dashboard.pendingFollowups")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   {crmData.todayFollowUps.length === 0 ? (
-                    <p className="text-sm text-muted-foreground px-6 pb-4">No follow-ups due today.</p>
+                    <p className="text-sm text-muted-foreground px-6 pb-4">{t("dashboard.noFollowups")}</p>
                   ) : (
                     <>
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Customer</TableHead>
-                            <TableHead>Note</TableHead>
-                            <TableHead className="text-right">Time</TableHead>
+                            <TableHead>{t("common.name")}</TableHead>
+                            <TableHead>{language === "ar" ? "الملاحظة" : "Note"}</TableHead>
+                            <TableHead className={cn("text-right", isRtl && "text-left")}>{language === "ar" ? "الوقت" : "Time"}</TableHead>
                             <TableHead></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -321,14 +330,14 @@ export default function Dashboard() {
                                 {f.customerName ?? "Unknown"}
                               </TableCell>
                               <TableCell className="text-xs text-muted-foreground line-clamp-1 max-w-[100px]">{f.note}</TableCell>
-                              <TableCell className="text-xs text-muted-foreground text-right whitespace-nowrap">
+                              <TableCell className={cn("text-xs text-muted-foreground whitespace-nowrap text-right", isRtl && "text-left")}>
                                 {f.followUpDate ? formatDateTime(f.followUpDate).split(",")[1]?.trim() ?? "" : "—"}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className={cn("text-right", isRtl && "text-left")}>
                                 {f.customerId ? (
                                   <Link href={`/customers/${f.customerId}`}>
-                                    <span className="text-xs text-primary hover:underline flex items-center justify-end gap-0.5 cursor-pointer">
-                                      View <ChevronRight className="h-3 w-3" />
+                                    <span className={cn("text-xs text-primary hover:underline flex items-center justify-end gap-0.5 cursor-pointer", isRtl && "justify-start")}>
+                                      {t("common.view")} <ChevronRight className={cn("h-3 w-3", isRtl && "rotate-180")} />
                                     </span>
                                   </Link>
                                 ) : null}
@@ -338,7 +347,9 @@ export default function Dashboard() {
                         </TableBody>
                       </Table>
                       <div className="px-6 py-2 border-t">
-                        <Link href="/reminders" className="text-xs text-primary hover:underline">View all reminders →</Link>
+                        <Link href="/reminders" className="text-xs text-primary hover:underline">
+                          {language === "ar" ? "عرض جميع التذكيرات ←" : "View all reminders →"}
+                        </Link>
                       </div>
                     </>
                   )}
@@ -348,20 +359,20 @@ export default function Dashboard() {
               <Card className="lg:col-span-1">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" /> Recent Customers
+                    <Users className="h-4 w-4 text-muted-foreground" /> {t("dashboard.recentCustomers")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   {crmData.recentCustomers.length === 0 ? (
-                    <p className="text-sm text-muted-foreground px-6 pb-4">No customers yet.</p>
+                    <p className="text-sm text-muted-foreground px-6 pb-4">{t("dashboard.noCustomers")}</p>
                   ) : (
                     <>
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Added</TableHead>
-                            <TableHead>Status</TableHead>
+                            <TableHead>{t("common.name")}</TableHead>
+                            <TableHead>{language === "ar" ? "تاريخ الإضافة" : "Added"}</TableHead>
+                            <TableHead>{t("common.status")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -371,7 +382,7 @@ export default function Dashboard() {
                               <TableCell className="text-xs text-muted-foreground">{formatShortDate(c.createdAt)}</TableCell>
                               <TableCell>
                                 <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[c.status] ?? "bg-gray-100 text-gray-700"}`}>
-                                  {STATUS_LABELS[c.status] ?? c.status}
+                                  {t(`statuses.${c.status}`)}
                                 </span>
                               </TableCell>
                             </TableRow>
@@ -379,7 +390,9 @@ export default function Dashboard() {
                         </TableBody>
                       </Table>
                       <div className="px-6 py-2 border-t">
-                        <Link href="/customers" className="text-xs text-primary hover:underline">View all customers →</Link>
+                        <Link href="/customers" className="text-xs text-primary hover:underline">
+                          {language === "ar" ? "عرض جميع العملاء ←" : "View all customers →"}
+                        </Link>
                       </div>
                     </>
                   )}
@@ -390,36 +403,36 @@ export default function Dashboard() {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Tag className="h-4 w-4 text-muted-foreground" /> Recent Tickets
+                  <Tag className="h-4 w-4 text-muted-foreground" /> {t("dashboard.recentTickets")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 {crmData.recentTickets.length === 0 ? (
-                  <p className="text-sm text-muted-foreground px-6 pb-4">No tickets yet.</p>
+                  <p className="text-sm text-muted-foreground px-6 pb-4">{t("dashboard.noTickets")}</p>
                 ) : (
                   <>
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Customer</TableHead>
-                          <TableHead>Route</TableHead>
-                          <TableHead>Ticket Status</TableHead>
-                          <TableHead>Payment</TableHead>
+                          <TableHead>{t("common.name")}</TableHead>
+                          <TableHead>{t("common.route")}</TableHead>
+                          <TableHead>{t("common.ticketStatus")}</TableHead>
+                          <TableHead>{t("common.paymentStatus")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {crmData.recentTickets.map((t) => (
-                          <TableRow key={t.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/tickets/${t.id}`)}>
-                            <TableCell className="font-medium text-sm truncate max-w-[110px]">{t.customerName ?? `#${t.id}`}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{t.flightRoute ?? "—"}</TableCell>
+                        {crmData.recentTickets.map((tRow) => (
+                          <TableRow key={tRow.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/tickets/${tRow.id}`)}>
+                            <TableCell className="font-medium text-sm truncate max-w-[110px]">{tRow.customerName ?? `#${tRow.id}`}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{tRow.flightRoute ?? "—"}</TableCell>
                             <TableCell>
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${TICKET_STATUS_COLORS[t.ticketStatus] ?? ""}`}>
-                                {TICKET_STATUS_LABELS[t.ticketStatus] ?? t.ticketStatus}
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${TICKET_STATUS_COLORS[tRow.ticketStatus] ?? ""}`}>
+                                {t(`statuses.${tRow.ticketStatus}`)}
                               </span>
                             </TableCell>
                             <TableCell>
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${PAYMENT_STATUS_COLORS[t.paymentStatus] ?? ""}`}>
-                                {PAYMENT_STATUS_LABELS[t.paymentStatus] ?? t.paymentStatus}
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${PAYMENT_STATUS_COLORS[tRow.paymentStatus] ?? ""}`}>
+                                {t(`statuses.${tRow.paymentStatus}`)}
                               </span>
                             </TableCell>
                           </TableRow>
@@ -427,7 +440,9 @@ export default function Dashboard() {
                       </TableBody>
                     </Table>
                     <div className="px-6 py-2 border-t">
-                      <Link href="/tickets" className="text-xs text-primary hover:underline">View all tickets →</Link>
+                      <Link href="/tickets" className="text-xs text-primary hover:underline">
+                        {language === "ar" ? "عرض جميع التذاكر ←" : "View all tickets →"}
+                      </Link>
                     </div>
                   </>
                 )}
@@ -440,35 +455,35 @@ export default function Dashboard() {
       {currentEmployee.role === "Administrator" && (
         <section className="space-y-5">
           <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
-            <Plane className="h-5 w-5 text-blue-500" /> Flight Booking Stats
+            <Plane className="h-5 w-5 text-blue-500" /> {t("dashboard.flightBookingStats")}
           </h2>
 
           {flightLoading && <SectionSkeleton />}
-          {flightError && <div className="text-destructive text-sm">Failed to load flight booking stats.</div>}
+          {flightError && <div className="text-destructive text-sm">{language === "ar" ? "فشل تحميل إحصائيات حجوزات الطيران." : "Failed to load flight booking stats."}</div>}
 
           {flightStats && (
             <>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <StatCard
-                  title="Total Revenue"
+                  title={t("dashboard.totalRevenue")}
                   value={formatCurrency(flightStats.totalRevenue, flightStats.currency)}
                   icon={<TrendingUp className="h-4 w-4" />}
                   color="text-primary"
                 />
                 <StatCard
-                  title="Total Bookings"
+                  title={t("dashboard.totalBookings")}
                   value={flightStats.totalOrders}
                   icon={<Plane className="h-4 w-4" />}
                   color="text-blue-500"
                 />
                 <StatCard
-                  title="Confirmed Bookings"
+                  title={t("dashboard.confirmedBookings")}
                   value={flightStats.confirmedOrders}
                   icon={<CheckCircle2 className="h-4 w-4" />}
                   color="text-green-500"
                 />
                 <StatCard
-                  title="Cancellations"
+                  title={t("dashboard.cancelledBookings")}
                   value={flightStats.cancelledOrders}
                   icon={<XCircle className="h-4 w-4" />}
                   color="text-destructive"
@@ -478,7 +493,7 @@ export default function Dashboard() {
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
                 <Card className="md:col-span-1 lg:col-span-4">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Recent Orders</CardTitle>
+                    <CardTitle className="text-base">{t("common.orders")}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
@@ -497,7 +512,7 @@ export default function Dashboard() {
                               order.status === "cancelled" ? "bg-red-100 text-red-800" :
                               "bg-gray-100 text-gray-700"
                             }`}>
-                              {order.status}
+                              {language === "ar" ? t(`statuses.${order.status}`) : order.status}
                             </span>
                           </div>
                         </div>
@@ -505,7 +520,7 @@ export default function Dashboard() {
                     </div>
                     <div className="mt-3 pt-3 border-t">
                       <Link href="/orders" className="text-sm text-primary hover:underline font-medium">
-                        View all orders →
+                        {language === "ar" ? "عرض جميع الطلبات ←" : "View all orders →"}
                       </Link>
                     </div>
                   </CardContent>
@@ -513,19 +528,21 @@ export default function Dashboard() {
 
                 <Card className="md:col-span-1 lg:col-span-3">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Top Routes</CardTitle>
+                    <CardTitle className="text-base">{language === "ar" ? "أهم مسارات الرحلات" : "Top Routes"}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
                       {flightStats.topRoutes?.map((route, i) => (
-                        <div key={i} className="flex items-center justify-between">
+                        <div key={i} className="flex items-center justify-between animate-in fade-in duration-300">
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded bg-muted flex items-center justify-center flex-shrink-0">
                               <Plane className="w-3.5 h-3.5 text-muted-foreground" />
                             </div>
                             <span className="text-sm font-medium">{route.origin} → {route.destination}</span>
                           </div>
-                          <span className="text-sm text-muted-foreground">{route.count} bookings</span>
+                          <span className="text-sm text-muted-foreground">
+                            {route.count} {language === "ar" ? "حجز" : "bookings"}
+                          </span>
                         </div>
                       ))}
                     </div>

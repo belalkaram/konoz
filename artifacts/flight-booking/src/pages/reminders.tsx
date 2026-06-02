@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { formatDateTime } from "@/lib/formatters";
 import { useCurrentEmployee, useEmployee } from "@/contexts/employee-context";
+import { useLanguage } from "@/contexts/language-context";
 import { authFetch, BASE } from "@/lib/api";
 
 interface FollowUpNote {
@@ -62,27 +63,28 @@ function NoteItem({ note, showMarkDone, isAdmin }: { note: FollowUpNote; showMar
   const { toast } = useToast();
   const qc = useQueryClient();
   const { employees } = useEmployee();
+  const { t, language } = useLanguage();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const markDone = useMutation({
     mutationFn: () => markNoteDone(note.id),
     onSuccess: () => {
-      toast({ title: "Marked as done" });
+      toast({ title: language === "ar" ? "تم تعليمه كمكتمل" : "Marked as done" });
       qc.invalidateQueries({ queryKey: ["followups"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("common.error"), description: e.message, variant: "destructive" }),
   });
 
   const remove = useMutation({
     mutationFn: () => deleteNote(note.id),
     onSuccess: () => {
-      toast({ title: "Reminder deleted" });
+      toast({ title: language === "ar" ? "تم حذف التذكير" : "Reminder deleted" });
       qc.invalidateQueries({ queryKey: ["followups"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
     },
     onError: (e: Error) => {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: e.message, variant: "destructive" });
       setConfirmDelete(false);
     },
   });
@@ -92,7 +94,7 @@ function NoteItem({ note, showMarkDone, isAdmin }: { note: FollowUpNote; showMar
     : null;
 
   return (
-    <div className="border rounded-lg p-3 bg-card flex items-start justify-between gap-3">
+    <div className="border rounded-lg p-3 bg-card flex items-start justify-between gap-3 text-start">
       <div className="flex-1 min-w-0">
         <p className="text-sm line-clamp-2 mb-1.5">{note.note}</p>
         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
@@ -104,7 +106,7 @@ function NoteItem({ note, showMarkDone, isAdmin }: { note: FollowUpNote; showMar
           )}
           {note.ticketId && (
             <Link href={`/tickets/${note.ticketId}`}>
-              <span className="hover:underline cursor-pointer">Ticket #{note.ticketId}</span>
+              <span className="hover:underline cursor-pointer">{language === "ar" ? `تذكرة #${note.ticketId}` : `Ticket #${note.ticketId}`}</span>
             </Link>
           )}
           {employeeName && <span className="flex items-center gap-1"><UserCheck className="h-3 w-3" />{employeeName}</span>}
@@ -119,13 +121,13 @@ function NoteItem({ note, showMarkDone, isAdmin }: { note: FollowUpNote; showMar
             disabled={markDone.isPending}
             onClick={() => markDone.mutate()}
           >
-            <CheckCircle2 className="h-3 w-3 mr-1" /> Done
+            <CheckCircle2 className="h-3 w-3 mr-1 rtl:mr-0 rtl:ml-1" /> {t("reminders.doneBtn")}
           </Button>
         )}
         {note.customerId && (
           <Link href={`/customers/${note.customerId}`}>
             <Button size="sm" variant="ghost" className="h-7 text-xs px-2">
-              View <ChevronRight className="h-3 w-3 ml-0.5" />
+              {t("common.view")} <ChevronRight className="h-3 w-3 ml-0.5 rtl:ml-0 rtl:mr-0.5 rtl:rotate-180" />
             </Button>
           </Link>
         )}
@@ -141,7 +143,7 @@ function NoteItem({ note, showMarkDone, isAdmin }: { note: FollowUpNote; showMar
         )}
         {isAdmin && confirmDelete && (
           <div className="flex items-center gap-1">
-            <span className="text-xs text-muted-foreground">Delete?</span>
+            <span className="text-xs text-muted-foreground">{t("reminders.deleteConfirm")}</span>
             <Button
               size="sm"
               variant="destructive"
@@ -149,7 +151,7 @@ function NoteItem({ note, showMarkDone, isAdmin }: { note: FollowUpNote; showMar
               disabled={remove.isPending}
               onClick={() => remove.mutate()}
             >
-              Yes
+              {t("common.yes")}
             </Button>
             <Button
               size="sm"
@@ -158,7 +160,7 @@ function NoteItem({ note, showMarkDone, isAdmin }: { note: FollowUpNote; showMar
               disabled={remove.isPending}
               onClick={() => setConfirmDelete(false)}
             >
-              No
+              {t("common.no")}
             </Button>
           </div>
         )}
@@ -187,25 +189,26 @@ function groupByCustomer(notes: FollowUpNote[]): CustomerGroup[] {
 
 function NoteGroupList({ notes, showMarkDone, isAdmin }: { notes: FollowUpNote[]; showMarkDone?: boolean; isAdmin?: boolean }) {
   const groups = groupByCustomer(notes);
+  const { t } = useLanguage();
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-start">
       {groups.map((group) => (
         <div key={String(group.customerId ?? "none")}>
           <div className="flex items-center gap-2 mb-2">
             {group.customerId ? (
               <Link href={`/customers/${group.customerId}`}>
                 <span className="font-semibold text-sm hover:underline text-primary cursor-pointer">
-                  {group.customerName ?? "Unknown customer"}
+                  {group.customerName ?? t("reminders.unknownCustomer")}
                 </span>
               </Link>
             ) : (
-              <span className="font-semibold text-sm text-muted-foreground">Unknown customer</span>
+              <span className="font-semibold text-sm text-muted-foreground">{t("reminders.unknownCustomer")}</span>
             )}
             <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
               {group.notes.length}
             </span>
           </div>
-          <div className="space-y-2 pl-3 border-l-2 border-border">
+          <div className="space-y-2 pl-3 rtl:pl-0 rtl:pr-3 border-l-2 rtl:border-l-0 rtl:border-r-2 border-border">
             {group.notes.map((note) => (
               <NoteItem key={note.id} note={note} showMarkDone={showMarkDone} isAdmin={isAdmin} />
             ))}
@@ -217,10 +220,11 @@ function NoteGroupList({ notes, showMarkDone, isAdmin }: { notes: FollowUpNote[]
 }
 
 function EmptyTab({ label }: { label: string }) {
+  const { t } = useLanguage();
   return (
     <div className="text-center py-16 text-muted-foreground">
       <Bell className="h-10 w-10 mx-auto mb-3 opacity-20" />
-      <p className="font-medium">No {label} follow-ups</p>
+      <p className="font-medium">{t("reminders.noReminders").replace("{label}", label)}</p>
     </div>
   );
 }
@@ -251,6 +255,7 @@ export default function Reminders() {
   const [myReminders, setMyReminders] = useState(false);
   const currentEmployee = useCurrentEmployee();
   const { employees } = useEmployee();
+  const { t, language } = useLanguage();
   const isAdmin = currentEmployee.role === "Administrator";
 
   const { data, isLoading, isError } = useQuery({
@@ -290,9 +295,9 @@ export default function Reminders() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Reminders & Follow-ups</h1>
-          <p className="text-muted-foreground mt-1 text-sm md:text-base">
-            Track and action all customer follow-up notes, grouped by customer.
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t("reminders.title")}</h1>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base font-normal">
+            {t("reminders.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -303,32 +308,32 @@ export default function Reminders() {
             className="gap-1.5"
           >
             <UserCheck className="h-4 w-4" />
-            My Reminders
+            {t("reminders.myReminders")}
           </Button>
           <Button
             variant={hasFilters && !myReminders ? "default" : "outline"}
             size="sm"
             onClick={() => setShowFilters((v) => !v)}
           >
-            <Filter className="h-4 w-4 mr-1.5" />
-            Filters {hasFilters && !myReminders ? "(active)" : ""}
+            <Filter className="h-4 w-4 mr-1.5 rtl:mr-0 rtl:ml-1.5" />
+            {t("reminders.filters")} {hasFilters && !myReminders ? t("reminders.active") : ""}
           </Button>
         </div>
       </div>
 
       {showFilters && (
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-4 text-start">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label>Employee</Label>
+                <Label>{t("reminders.employee")}</Label>
                 <Select
                   value={employeeFilter || "all"}
                   onValueChange={handleEmployeeFilterChange}
                 >
-                  <SelectTrigger><SelectValue placeholder="All employees" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("supervisor.allEmployees")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All employees</SelectItem>
+                    <SelectItem value="all">{t("supervisor.allEmployees")}</SelectItem>
                     {employees.map((e) => (
                       <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>
                     ))}
@@ -336,7 +341,7 @@ export default function Reminders() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>From Date</Label>
+                <Label>{t("reminders.fromDate")}</Label>
                 <Input
                   type="date"
                   value={startDate}
@@ -344,7 +349,7 @@ export default function Reminders() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>To Date</Label>
+                <Label>{t("reminders.toDate")}</Label>
                 <Input
                   type="date"
                   value={endDate}
@@ -356,10 +361,10 @@ export default function Reminders() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="mt-3"
+                className="mt-3 text-xs"
                 onClick={() => { setEmployeeFilter(""); setStartDate(""); setEndDate(""); }}
               >
-                Clear filters
+                {t("reminders.clearFilters")}
               </Button>
             )}
           </CardContent>
@@ -372,43 +377,43 @@ export default function Reminders() {
         </div>
       )}
 
-      {isError && <div className="text-destructive">Failed to load follow-ups.</div>}
+      {isError && <div className="text-destructive text-center py-8">{t("reminders.failedToLoad")}</div>}
 
       {filtered && (
         <Tabs defaultValue="today">
           <TabsList className="mb-4">
             <TabsTrigger value="today" className="gap-1.5">
               <Calendar className="h-3.5 w-3.5" />
-              Today
+              {t("reminders.tabs.today")}
               {filtered.today.length > 0 && (
-                <span className="ml-1 rounded-full bg-primary text-primary-foreground text-xs px-1.5 py-0.5 font-medium">
+                <span className="ml-1 rtl:ml-0 rtl:mr-1 rounded-full bg-primary text-primary-foreground text-xs px-1.5 py-0.5 font-medium">
                   {filtered.today.length}
                 </span>
               )}
             </TabsTrigger>
             <TabsTrigger value="upcoming" className="gap-1.5">
               <Clock className="h-3.5 w-3.5" />
-              Upcoming
+              {t("reminders.tabs.upcoming")}
               {filtered.upcoming.length > 0 && (
-                <span className="ml-1 rounded-full bg-blue-500 text-white text-xs px-1.5 py-0.5 font-medium">
+                <span className="ml-1 rtl:ml-0 rtl:mr-1 rounded-full bg-blue-500 text-white text-xs px-1.5 py-0.5 font-medium">
                   {filtered.upcoming.length}
                 </span>
               )}
             </TabsTrigger>
             <TabsTrigger value="missed" className="gap-1.5">
               <AlertCircle className="h-3.5 w-3.5" />
-              Missed
+              {t("reminders.tabs.missed")}
               {filtered.missed.length > 0 && (
-                <span className="ml-1 rounded-full bg-destructive text-destructive-foreground text-xs px-1.5 py-0.5 font-medium">
+                <span className="ml-1 rtl:ml-0 rtl:mr-1 rounded-full bg-destructive text-destructive-foreground text-xs px-1.5 py-0.5 font-medium">
                   {filtered.missed.length}
                 </span>
               )}
             </TabsTrigger>
             <TabsTrigger value="done" className="gap-1.5">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              Done
+              {t("reminders.tabs.done")}
               {filtered.done.length > 0 && (
-                <span className="ml-1 rounded-full bg-green-500 text-white text-xs px-1.5 py-0.5 font-medium">
+                <span className="ml-1 rtl:ml-0 rtl:mr-1 rounded-full bg-green-500 text-white text-xs px-1.5 py-0.5 font-medium">
                   {filtered.done.length}
                 </span>
               )}
@@ -416,16 +421,16 @@ export default function Reminders() {
           </TabsList>
 
           <TabsContent value="today">
-            {filtered.today.length === 0 ? <EmptyTab label="today's" /> : <NoteGroupList notes={filtered.today} showMarkDone isAdmin={isAdmin} />}
+            {filtered.today.length === 0 ? <EmptyTab label={language === "ar" ? "اليوم" : "today"} /> : <NoteGroupList notes={filtered.today} showMarkDone isAdmin={isAdmin} />}
           </TabsContent>
           <TabsContent value="upcoming">
-            {filtered.upcoming.length === 0 ? <EmptyTab label="upcoming" /> : <NoteGroupList notes={filtered.upcoming} showMarkDone isAdmin={isAdmin} />}
+            {filtered.upcoming.length === 0 ? <EmptyTab label={language === "ar" ? "القادمة" : "upcoming"} /> : <NoteGroupList notes={filtered.upcoming} showMarkDone isAdmin={isAdmin} />}
           </TabsContent>
           <TabsContent value="missed">
-            {filtered.missed.length === 0 ? <EmptyTab label="missed" /> : <NoteGroupList notes={filtered.missed} showMarkDone isAdmin={isAdmin} />}
+            {filtered.missed.length === 0 ? <EmptyTab label={language === "ar" ? "الفائتة" : "missed"} /> : <NoteGroupList notes={filtered.missed} showMarkDone isAdmin={isAdmin} />}
           </TabsContent>
           <TabsContent value="done">
-            {filtered.done.length === 0 ? <EmptyTab label="done" /> : <NoteGroupList notes={filtered.done} isAdmin={isAdmin} />}
+            {filtered.done.length === 0 ? <EmptyTab label={language === "ar" ? "المكتملة" : "done"} /> : <NoteGroupList notes={filtered.done} isAdmin={isAdmin} />}
           </TabsContent>
         </Tabs>
       )}

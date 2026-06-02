@@ -70,37 +70,37 @@ router.get("/customers", requireAuth, async (req, res) => {
         // Join latest ticket data
         pnr: sql<string | null>`(
           SELECT t.pnr FROM tickets t 
-          WHERE t.customer_id = ${customersTable.id} 
+          WHERE t.customer_id = "customers"."id" 
           ORDER BY t.created_at DESC, t.id DESC LIMIT 1
         )`,
         bookingDate: sql<string | null>`(
           SELECT COALESCE(t.booking_date::text, t.created_at::text) FROM tickets t 
-          WHERE t.customer_id = ${customersTable.id} 
+          WHERE t.customer_id = "customers"."id" 
           ORDER BY t.created_at DESC, t.id DESC LIMIT 1
         )`,
         travelDate: sql<string | null>`(
           SELECT t.departure_datetime::text FROM tickets t 
-          WHERE t.customer_id = ${customersTable.id} 
+          WHERE t.customer_id = "customers"."id" 
           ORDER BY t.created_at DESC, t.id DESC LIMIT 1
         )`,
         costPrice: sql<string | null>`(
           SELECT t.cost_price FROM tickets t 
-          WHERE t.customer_id = ${customersTable.id} 
+          WHERE t.customer_id = "customers"."id" 
           ORDER BY t.created_at DESC, t.id DESC LIMIT 1
         )`,
         sellingPrice: sql<string | null>`(
           SELECT t.price FROM tickets t 
-          WHERE t.customer_id = ${customersTable.id} 
+          WHERE t.customer_id = "customers"."id" 
           ORDER BY t.created_at DESC, t.id DESC LIMIT 1
         )`,
         ticketCurrency: sql<string | null>`(
           SELECT t.currency FROM tickets t 
-          WHERE t.customer_id = ${customersTable.id} 
+          WHERE t.customer_id = "customers"."id" 
           ORDER BY t.created_at DESC, t.id DESC LIMIT 1
         )`,
         uploadedByName: sql<string | null>`(
           SELECT e.name FROM employees e 
-          WHERE e.id = ${customersTable.createdByEmployeeId}
+          WHERE e.id = "customers"."created_by_employee_id"
         )`,
       })
       .from(customersTable);
@@ -404,11 +404,54 @@ router.put("/customers/:id", requireAuth, async (req, res) => {
     const updateData = (role === "Administrator" || role === "Supervisor")
       ? parsed.data
       : (({ assignedEmployeeId: _aei, ...rest }) => rest)(parsed.data as Record<string, unknown>) as typeof parsed.data;
-    const [customer] = await db
-      .update(customersTable)
-      .set({ ...updateData, updatedAt: new Date() })
-      .where(eq(customersTable.id, id))
-      .returning();
+
+    const customer = await db.transaction(async (tx) => {
+      const [updatedCustomer] = await tx
+        .update(customersTable)
+        .set({ ...updateData, updatedAt: new Date() })
+        .where(eq(customersTable.id, id))
+        .returning();
+
+      if (!updatedCustomer) return null;
+
+      const { pnr, bookingDate, travelDate, costPrice, ticketPrice } = req.body;
+      
+      // Update/create ticket if any ticket info is present in body
+      if (pnr !== undefined || bookingDate !== undefined || travelDate !== undefined || costPrice !== undefined || ticketPrice !== undefined) {
+        const latestTickets = await tx
+          .select({ id: ticketsTable.id })
+          .from(ticketsTable)
+          .where(eq(ticketsTable.customerId, id))
+          .orderBy(desc(ticketsTable.createdAt), desc(ticketsTable.id))
+          .limit(1);
+
+        const ticketPayload: any = {
+          pnr: pnr || null,
+          bookingDate: bookingDate ? new Date(bookingDate) : null,
+          departureDatetime: travelDate ? new Date(travelDate) : null,
+          price: ticketPrice || "0",
+          costPrice: costPrice || "0",
+        };
+
+        if (latestTickets.length > 0) {
+          await tx
+            .update(ticketsTable)
+            .set(ticketPayload)
+            .where(eq(ticketsTable.id, latestTickets[0].id));
+        } else {
+          await tx.insert(ticketsTable).values({
+            ...ticketPayload,
+            customerId: id,
+            employeeId: updatedCustomer.assignedEmployeeId,
+            ticketStatus: "quoted",
+            paymentStatus: "unpaid",
+            currency: "USD",
+          });
+        }
+      }
+      return updatedCustomer;
+    });
+
     if (!customer) {
       res.status(404).json({ error: "not_found", message: "Customer not found" });
       return;

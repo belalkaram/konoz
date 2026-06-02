@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { useLanguage } from "@/contexts/language-context";
 
 interface InvoiceViewProps {
   invoice: {
@@ -50,6 +51,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
   customer,
   isAdmin = false,
 }) => {
+  const { t, isRtl } = useLanguage();
   const [isGenerating, setIsGenerating] = React.useState(false);
 
   const safeFormatDate = (dateValue?: string, pattern = "yyyy/MM/dd") => {
@@ -158,7 +160,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
       border-radius: 18px !important;
       box-shadow: none !important;
       overflow: hidden !important;
-      direction: rtl !important;
+      direction: ${isRtl ? "rtl" : "ltr"} !important;
     }
 
     .invoice-content {
@@ -196,7 +198,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
     }
 
     .invoice-title-box {
-      text-align: left !important;
+      text-align: ${isRtl ? "left" : "right"} !important;
       min-width: 230px !important;
     }
 
@@ -356,7 +358,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
 
     .totals-box {
       display: flex !important;
-      justify-content: flex-start !important;
+      justify-content: ${isRtl ? "flex-start" : "flex-end"} !important;
       margin-bottom: 26px !important;
     }
 
@@ -603,7 +605,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
   const buildPrintableHTML = (cardHTML: string) => {
     return `
       <!DOCTYPE html>
-      <html dir="rtl">
+      <html dir="${isRtl ? "rtl" : "ltr"}">
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -754,6 +756,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
     try {
       pdfRoot = document.createElement("div");
       pdfRoot.id = "invoice-pdf-render-root";
+      pdfRoot.dir = isRtl ? "rtl" : "ltr";
 
       pdfRoot.style.position = "fixed";
       pdfRoot.style.left = "0";
@@ -849,10 +852,10 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
   };
 
   const statusText: Record<string, string> = {
-    paid: "تم الدفع",
-    pending: "بانتظار الدفع",
-    cancelled: "ملغاة",
-    draft: "مسودة",
+    paid: isRtl ? "تم الدفع" : "Paid",
+    pending: isRtl ? "بانتظار الدفع" : "Pending Payment",
+    cancelled: isRtl ? "ملغاة" : "Cancelled",
+    draft: isRtl ? "مسودة" : "Draft",
   };
 
   const formattedIssueDate = safeFormatDate(invoice.issueDate);
@@ -881,7 +884,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
           className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-all shadow-sm"
         >
           <Printer className="w-4 h-4" />
-          طباعة الفاتورة
+          {isRtl ? "طباعة الفاتورة" : "Print Invoice"}
         </button>
 
         <button
@@ -890,7 +893,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
           className="flex items-center gap-2 px-4 py-2 border border-input bg-background rounded-md hover:bg-accent transition-all disabled:opacity-50"
         >
           <Download className="w-4 h-4" />
-          {isGenerating ? "جاري التحميل..." : "تحميل PDF"}
+          {isGenerating ? (isRtl ? "جاري التحميل..." : "Loading...") : (t("ticketDetail.invoice.downloadPdf") || "Download PDF")}
         </button>
       </div>
 
@@ -919,7 +922,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
                 className="text-sm brand-subtitle"
                 style={{ color: "#64748b" }}
               >
-                بوابتك لعالم من السفر المريح والآمن
+                {isRtl ? "بوابتك لعالم من السفر المريح والآمن" : "Your gateway to comfortable and safe travel"}
               </p>
             </div>
 
@@ -928,7 +931,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
                 className="text-xl font-bold invoice-title"
                 style={{ color: "#1e293b" }}
               >
-                فاتورة ضريبية
+                {t("ticketDetail.invoice.title") || (isRtl ? "فاتورة ضريبية" : "Tax Invoice")}
               </h2>
 
               <p className="invoice-number" style={{ color: "#64748b" }}>
@@ -960,7 +963,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
                 style={{ color: "#94a3b8" }}
               >
                 <User className="w-4 h-4" />
-                بيانات العميل
+                {t("ticketDetail.invoice.billTo") || (isRtl ? "بيانات العميل" : "Bill To")}
               </h3>
 
               <div className="space-y-1">
@@ -991,33 +994,31 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
                 style={{ color: "#94a3b8" }}
               >
                 <Calendar className="w-4 h-4" />
-                تفاصيل الفاتورة
+                {isRtl ? "تفاصيل الفاتورة" : "Invoice Details"}
               </h3>
 
               <div className="space-y-1">
                 <div className="flex justify-between md:justify-end gap-4 detail-row">
+                  <span className="detail-label" style={{ color: "#64748b" }}>
+                    {isRtl ? "تاريخ الإصدار:" : "Issue Date:"}
+                  </span>
                   <span
                     className="font-medium detail-value"
                     style={{ color: "#1e293b" }}
                   >
                     {formattedIssueDate}
                   </span>
-
-                  <span className="detail-label" style={{ color: "#64748b" }}>
-                    :تاريخ الإصدار
-                  </span>
                 </div>
 
                 <div className="flex justify-between md:justify-end gap-4 detail-row">
+                  <span className="detail-label" style={{ color: "#64748b" }}>
+                    {isRtl ? "رقم الحجز (PNR):" : "PNR (Booking Ref):"}
+                  </span>
                   <span
                     className="font-medium detail-value"
                     style={{ color: "#1e293b" }}
                   >
                     {ticket.pnr || "N/A"}
-                  </span>
-
-                  <span className="detail-label" style={{ color: "#64748b" }}>
-                    :رقم الحجز (PNR)
                   </span>
                 </div>
               </div>
@@ -1032,9 +1033,9 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
               className="p-4 font-bold grid grid-cols-4 gap-4 flight-table-header"
               style={{ backgroundColor: "#f1f5f9", color: "#334155" }}
             >
-              <div className="col-span-2">الوصف (تفاصيل الرحلة)</div>
-              <div className="text-center">شركة الطيران</div>
-              <div className="text-left">المبلغ</div>
+              <div className="col-span-2">{t("ticketDetail.invoice.description") || (isRtl ? "الوصف (تفاصيل الرحلة)" : "Description")}</div>
+              <div className="text-center">{t("common.airline") || (isRtl ? "شركة الطيران" : "Airline")}</div>
+              <div className={isRtl ? "text-left" : "text-right"}>{t("ticketDetail.invoice.amount") || (isRtl ? "المبلغ" : "Amount")}</div>
             </div>
 
             <div className="p-6 grid grid-cols-4 gap-4 items-center border-b border-slate-100 flight-table-row">
@@ -1048,11 +1049,11 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
                 </div>
 
                 <p className="text-sm small-line" style={{ color: "#64748b" }}>
-                  رقم الرحلة: {ticket.flightNumber}
+                  {isRtl ? `رقم الرحلة: ${ticket.flightNumber}` : `Flight No: ${ticket.flightNumber}`}
                 </p>
 
                 <p className="text-xs small-line" style={{ color: "#94a3b8" }}>
-                  الموعد: {formattedDepartureDate}
+                  {isRtl ? `الموعد: ${formattedDepartureDate}` : `Departure: ${formattedDepartureDate}`}
                 </p>
               </div>
 
@@ -1063,19 +1064,19 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
                 {ticket.airline}
               </div>
 
-              <div className="text-left font-bold" style={{ color: "#0f172a" }}>
+              <div className={cn(isRtl ? "text-left" : "text-right", "font-bold")} style={{ color: "#0f172a" }}>
                 {invoice.totalAmount} KWD
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end mb-10 totals-box">
+          <div className="flex justify-end rtl:justify-start mb-10 totals-box">
             <div className="w-full md:w-64 space-y-3 totals-inner">
               <div
                 className="flex justify-between total-row"
                 style={{ color: "#475569" }}
               >
-                <span>الإجمالي الفرعي:</span>
+                <span>{t("ticketDetail.invoice.subtotal") || (isRtl ? "الإجمالي الفرعي:" : "Subtotal:")}</span>
                 <span>{invoice.totalAmount} KWD</span>
               </div>
 
@@ -1083,7 +1084,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
                 className="flex justify-between total-row"
                 style={{ color: "#475569" }}
               >
-                <span>الضرائب (0%):</span>
+                <span>{t("ticketDetail.invoice.tax") || (isRtl ? "الضرائب" : "Tax")} (0%):</span>
                 <span>0.00 KWD</span>
               </div>
 
@@ -1094,7 +1095,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
                   className="text-lg font-bold final-total-label"
                   style={{ color: "#1e293b" }}
                 >
-                  الإجمالي النهائي:
+                  {t("ticketDetail.invoice.total") || (isRtl ? "الإجمالي النهائي:" : "Total:")}
                 </span>
 
                 <span
@@ -1111,7 +1112,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
             <div className="p-4 rounded-lg bg-blue-50 border border-blue-100 mb-8 notes-box">
               <h4 className="text-sm font-bold text-blue-800 flex items-center gap-2 mb-1 notes-title">
                 <Info className="w-4 h-4" />
-                ملاحظات:
+                {isRtl ? "ملاحظات:" : "Notes:"}
               </h4>
 
               <p className="text-sm text-blue-700 leading-relaxed notes-text">
@@ -1124,13 +1125,13 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
             <div className="mt-12 p-6 rounded-xl border-2 border-dashed border-purple-200 bg-purple-50/30 print:hidden print-hidden admin-box">
               <div className="flex items-center gap-2 mb-4 text-purple-700">
                 <ShieldCheck className="w-6 h-6" />
-                <h3 className="text-lg font-bold">بيانات الإدارة (سرية)</h3>
+                <h3 className="text-lg font-bold">{isRtl ? "بيانات الإدارة (سرية)" : "Admin Data (Confidential)"}</h3>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-1">
                   <p className="text-xs text-purple-400 font-bold uppercase">
-                    التكلفة (Cost Price)
+                    {t("common.costPrice") || (isRtl ? "التكلفة (Cost Price)" : "Cost Price")}
                   </p>
 
                   <p className="text-xl font-bold text-slate-800">
@@ -1140,7 +1141,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
 
                 <div className="space-y-1">
                   <p className="text-xs text-purple-400 font-bold uppercase">
-                    الربح الصافي (Profit)
+                    {t("common.profit") || (isRtl ? "الربح الصافي (Profit)" : "Net Profit")}
                   </p>
 
                   <p className="text-xl font-bold text-green-600">
@@ -1150,7 +1151,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
 
                 <div className="space-y-1">
                   <p className="text-xs text-purple-400 font-bold uppercase">
-                    نسبة الربح
+                    {isRtl ? "نسبة الربح" : "Profit margin"}
                   </p>
 
                   <p className="text-xl font-bold text-slate-800">
@@ -1162,7 +1163,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
               {invoice.internalNotes && (
                 <div className="mt-4 pt-4 border-t border-purple-100">
                   <p className="text-xs text-purple-400 font-bold uppercase mb-1">
-                    ملاحظات داخلية:
+                    {isRtl ? "ملاحظات داخلية:" : "Internal Notes:"}
                   </p>
 
                   <p className="text-sm text-slate-700">
@@ -1178,7 +1179,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
 
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400 pt-4 footer-content">
               <p>
-                © {new Date().getFullYear()} Konoz Travel - جميع الحقوق محفوظة
+                © {new Date().getFullYear()} Konoz Travel - {isRtl ? "جميع الحقوق محفوظة" : "All rights reserved"}
               </p>
 
               <div className="flex gap-4 footer-contact">

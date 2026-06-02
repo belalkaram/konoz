@@ -15,10 +15,11 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency, formatShortDate, calculateDaysRemaining } from "@/lib/formatters";
 import {
-  TICKET_STATUS_COLORS, TICKET_STATUS_LABELS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS,
+  TICKET_STATUS_COLORS, PAYMENT_STATUS_COLORS,
   TICKET_STATUSES, PAYMENT_STATUSES,
 } from "@/lib/ticket-constants";
 import { useCurrentEmployee, useEmployee } from "@/contexts/employee-context";
+import { useLanguage } from "@/contexts/language-context";
 import { authFetch, BASE } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
@@ -60,6 +61,21 @@ async function deleteTicket(id: number): Promise<{ success?: boolean; message?: 
   return { success: true };
 }
 
+function formatDaysLeft(label: string, days: number | null, language: string) {
+  if (language !== "ar") return label;
+  if (!label || label === "—") return "—";
+  if (label === "Departed") return "غادرت";
+  if (label === "Travels Today") return "يسافر اليوم";
+  if (label === "1 Day Left") return "متبقي يوم واحد";
+  if (days != null) {
+    const absDays = Math.abs(days);
+    if (absDays === 2) return "متبقي يومان";
+    if (absDays >= 3 && absDays <= 10) return `متبقي ${absDays} أيام`;
+    return `متبقي ${absDays} يوم`;
+  }
+  return label;
+}
+
 export default function Tickets() {
   const [, navigate] = useLocation();
   const search_params = useSearch();
@@ -76,6 +92,7 @@ export default function Tickets() {
   const currentEmployee = useCurrentEmployee();
   const { employees } = useEmployee();
   const { toast } = useToast();
+  const { t, language, isRtl } = useLanguage();
   const qc = useQueryClient();
   const isAdmin = currentEmployee.role === "Administrator";
 
@@ -147,10 +164,10 @@ export default function Tickets() {
     qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
 
     if (failed === 0) {
-      toast({ title: `${succeeded} ticket${succeeded !== 1 ? "s" : ""} deleted` });
+      toast({ title: language === "ar" ? `تم حذف ${succeeded} تذكرة` : `${succeeded} ticket${succeeded !== 1 ? "s" : ""} deleted` });
     } else {
       toast({
-        title: `${succeeded} deleted, ${failed} failed`,
+        title: language === "ar" ? `تم حذف ${succeeded}، وفشل ${failed}` : `${succeeded} deleted, ${failed} failed`,
         variant: "destructive",
       });
     }
@@ -164,8 +181,8 @@ export default function Tickets() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Tickets</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Manage all customer flight tickets.</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t("tickets.title")}</h1>
+          <p className="text-muted-foreground mt-1 text-sm">{t("tickets.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && selectedIds.size > 0 && (
@@ -177,12 +194,12 @@ export default function Tickets() {
               className="gap-1.5"
             >
               <Trash2 className="h-4 w-4" />
-              Delete Selected ({selectedIds.size})
+              {language === "ar" ? `حذف المحدد (${selectedIds.size})` : `Delete Selected (${selectedIds.size})`}
             </Button>
           )}
           <Link href="/tickets/new">
             <Button>
-              <Plus className="h-4 w-4 mr-2" /> Add Ticket
+              <Plus className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" /> {t("tickets.newTicket")}
             </Button>
           </Link>
         </div>
@@ -192,42 +209,42 @@ export default function Tickets() {
         <CardContent className="p-4 space-y-4">
           <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
             <div className="relative flex-1 min-w-48">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                className="pl-9"
-                placeholder="Search by customer name, PNR, or route..."
+                className="pl-9 rtl:pl-3 rtl:pr-9"
+                placeholder={t("tickets.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-44">
-                <SelectValue placeholder="Ticket status" />
+                <SelectValue placeholder={t("tickets.allStatuses")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="all">{t("tickets.allStatuses")}</SelectItem>
                 {TICKET_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>{TICKET_STATUS_LABELS[s]}</SelectItem>
+                  <SelectItem key={s} value={s}>{t(`statuses.${s}`)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={paymentFilter} onValueChange={setPaymentFilter}>
               <SelectTrigger className="w-full sm:w-44">
-                <SelectValue placeholder="Payment status" />
+                <SelectValue placeholder={t("tickets.allPayments")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All payments</SelectItem>
+                <SelectItem value="all">{t("tickets.allPayments")}</SelectItem>
                 {PAYMENT_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>{PAYMENT_STATUS_LABELS[s]}</SelectItem>
+                  <SelectItem key={s} value={s}>{t(`statuses.${s}`)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={selectValue} onValueChange={handleEmployeeFilter}>
               <SelectTrigger className="w-full sm:w-44">
-                <SelectValue placeholder="All employees" />
+                <SelectValue placeholder={t("supervisor.allEmployees")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All employees</SelectItem>
+                <SelectItem value="all">{t("supervisor.allEmployees")}</SelectItem>
                 {employees.map((e) => (
                   <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>
                 ))}
@@ -240,7 +257,7 @@ export default function Tickets() {
               onClick={toggleMyTickets}
             >
               <UserCheck className="h-4 w-4" />
-              My Tickets
+              {t("tickets.myTickets")}
             </Button>
           </div>
 
@@ -251,23 +268,23 @@ export default function Tickets() {
           )}
 
           {isError && (
-            <div className="text-destructive text-center py-8">Failed to load tickets.</div>
+            <div className="text-destructive text-center py-8">{t("common.failedToLoad")}</div>
           )}
 
           {!isLoading && !isError && tickets.length === 0 && (
             <div className="text-center py-16">
               <Tag className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-20" />
-              <p className="font-medium">No tickets found</p>
+              <p className="font-medium">{t("tickets.noTicketsFound")}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 {allTickets.length === 0
                   ? myTickets || activeEmployeeId
-                    ? "No tickets assigned to this employee."
-                    : "Start by adding your first ticket."
-                  : "Try adjusting your search or filters."}
+                    ? t("tickets.noTicketsDesc1")
+                    : t("tickets.noTicketsDesc2")
+                  : t("tickets.noTicketsDesc3")}
               </p>
               {allTickets.length === 0 && !myTickets && !activeEmployeeId && (
                 <Link href="/tickets/new">
-                  <Button className="mt-4" size="sm">Add Ticket</Button>
+                  <Button className="mt-4" size="sm">{t("tickets.newTicket")}</Button>
                 </Link>
               )}
             </div>
@@ -292,77 +309,77 @@ export default function Tickets() {
                           />
                         </TableHead>
                       )}
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Route</TableHead>
-                      <TableHead>Airline</TableHead>
-                      <TableHead>Departure</TableHead>
-                      <TableHead>Days Left</TableHead>
-                      <TableHead>PNR</TableHead>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Ticket Status</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead className="text-right">Price</TableHead>
+                      <TableHead>{t("tickets.table.customer")}</TableHead>
+                      <TableHead>{t("tickets.table.route")}</TableHead>
+                      <TableHead>{t("tickets.table.airline")}</TableHead>
+                      <TableHead>{t("tickets.table.travelDate")}</TableHead>
+                      <TableHead>{t("common.daysLeft")}</TableHead>
+                      <TableHead>{t("tickets.table.pnr")}</TableHead>
+                      <TableHead>{t("reports.table.employee")}</TableHead>
+                      <TableHead>{t("tickets.table.status")}</TableHead>
+                      <TableHead>{t("tickets.table.payment")}</TableHead>
+                      <TableHead className="text-end">{t("tickets.table.sellingPrice")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {tickets.map((t) => {
-                      const selected = selectedIds.has(t.id);
+                    {tickets.map((tRow) => {
+                      const selected = selectedIds.has(tRow.id);
                       return (
                         <TableRow
-                          key={t.id}
+                          key={tRow.id}
                           className={`cursor-pointer ${selected ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-muted/50"}`}
-                          onClick={() => navigate(`/tickets/${t.id}`)}
+                          onClick={() => navigate(`/tickets/${tRow.id}`)}
                         >
                           {isAdmin && (
                             <TableCell
-                              onClick={(e) => { e.stopPropagation(); toggleSelect(t.id); }}
+                              onClick={(e) => { e.stopPropagation(); toggleSelect(tRow.id); }}
                               className="w-10"
                             >
                               <Checkbox
                                 checked={selected}
-                                onCheckedChange={() => toggleSelect(t.id)}
-                                aria-label={`Select ticket ${t.id}`}
+                                onCheckedChange={() => toggleSelect(tRow.id)}
+                                aria-label={`Select ticket ${tRow.id}`}
                               />
                             </TableCell>
                           )}
                           <TableCell className="font-medium">
-                            {t.customerName ?? <span className="text-muted-foreground">—</span>}
+                            {tRow.customerName ?? <span className="text-muted-foreground">—</span>}
                           </TableCell>
                           <TableCell>
-                            {t.flightRoute ? (
+                            {tRow.flightRoute ? (
                               <span className="flex items-center gap-1 text-sm">
-                                <Plane className="h-3 w-3 text-muted-foreground" /> {t.flightRoute}
+                                <Plane className="h-3 w-3 text-muted-foreground" /> {tRow.flightRoute}
                               </span>
                             ) : "—"}
                           </TableCell>
-                          <TableCell>{t.airline ?? "—"}</TableCell>
+                          <TableCell>{tRow.airline ?? "—"}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {t.departureDatetime ? formatShortDate(t.departureDatetime) : "—"}
+                            {tRow.departureDatetime ? formatShortDate(tRow.departureDatetime) : "—"}
                           </TableCell>
                           <TableCell>
                             {(() => {
-                              const { label, color } = calculateDaysRemaining(t.departureDatetime);
-                              return <span className={`text-xs ${color}`}>{label}</span>;
+                              const { label, color, days } = calculateDaysRemaining(tRow.departureDatetime);
+                              return <span className={`text-xs ${color}`}>{formatDaysLeft(label, days, language)}</span>;
                             })()}
                           </TableCell>
-                          <TableCell className="font-mono text-sm">{t.pnr ?? "—"}</TableCell>
+                          <TableCell className="font-mono text-sm">{tRow.pnr ?? "—"}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {t.employeeId
-                              ? (employees.find((e) => e.id === t.employeeId)?.name ?? `#${t.employeeId}`)
+                            {tRow.employeeId
+                              ? (employees.find((e) => e.id === tRow.employeeId)?.name ?? `#${tRow.employeeId}`)
                               : <span className="text-muted-foreground/50">—</span>}
                           </TableCell>
                           <TableCell>
-                            <span className={`inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${TICKET_STATUS_COLORS[t.ticketStatus] ?? "bg-gray-100 text-gray-700"}`}>
-                              {TICKET_STATUS_LABELS[t.ticketStatus] ?? t.ticketStatus}
+                            <span className={`inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${TICKET_STATUS_COLORS[tRow.ticketStatus] ?? "bg-gray-100 text-gray-700"}`}>
+                              {t(`statuses.${tRow.ticketStatus}`)}
                             </span>
                           </TableCell>
                           <TableCell>
-                            <span className={`inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${PAYMENT_STATUS_COLORS[t.paymentStatus] ?? ""}`}>
-                              {PAYMENT_STATUS_LABELS[t.paymentStatus] ?? t.paymentStatus}
+                            <span className={`inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${PAYMENT_STATUS_COLORS[tRow.paymentStatus] ?? ""}`}>
+                              {t(`statuses.${tRow.paymentStatus}`)}
                             </span>
                           </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {t.price ? formatCurrency(t.price, t.currency) : "—"}
+                          <TableCell className="text-end font-medium">
+                            {tRow.price ? formatCurrency(tRow.price, tRow.currency) : "—"}
                           </TableCell>
                         </TableRow>
                       );
@@ -373,23 +390,23 @@ export default function Tickets() {
 
               {/* Mobile cards */}
               <div className="md:hidden space-y-2">
-                {tickets.map((t) => (
-                  <Link key={t.id} href={`/tickets/${t.id}`}>
+                {tickets.map((tRow) => (
+                  <Link key={tRow.id} href={`/tickets/${tRow.id}`}>
                     <div className="border rounded-lg p-3 hover:bg-muted/30 transition-colors">
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="font-semibold text-sm">{t.customerName ?? "Unknown"}</span>
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${TICKET_STATUS_COLORS[t.ticketStatus] ?? ""}`}>
-                          {TICKET_STATUS_LABELS[t.ticketStatus] ?? t.ticketStatus}
+                        <span className="font-semibold text-sm">{tRow.customerName ?? "Unknown"}</span>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${TICKET_STATUS_COLORS[tRow.ticketStatus] ?? ""}`}>
+                          {t(`statuses.${tRow.ticketStatus}`)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{t.flightRoute ?? "—"} {t.airline ? `· ${t.airline}` : ""}</span>
-                        <span className="font-medium text-foreground">{t.price ? formatCurrency(t.price, t.currency) : "—"}</span>
+                        <span>{tRow.flightRoute ?? "—"} {tRow.airline ? `· ${tRow.airline}` : ""}</span>
+                        <span className="font-medium text-foreground">{tRow.price ? formatCurrency(tRow.price, tRow.currency) : "—"}</span>
                       </div>
-                      {t.pnr && <div className="text-xs text-muted-foreground mt-1">PNR: <span className="font-mono">{t.pnr}</span></div>}
-                      {t.employeeId && (
+                      {tRow.pnr && <div className="text-xs text-muted-foreground mt-1">{t("tickets.table.pnr")}: <span className="font-mono">{tRow.pnr}</span></div>}
+                      {tRow.employeeId && (
                         <div className="text-xs text-muted-foreground mt-1">
-                          Employee: {employees.find((e) => e.id === t.employeeId)?.name ?? `#${t.employeeId}`}
+                          {t("reports.table.employee")}: {employees.find((e) => e.id === tRow.employeeId)?.name ?? `#${tRow.employeeId}`}
                         </div>
                       )}
                     </div>
@@ -399,12 +416,12 @@ export default function Tickets() {
 
               <div className="text-sm text-muted-foreground pt-1 flex items-center gap-3">
                 <span>
-                  {tickets.length} ticket{tickets.length !== 1 ? "s" : ""}
-                  {tickets.length !== allTickets.length && ` (filtered from ${allTickets.length})`}
-                  {myTickets && <span className="ml-2 text-xs font-medium text-primary">· My Tickets only</span>}
+                  {tickets.length} {language === "ar" ? "تذكرة" : `ticket${tickets.length !== 1 ? "s" : ""}`}
+                  {tickets.length !== allTickets.length && ` (${language === "ar" ? "مصفى من" : "filtered from"} ${allTickets.length})`}
+                  {myTickets && <span className="ml-2 text-xs font-medium text-primary">· {t("tickets.myTickets")} {language === "ar" ? "فقط" : "only"}</span>}
                 </span>
                 {isAdmin && selectedIds.size > 0 && (
-                  <span className="text-primary font-medium">{selectedIds.size} selected</span>
+                  <span className="text-primary font-medium">{selectedIds.size} {language === "ar" ? "محدد" : "selected"}</span>
                 )}
               </div>
             </>
@@ -415,19 +432,19 @@ export default function Tickets() {
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {selectedIds.size} ticket{selectedIds.size !== 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogTitle>{t("tickets.deleteConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This action is permanent and cannot be undone. All ticket data, payment records, and status history will be deleted.
+              {t("tickets.deleteConfirmDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleBulkDelete}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? "Deleting…" : "Delete"}
+              {isDeleting ? t("employees.revoking") : t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

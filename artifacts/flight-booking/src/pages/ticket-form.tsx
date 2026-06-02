@@ -15,11 +15,11 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import {
-  TICKET_STATUS_LABELS, PAYMENT_STATUS_LABELS,
   TICKET_STATUSES, PAYMENT_STATUSES, CURRENCIES,
 } from "@/lib/ticket-constants";
 import { cn } from "@/lib/utils";
 import { useEmployee } from "@/contexts/employee-context";
+import { useLanguage } from "@/contexts/language-context";
 import { authFetch, BASE } from "@/lib/api";
 
 interface Customer {
@@ -55,7 +55,7 @@ const EMPTY_FORM = {
   departureDatetime: "",
   arrivalDatetime: "",
   price: "",
-  currency: "USD",
+  currency: "KWD",
   pnr: "",
   ticketStatus: "quoted",
   paymentStatus: "unpaid",
@@ -110,6 +110,7 @@ export default function TicketForm() {
 
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { t, language, isRtl } = useLanguage();
   const qc = useQueryClient();
 
   const { employees } = useEmployee();
@@ -133,22 +134,22 @@ export default function TicketForm() {
 
   useEffect(() => {
     if (isEdit && ticketData?.ticket) {
-      const t = ticketData.ticket;
+      const tData = ticketData.ticket;
       setForm({
-        customerId: String(t.customerId),
-        employeeId: t.employeeId ? String(t.employeeId) : "",
-        flightRoute: t.flightRoute ?? "",
-        airline: t.airline ?? "",
-        flightNumber: t.flightNumber ?? "",
-        departureDatetime: toLocalDatetimeInput(t.departureDatetime),
-        arrivalDatetime: toLocalDatetimeInput(t.arrivalDatetime),
-        price: t.price ?? "",
-        currency: t.currency ?? "USD",
-        pnr: t.pnr ?? "",
-        ticketStatus: t.ticketStatus,
-        paymentStatus: t.paymentStatus,
-        baggageDetails: t.baggageDetails ?? "",
-        notes: t.notes ?? "",
+        customerId: String(tData.customerId),
+        employeeId: tData.employeeId ? String(tData.employeeId) : "",
+        flightRoute: tData.flightRoute ?? "",
+        airline: tData.airline ?? "",
+        flightNumber: tData.flightNumber ?? "",
+        departureDatetime: toLocalDatetimeInput(tData.departureDatetime),
+        arrivalDatetime: toLocalDatetimeInput(tData.arrivalDatetime),
+        price: tData.price ?? "",
+        currency: tData.currency ?? "KWD",
+        pnr: tData.pnr ?? "",
+        ticketStatus: tData.ticketStatus,
+        paymentStatus: tData.paymentStatus,
+        baggageDetails: tData.baggageDetails ?? "",
+        notes: tData.notes ?? "",
       });
     } else if (!isEdit) {
       const params = new URLSearchParams(window.location.search);
@@ -159,11 +160,21 @@ export default function TicketForm() {
 
   function validate() {
     const errs: Record<string, string> = {};
-    if (!form.customerId) errs.customerId = "Customer is required.";
-    if (!form.flightRoute.trim()) errs.flightRoute = "Flight route is required.";
-    if (!form.airline.trim()) errs.airline = "Airline is required.";
-    if (!form.departureDatetime) errs.departureDatetime = "Departure date/time is required.";
-    if (form.price && isNaN(parseFloat(form.price))) errs.price = "Price must be a valid number.";
+    if (!form.customerId) {
+      errs.customerId = language === "ar" ? "يجب اختيار مسافر." : "Customer is required.";
+    }
+    if (!form.flightRoute.trim()) {
+      errs.flightRoute = language === "ar" ? "يجب إدخال خط سير الرحلة." : "Flight route is required.";
+    }
+    if (!form.airline.trim()) {
+      errs.airline = language === "ar" ? "يجب إدخال رمز شركة الطيران." : "Airline is required.";
+    }
+    if (!form.departureDatetime) {
+      errs.departureDatetime = language === "ar" ? "يجب إدخال تاريخ المغادرة." : "Departure date/time is required.";
+    }
+    if (form.price && isNaN(parseFloat(form.price))) {
+      errs.price = language === "ar" ? "يجب إدخال سعر صالح." : "Price must be a valid number.";
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -181,7 +192,7 @@ export default function TicketForm() {
     payload.departureDatetime = form.departureDatetime ? new Date(form.departureDatetime).toISOString() : null;
     payload.arrivalDatetime = form.arrivalDatetime ? new Date(form.arrivalDatetime).toISOString() : null;
     payload.price = form.price ? form.price : null;
-    payload.currency = form.currency || "USD";
+    payload.currency = form.currency || "KWD";
     payload.pnr = form.pnr || null;
     payload.ticketStatus = form.ticketStatus;
     payload.paymentStatus = form.paymentStatus;
@@ -194,13 +205,13 @@ export default function TicketForm() {
     mutationFn: (payload: Record<string, unknown>) =>
       isEdit ? updateTicket(editId!, payload) : createTicket(payload),
     onSuccess: (data) => {
-      toast({ title: isEdit ? "Ticket updated" : "Ticket created" });
+      toast({ title: isEdit ? (language === "ar" ? "تم تحديث التذكرة بنجاح" : "Ticket updated") : (language === "ar" ? "تم إصدار التذكرة بنجاح" : "Ticket created") });
       qc.invalidateQueries({ queryKey: ["tickets"] });
       qc.invalidateQueries({ queryKey: ["ticket", editId] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
       navigate(`/tickets/${data.ticket.id}`);
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("common.error"), description: e.message, variant: "destructive" }),
   });
 
   function handleSubmit(e: React.FormEvent) {
@@ -235,12 +246,12 @@ export default function TicketForm() {
           size="icon"
           onClick={() => navigate(isEdit ? `/tickets/${editId}` : "/tickets")}
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{isEdit ? "Edit Ticket" : "New Ticket"}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{isEdit ? t("ticketForm.editTitle") : t("ticketForm.addTitle")}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            {isEdit ? "Update the ticket details below." : "Fill in the ticket details to create a new ticket."}
+            {isEdit ? (language === "ar" ? "تعديل تفاصيل تذكرة الطيران أدناه." : "Update the ticket details below.") : (language === "ar" ? "املأ البيانات أدناه لإصدار وتسجيل تذكرة طيران جديدة." : "Fill in the ticket details to create a new ticket.")}
           </p>
         </div>
       </div>
@@ -248,31 +259,31 @@ export default function TicketForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Customer & Flight</CardTitle>
+            <CardTitle className="text-base">{t("ticketDetail.routeInfo")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Customer *</Label>
+              <Label>{t("ticketForm.customerLabel")}</Label>
               <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     role="combobox"
-                    className={cn("w-full justify-between font-normal", errors.customerId && "border-destructive")}
+                    className={cn("w-full justify-between font-normal text-start", errors.customerId && "border-destructive")}
                   >
                     {selectedCustomer ? (
                       <span>{selectedCustomer.fullName} {selectedCustomer.phone ? `· ${selectedCustomer.phone}` : ""}</span>
                     ) : (
-                      <span className="text-muted-foreground">Select customer...</span>
+                      <span className="text-muted-foreground">{t("ticketForm.selectCustomer")}...</span>
                     )}
                     <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-full p-0" align="start">
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search by name or phone..." />
+                    <CommandInput placeholder={t("customers.searchPlaceholder")} />
                     <CommandList>
-                      <CommandEmpty>No customers found.</CommandEmpty>
+                      <CommandEmpty>{t("employees.noEmployees")}</CommandEmpty>
                       <CommandGroup>
                         {customers.map((c) => (
                           <CommandItem
@@ -284,7 +295,7 @@ export default function TicketForm() {
                             }}
                           >
                             <Check
-                              className={cn("mr-2 h-4 w-4", form.customerId === String(c.id) ? "opacity-100" : "opacity-0")}
+                              className={cn("mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4", form.customerId === String(c.id) ? "opacity-100" : "opacity-0")}
                             />
                             <div>
                               <div className="font-medium">{c.fullName}</div>
@@ -301,13 +312,13 @@ export default function TicketForm() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Assigned Employee</Label>
+              <Label>{t("employees.supervisor")}</Label>
               <Select value={form.employeeId || "unassigned"} onValueChange={(v) => setField("employeeId", v === "unassigned" ? "" : v)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Unassigned" />
+                  <SelectValue placeholder={language === "ar" ? "غير مسند" : "Unassigned"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">{language === "ar" ? "غير مسند" : "Unassigned"}</SelectItem>
                   {employees.map((e) => (
                     <SelectItem key={e.id} value={String(e.id)}>{e.name} — {e.role}</SelectItem>
                   ))}
@@ -317,7 +328,7 @@ export default function TicketForm() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Flight Route <span className="text-destructive">*</span></Label>
+                <Label>{t("ticketForm.routeLabel")}</Label>
                 <Input
                   placeholder="e.g. CAI → DXB"
                   value={form.flightRoute}
@@ -327,9 +338,9 @@ export default function TicketForm() {
                 {errors.flightRoute && <p className="text-xs text-destructive">{errors.flightRoute}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label>Airline <span className="text-destructive">*</span></Label>
+                <Label>{t("ticketForm.airlineLabel")}</Label>
                 <Input
-                  placeholder="e.g. EgyptAir"
+                  placeholder="e.g. J9"
                   value={form.airline}
                   onChange={(e) => setField("airline", e.target.value)}
                   className={cn(errors.airline && "border-destructive")}
@@ -340,15 +351,15 @@ export default function TicketForm() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Flight Number</Label>
+                <Label>{t("ticketForm.flightNoLabel")}</Label>
                 <Input
-                  placeholder="e.g. MS123"
+                  placeholder="e.g. 501"
                   value={form.flightNumber}
                   onChange={(e) => setField("flightNumber", e.target.value)}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>PNR</Label>
+                <Label>{t("ticketForm.pnrLabel")}</Label>
                 <Input
                   placeholder="e.g. ABC123"
                   value={form.pnr}
@@ -360,7 +371,7 @@ export default function TicketForm() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Departure <span className="text-destructive">*</span></Label>
+                <Label>{t("ticketForm.departureLabel")}</Label>
                 <Input
                   type="datetime-local"
                   value={form.departureDatetime}
@@ -373,7 +384,7 @@ export default function TicketForm() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label>Arrival</Label>
+                <Label>{t("ticketForm.arrivalLabel")}</Label>
                 <Input
                   type="datetime-local"
                   value={form.arrivalDatetime}
@@ -389,12 +400,12 @@ export default function TicketForm() {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Pricing & Status</CardTitle>
+            <CardTitle className="text-base">{t("ticketDetail.financialDetails")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Price</Label>
+                <Label>{t("ticketForm.priceLabel")}</Label>
                 <Input
                   type="number"
                   min="0"
@@ -405,7 +416,7 @@ export default function TicketForm() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Currency</Label>
+                <Label>{t("ticketForm.currencyLabel")}</Label>
                 <Select value={form.currency} onValueChange={(v) => setField("currency", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -417,23 +428,23 @@ export default function TicketForm() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Ticket Status</Label>
+                <Label>{t("ticketForm.statusLabel")}</Label>
                 <Select value={form.ticketStatus} onValueChange={(v) => setField("ticketStatus", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {TICKET_STATUSES.map((s) => (
-                      <SelectItem key={s} value={s}>{TICKET_STATUS_LABELS[s]}</SelectItem>
+                      <SelectItem key={s} value={s}>{t(`statuses.${s}`)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Payment Status</Label>
+                <Label>{t("ticketForm.paymentLabel")}</Label>
                 <Select value={form.paymentStatus} onValueChange={(v) => setField("paymentStatus", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {PAYMENT_STATUSES.map((s) => (
-                      <SelectItem key={s} value={s}>{PAYMENT_STATUS_LABELS[s]}</SelectItem>
+                      <SelectItem key={s} value={s}>{t(`statuses.${s}`)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -444,11 +455,11 @@ export default function TicketForm() {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Additional Details</CardTitle>
+            <CardTitle className="text-base">{t("common.settings")} ({t("common.other")})</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Baggage Details</Label>
+              <Label>{t("ticketForm.baggageLabel")}</Label>
               <Input
                 placeholder="e.g. 23kg checked + 7kg cabin"
                 value={form.baggageDetails}
@@ -457,14 +468,14 @@ export default function TicketForm() {
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label>Notes</Label>
+                <Label>{t("ticketDetail.notes")}</Label>
                 <VoiceInputButton
-                  onTranscript={(t) => setField("notes", form.notes ? form.notes + " " + t : t)}
-                  title="Dictate note"
+                  onTranscript={(txt) => setField("notes", form.notes ? form.notes + " " + txt : txt)}
+                  title={language === "ar" ? "إملاء صوتي" : "Dictate note"}
                 />
               </div>
               <Textarea
-                placeholder="Any additional notes about this ticket..."
+                placeholder={language === "ar" ? "ملاحظات إضافية حول التذكرة..." : "Any additional notes about this ticket..."}
                 rows={3}
                 value={form.notes}
                 onChange={(e) => setField("notes", e.target.value)}
@@ -479,10 +490,10 @@ export default function TicketForm() {
             variant="outline"
             onClick={() => navigate(isEdit ? `/tickets/${editId}` : "/tickets")}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? "Saving..." : isEdit ? "Save Changes" : "Create Ticket"}
+            {mutation.isPending ? t("employees.saving") : isEdit ? t("ticketForm.btnSave") : t("ticketForm.btnCreate")}
           </Button>
         </div>
       </form>

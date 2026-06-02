@@ -4,12 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, QrCode, LogOut, CheckCircle2, RefreshCw } from "lucide-react";
+import { useLanguage } from "@/contexts/language-context";
 import { authFetch, BASE } from "@/lib/api";
 
 const QR_LIFETIME_SECONDS = 55; // Refresh just before 60s expiry
 
 export default function WhatsappSettings() {
   const { toast } = useToast();
+  const { t, language } = useLanguage();
   const queryClient = useQueryClient();
   const [isPolling, setIsPolling] = useState(false);
   const [qrCountdown, setQrCountdown] = useState<number | null>(null);
@@ -32,9 +34,9 @@ export default function WhatsappSettings() {
     if (isPolling && data?.status === "open") {
       setIsPolling(false);
       stopCountdown();
-      toast({ title: "✅ Connected to WhatsApp successfully!" });
+      toast({ title: language === "ar" ? "✅ تم ربط الواتساب بنجاح!" : "✅ Connected to WhatsApp successfully!" });
     }
-  }, [data?.status, isPolling]);
+  }, [data?.status, isPolling, language]);
 
   // ── Countdown helpers ─────────────────────────────────────────────────────
   const stopCountdown = useCallback(() => {
@@ -64,10 +66,10 @@ export default function WhatsappSettings() {
     autoRefreshRef.current = setTimeout(() => {
       refreshQR();
     }, (QR_LIFETIME_SECONDS - 2) * 1000);
-  }, []);
+  }, [stopCountdown]);
 
   // Cleanup on unmount
-  useEffect(() => () => stopCountdown(), []);
+  useEffect(() => () => stopCountdown(), [stopCountdown]);
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const connectMutation = useMutation({
@@ -85,7 +87,7 @@ export default function WhatsappSettings() {
       startCountdown();
     },
     onError: (err: any) => {
-      toast({ title: "Connection Error", description: err.message, variant: "destructive" });
+      toast({ title: language === "ar" ? "خطأ في الاتصال" : "Connection Error", description: err.message, variant: "destructive" });
     },
   });
 
@@ -101,17 +103,17 @@ export default function WhatsappSettings() {
       setIsPolling(false);
       stopCountdown();
       queryClient.invalidateQueries({ queryKey: ["whatsapp-instance"] });
-      toast({ title: "Logged out successfully" });
+      toast({ title: language === "ar" ? "تم تسجيل الخروج بنجاح" : "Logged out successfully" });
     },
     onError: (err: any) => {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
     },
   });
 
   // ── Refresh QR ────────────────────────────────────────────────────────────
   const refreshQR = useCallback(() => {
     connectMutation.mutate();
-  }, []);
+  }, [connectMutation]);
 
   // ── Countdown color ───────────────────────────────────────────────────────
   const getCountdownColor = () => {
@@ -121,7 +123,6 @@ export default function WhatsappSettings() {
     return "text-destructive";
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -134,38 +135,38 @@ export default function WhatsappSettings() {
 
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-6 animate-in fade-in zoom-in-95 duration-500">
-      <Card className="bg-card border-border shadow-sm">
+      <Card className="bg-card border-border shadow-sm text-start">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-2xl text-foreground">
             <QrCode className="h-6 w-6 text-primary" />
-            WhatsApp Settings
+            {t("whatsapp.settings.title")}
           </CardTitle>
           <CardDescription className="text-muted-foreground">
-            Link your WhatsApp number to reply to customers and send notifications.
+            {language === "ar" ? "اربط رقم الواتساب الخاص بك لإرسال وتلقي إشعارات الحجز ورسائل العملاء." : "Link your WhatsApp number to reply to customers and send notifications."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Status row */}
-          <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/20">
+          <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/20 flex-wrap gap-4">
             <div>
-              <p className="text-sm font-medium text-foreground">Connection Status</p>
+              <p className="text-sm font-medium text-foreground">{language === "ar" ? "حالة الاتصال" : "Connection Status"}</p>
               <div className="flex items-center gap-2 mt-1">
                 {isConnected ? (
                   <span className="flex items-center gap-1.5 text-emerald-600 text-sm font-medium">
-                    <CheckCircle2 className="h-4 w-4" /> Connected
+                    <CheckCircle2 className="h-4 w-4" /> {t("whatsapp.statusConnected")}
                   </span>
                 ) : data?.status === "connecting" ? (
                   <span className="flex items-center gap-1.5 text-yellow-600 text-sm font-medium">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Connecting…
+                    <Loader2 className="h-4 w-4 animate-spin" /> {t("whatsapp.statusConnecting")}
                   </span>
                 ) : (
-                  <span className="text-destructive text-sm font-medium">Disconnected</span>
+                  <span className="text-destructive text-sm font-medium">{t("whatsapp.statusDisconnected")}</span>
                 )}
               </div>
             </div>
 
             <div>
-              <p className="text-sm font-medium text-foreground">Session ID</p>
+              <p className="text-sm font-medium text-foreground">{language === "ar" ? "معرف الجلسة" : "Session ID"}</p>
               <p className="text-sm text-muted-foreground mt-1">{data?.instanceName}</p>
             </div>
           </div>
@@ -187,7 +188,7 @@ export default function WhatsappSettings() {
                   </div>
 
                   <p className="text-sm text-muted-foreground">
-                    Open WhatsApp → Linked Devices → Scan QR Code
+                    {language === "ar" ? "افتح تطبيق الواتساب ← الأجهزة المرتبطة ← امسح رمز الاستجابة السريعة" : "Open WhatsApp → Linked Devices → Scan QR Code"}
                   </p>
 
                   {/* Countdown + refresh */}
@@ -204,38 +205,63 @@ export default function WhatsappSettings() {
                       onClick={refreshQR}
                       disabled={connectMutation.isPending}
                     >
-                      <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                      Refresh QR
+                      <RefreshCw className="mr-1.5 h-3.5 w-3.5 rtl:mr-0 rtl:ml-1.5" />
+                      {language === "ar" ? "تحديث الرمز" : "Refresh QR"}
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div className="text-center space-y-4">
                   <QrCode className="h-16 w-16 mx-auto text-muted-foreground opacity-50" />
-                  <p className="text-sm text-muted-foreground">No QR code generated yet.</p>
+                  <p className="text-sm text-muted-foreground">{language === "ar" ? "لم يتم إنشاء رمز استجابة سريعة بعد." : "No QR code generated yet."}</p>
                   <Button
                     onClick={() => connectMutation.mutate()}
                     disabled={connectMutation.isPending}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     {connectMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Generate QR Code
+                    {language === "ar" ? "توليد رمز الاستجابة السريعة" : "Generate QR Code"}
                   </Button>
                 </div>
               )}
             </div>
           )}
 
+          {/* Main Instance Selection */}
+          {isConnected && (
+            <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/10">
+              <div>
+                <p className="text-sm font-medium text-foreground">{language === "ar" ? "رقم الواتساب الرئيسي للمركز" : "Main WhatsApp Number"}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {data?.isMainInstance 
+                    ? (language === "ar" ? "هذا هو الرقم الرئيسي لتوزيع المحادثات" : "This is the main number for routing chats")
+                    : (language === "ar" ? "اضغط لتعيين هذا الرقم لاستقبال رسائل العملاء الجدد وتوزيعها" : "Click to set this number to receive and route new customer messages")}
+                </p>
+              </div>
+              <Button
+                variant={data?.isMainInstance ? "secondary" : "outline"}
+                disabled={data?.isMainInstance || setMainMutation.isPending}
+                onClick={() => setMainMutation.mutate()}
+                className={data?.isMainInstance ? "bg-emerald-50 text-emerald-700 border-emerald-200 pointer-events-none" : ""}
+              >
+                {setMainMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {data?.isMainInstance 
+                  ? (language === "ar" ? "الرقم الرئيسي ✓" : "Main Number ✓") 
+                  : (language === "ar" ? "تعيين كرقم رئيسي" : "Set as Main")}
+              </Button>
+            </div>
+          )}
+
           {/* Logout */}
           {isConnected && (
-            <div className="flex justify-end">
+            <div className="flex justify-end mt-6">
               <Button
                 variant="destructive"
                 onClick={() => logoutMutation.mutate()}
                 disabled={logoutMutation.isPending}
               >
                 {logoutMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
-                Logout and Disconnect
+                {language === "ar" ? "تسجيل الخروج وقطع الاتصال" : "Logout and Disconnect"}
               </Button>
             </div>
           )}

@@ -19,7 +19,7 @@ export const paymentsTable = pgTable("payments", {
     .references(() => ticketsTable.id, { onDelete: "cascade" }),
   customerId: integer("customer_id").references(() => customersTable.id),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
-  currency: text("currency").default("USD"),
+  currency: text("currency").default("KWD"),
   paymentMethod: paymentMethodEnum("payment_method").default("cash"),
   paymentStatus: paymentStatusEnum("payment_status").default("paid"),
   paymentDate: timestamp("payment_date").defaultNow(),

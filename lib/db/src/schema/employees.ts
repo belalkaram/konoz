@@ -14,6 +14,8 @@ export const employeesTable = pgTable("employees", {
   supervisorId: integer("supervisor_id").references((): AnyPgColumn => employeesTable.id),
   companyId: integer("company_id"),
   branchId: integer("branch_id"),
+  baseSalary: integer("base_salary").notNull().default(0),
+  commissionPercentage: integer("commission_percentage").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

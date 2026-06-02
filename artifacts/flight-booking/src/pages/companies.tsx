@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Building2, Plus, Pencil, Trash2, MapPin } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { Building2, Plus, Pencil, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/language-context";
 import { authFetch } from "@/lib/api";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -33,6 +34,7 @@ export default function CompaniesPage() {
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
   const { toast } = useToast();
+  const { t, language } = useLanguage();
 
   async function loadData() {
     setLoading(true);
@@ -50,7 +52,7 @@ export default function CompaniesPage() {
         setBranches(data.branches || []);
       }
     } catch (err) {
-      toast({ title: "Error", description: "Failed to load data", variant: "destructive" });
+      toast({ title: t("common.error"), description: "Failed to load data", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -70,11 +72,11 @@ export default function CompaniesPage() {
       if (!res.ok) throw new Error("Failed to save company");
     },
     onSuccess: () => {
-      toast({ title: editingCompany ? "Company updated" : "Company created" });
+      toast({ title: editingCompany ? (language === "ar" ? "تم تحديث بيانات الشركة" : "Company updated") : (language === "ar" ? "تم إنشاء الشركة بنجاح" : "Company created") });
       setShowCompanySheet(false);
       loadData();
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("common.error"), description: e.message, variant: "destructive" }),
   });
 
   const branchMutation = useMutation({
@@ -87,30 +89,30 @@ export default function CompaniesPage() {
       if (!res.ok) throw new Error("Failed to save branch");
     },
     onSuccess: () => {
-      toast({ title: editingBranch ? "Branch updated" : "Branch created" });
+      toast({ title: editingBranch ? (language === "ar" ? "تم تحديث بيانات الفرع" : "Branch updated") : (language === "ar" ? "تم إنشاء الفرع بنجاح" : "Branch created") });
       setShowBranchSheet(false);
       loadData();
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("common.error"), description: e.message, variant: "destructive" }),
   });
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Companies & Branches</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Manage organizational structure and office locations.</p>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="text-start">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t("common.companies")}</h1>
+          <p className="text-muted-foreground mt-1 text-sm">{language === "ar" ? "إدارة فروع وشركات الوكالة المتعاقدة بالنظام." : "Manage organizational structure and office locations."}</p>
         </div>
         <Button onClick={() => { setEditingCompany(null); setShowCompanySheet(true); }} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" /> Add Company
+          <Plus className="h-4 w-4" /> {language === "ar" ? "إضافة شركة" : "Add Company"}
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-start">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-primary" /> Companies
+              <Building2 className="h-5 w-5 text-primary" /> {language === "ar" ? "الشركات" : "Companies"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -132,9 +134,9 @@ export default function CompaniesPage() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 flex-wrap gap-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-primary" /> Branches
+              <MapPin className="h-5 w-5 text-primary" /> {language === "ar" ? "الفروع" : "Branches"}
             </CardTitle>
             <Button 
               size="sm" 
@@ -143,15 +145,15 @@ export default function CompaniesPage() {
               onClick={() => { setEditingBranch(null); setShowBranchSheet(true); }}
               className="h-8"
             >
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add Branch
+              <Plus className="h-3.5 w-3.5 mr-1 rtl:mr-0 rtl:ml-1" /> {language === "ar" ? "إضافة فرع" : "Add Branch"}
             </Button>
           </CardHeader>
           <CardContent className="space-y-2">
             {!selectedCompanyId ? (
-              <p className="text-sm text-muted-foreground italic text-center py-8">Select a company to see its branches.</p>
+              <p className="text-sm text-muted-foreground italic text-center py-8">{language === "ar" ? "اختر شركة من القائمة لعرض الفروع التابعة لها." : "Select a company to see its branches."}</p>
             ) : (
               branches.filter(b => b.companyId === selectedCompanyId).length === 0 ? (
-                <p className="text-sm text-muted-foreground italic text-center py-8">No branches found for this company.</p>
+                <p className="text-sm text-muted-foreground italic text-center py-8">{language === "ar" ? "لا توجد فروع مسجلة لهذه الشركة بعد." : "No branches found for this company."}</p>
               ) : (
                 branches.filter(b => b.companyId === selectedCompanyId).map((branch) => (
                   <div key={branch.id} className="flex items-center justify-between p-3 rounded-lg border">
@@ -189,6 +191,7 @@ export default function CompaniesPage() {
 
 function CompanySheet({ open, editing, onClose, onSubmit, isPending }: any) {
   const [name, setName] = useState("");
+  const { t, language } = useLanguage();
   useEffect(() => {
     if (open) setName(editing?.name || "");
   }, [open, editing]);
@@ -197,15 +200,15 @@ function CompanySheet({ open, editing, onClose, onSubmit, isPending }: any) {
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>{editing ? "Edit Company" : "Add Company"}</SheetTitle>
+          <SheetTitle>{editing ? (language === "ar" ? "تعديل الشركة" : "Edit Company") : (language === "ar" ? "إضافة شركة" : "Add Company")}</SheetTitle>
         </SheetHeader>
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 text-start">
           <div className="space-y-1.5">
-            <Label>Company Name</Label>
+            <Label>{language === "ar" ? "اسم الشركة" : "Company Name"}</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. ABC Travel" />
           </div>
           <Button className="w-full" disabled={isPending || !name.trim()} onClick={() => onSubmit(name)}>
-            {isPending ? "Saving..." : "Save Company"}
+            {isPending ? t("employees.saving") : (language === "ar" ? "حفظ بيانات الشركة" : "Save Company")}
           </Button>
         </div>
       </SheetContent>
@@ -215,6 +218,7 @@ function CompanySheet({ open, editing, onClose, onSubmit, isPending }: any) {
 
 function BranchSheet({ open, editing, companyId, onClose, onSubmit, isPending }: any) {
   const [name, setName] = useState("");
+  const { t, language } = useLanguage();
   useEffect(() => {
     if (open) setName(editing?.name || "");
   }, [open, editing]);
@@ -223,15 +227,15 @@ function BranchSheet({ open, editing, companyId, onClose, onSubmit, isPending }:
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>{editing ? "Edit Branch" : "Add Branch"}</SheetTitle>
+          <SheetTitle>{editing ? (language === "ar" ? "تعديل الفرع" : "Edit Branch") : (language === "ar" ? "إضافة فرع" : "Add Branch")}</SheetTitle>
         </SheetHeader>
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 text-start">
           <div className="space-y-1.5">
-            <Label>Branch Name</Label>
+            <Label>{language === "ar" ? "اسم الفرع" : "Branch Name"}</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cairo Office" />
           </div>
           <Button className="w-full" disabled={isPending || !name.trim()} onClick={() => onSubmit(name)}>
-            {isPending ? "Saving..." : "Save Branch"}
+            {isPending ? t("employees.saving") : (language === "ar" ? "حفظ بيانات الفرع" : "Save Branch")}
           </Button>
         </div>
       </SheetContent>

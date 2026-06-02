@@ -11,7 +11,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useEmployee, useCurrentEmployee } from "@/contexts/employee-context";
+import { useLanguage } from "@/contexts/language-context";
 import { authFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { SystemSettingsDialog } from "@/components/system-settings-dialog";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -142,6 +144,7 @@ function EmployeeFormSheet({ open, editing, onClose, onSuccess, allPossibleSuper
   const [form, setForm] = useState<EmployeeFormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<EmployeeFormData>>({});
   const { toast } = useToast();
+  const { t, language } = useLanguage();
 
   useEffect(() => {
     if (open) {
@@ -174,12 +177,12 @@ function EmployeeFormSheet({ open, editing, onClose, onSuccess, allPossibleSuper
 
   function validate(): boolean {
     const errs: Partial<EmployeeFormData> = {};
-    if (!form.name.trim()) errs.name = "Name is required";
-    if (!form.initials.trim()) errs.initials = "Initials are required";
-    if (!form.username.trim()) errs.username = "Username is required";
-    else if (!/^[a-z0-9_]+$/.test(form.username)) errs.username = "Lowercase letters, numbers, underscores only";
-    if (!editing && !form.pin) errs.pin = "PIN is required for new employees";
-    else if (form.pin && (form.pin.length < 4 || !/^\d+$/.test(form.pin))) errs.pin = "PIN must be 4–8 digits";
+    if (!form.name.trim()) errs.name = t("employees.validation.nameRequired");
+    if (!form.initials.trim()) errs.initials = t("employees.validation.initialsRequired");
+    if (!form.username.trim()) errs.username = t("employees.validation.usernameRequired");
+    else if (!/^[a-z0-9_]+$/.test(form.username)) errs.username = t("employees.validation.usernameFormat");
+    if (!editing && !form.pin) errs.pin = t("employees.validation.pinRequired");
+    else if (form.pin && (form.pin.length < 4 || !/^\d+$/.test(form.pin))) errs.pin = t("employees.validation.pinFormat");
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -207,11 +210,11 @@ function EmployeeFormSheet({ open, editing, onClose, onSuccess, allPossibleSuper
       }
     },
     onSuccess: () => {
-      toast({ title: editing ? "Employee updated" : "Employee added" });
+      toast({ title: editing ? t("employees.toast.updated") : t("employees.toast.added") });
       onSuccess();
       onClose();
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("common.error"), description: e.message, variant: "destructive" }),
   });
 
   function handleSubmit(e: React.FormEvent) {
@@ -224,23 +227,23 @@ function EmployeeFormSheet({ open, editing, onClose, onSuccess, allPossibleSuper
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>{editing ? "Edit Employee" : "Add Employee"}</SheetTitle>
+          <SheetTitle>{editing ? t("employees.editTitle") : t("employees.addTitle")}</SheetTitle>
         </SheetHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-1.5">
-            <Label>Full Name *</Label>
+            <Label>{t("employees.fullName")}</Label>
             <Input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Sara Ahmed" />
             {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Initials *</Label>
+              <Label>{t("employees.initials")}</Label>
               <Input value={form.initials} onChange={(e) => set("initials", e.target.value.toUpperCase())} placeholder="SA" maxLength={4} />
               {errors.initials && <p className="text-xs text-destructive">{errors.initials}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label>Role *</Label>
+              <Label>{t("employees.role")}</Label>
               <Select value={form.role} onValueChange={(v) => set("role", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -254,30 +257,30 @@ function EmployeeFormSheet({ open, editing, onClose, onSuccess, allPossibleSuper
           </div>
 
           <div className="space-y-1.5">
-            <Label>Username *</Label>
+            <Label>{t("employees.username")}</Label>
             <Input value={form.username} onChange={(e) => set("username", e.target.value.toLowerCase())} placeholder="sara.ahmed" />
             {errors.username && <p className="text-xs text-destructive">{errors.username}</p>}
           </div>
 
           <div className="space-y-1.5">
-            <Label>{editing ? "New PIN (leave blank to keep current)" : "PIN *"}</Label>
+            <Label>{editing ? t("employees.pinLabelEdit") : t("employees.pinLabelNew")}</Label>
             <Input
               type="password"
               inputMode="numeric"
               value={form.pin}
               onChange={(e) => set("pin", e.target.value)}
-              placeholder={editing ? "Enter new PIN to change" : "4–8 digit PIN"}
+              placeholder={editing ? t("employees.pinPlaceholderEdit") : t("employees.pinPlaceholderNew")}
               maxLength={8}
             />
             {errors.pin && <p className="text-xs text-destructive">{errors.pin}</p>}
           </div>
 
           <div className="space-y-1.5">
-            <Label>Supervisor</Label>
+            <Label>{t("employees.supervisor")}</Label>
             <Select value={form.supervisorId || "none"} onValueChange={(v) => set("supervisorId", v === "none" ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder="No Supervisor" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("employees.noSupervisor")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No Supervisor</SelectItem>
+                <SelectItem value="none">{t("employees.noSupervisor")}</SelectItem>
                 {allPossibleSupervisors.map(s => (
                   <SelectItem key={s.id} value={s.id.toString()}>{s.name} ({s.role})</SelectItem>
                 ))}
@@ -287,14 +290,14 @@ function EmployeeFormSheet({ open, editing, onClose, onSuccess, allPossibleSuper
 
           {isAdmin && (
             <div className="space-y-1.5">
-              <Label>Company</Label>
+              <Label>{t("employees.company")}</Label>
               <Select value={form.companyId || "none"} onValueChange={(v) => {
                 set("companyId", v === "none" ? "" : v);
                 set("branchId", ""); // Reset branch when company changes
               }}>
-                <SelectTrigger><SelectValue placeholder="No Company" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("employees.noCompany")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No Company</SelectItem>
+                  <SelectItem value="none">{t("employees.noCompany")}</SelectItem>
                   {companies.map(c => (
                     <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
                   ))}
@@ -304,11 +307,11 @@ function EmployeeFormSheet({ open, editing, onClose, onSuccess, allPossibleSuper
           )}
 
           <div className="space-y-1.5">
-            <Label>Branch</Label>
+            <Label>{t("employees.branch")}</Label>
             <Select value={form.branchId || "none"} onValueChange={(v) => set("branchId", v === "none" ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder="No Branch" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("employees.noBranch")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No Branch</SelectItem>
+                <SelectItem value="none">{t("employees.noBranch")}</SelectItem>
                 {branches.filter(b => !form.companyId || b.companyId === parseInt(form.companyId)).map(b => (
                   <SelectItem key={b.id} value={b.id.toString()}>{b.name}</SelectItem>
                 ))}
@@ -317,8 +320,8 @@ function EmployeeFormSheet({ open, editing, onClose, onSuccess, allPossibleSuper
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>Cancel</Button>
-            <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? "Saving..." : editing ? "Save Changes" : "Add Employee"}</Button>
+            <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>{t("common.cancel")}</Button>
+            <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? t("employees.saving") : (editing ? t("ticketForm.btnSave") : t("employees.addBtn"))}</Button>
           </div>
         </form>
 
@@ -326,7 +329,7 @@ function EmployeeFormSheet({ open, editing, onClose, onSuccess, allPossibleSuper
           <div className="mt-8 border-t pt-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold flex items-center gap-2">
-                <Users className="h-4 w-4" /> Team Members
+                <Users className="h-4 w-4" /> {t("employees.teamMembers")}
               </h3>
               <Button 
                 variant="outline" 
@@ -334,16 +337,14 @@ function EmployeeFormSheet({ open, editing, onClose, onSuccess, allPossibleSuper
                 className="h-8 text-xs"
                 onClick={() => {
                    setForm({ ...EMPTY_FORM, supervisorId: editing.id.toString(), role: "Employee" });
-                   // This is a bit tricky since we are in the same sheet. 
-                   // Ideally we'd reset the form to 'new' mode but keep the supervisorId.
                 }}
               >
-                <Plus className="h-3 w-3 mr-1" /> Add to Team
+                <Plus className="h-3 w-3 mr-1 rtl:mr-0 rtl:ml-1" /> {t("employees.addToTeam")}
               </Button>
             </div>
             <div className="space-y-2">
               {allEmployees.filter(e => e.supervisorId === editing.id).length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">No employees assigned to this supervisor.</p>
+                <p className="text-sm text-muted-foreground italic">{t("employees.noTeamMembers")}</p>
               ) : (
                 allEmployees.filter(e => e.supervisorId === editing.id).map(member => (
                   <div key={member.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border text-sm">
@@ -366,6 +367,7 @@ export default function EmployeesPage() {
   const { employees, refreshEmployees } = useEmployee();
   const currentEmployee = useCurrentEmployee();
   const [, navigate] = useLocation();
+  const { t, language } = useLanguage();
   const [showSheet, setShowSheet] = useState(false);
   const [editing, setEditing] = useState<EmployeeRow | null>(null);
   const [confirmDeactivate, setConfirmDeactivate] = useState<EmployeeRow | null>(null);
@@ -416,11 +418,11 @@ export default function EmployeesPage() {
       const rows = await fetchActiveSessions();
       setActiveSessions(rows);
     } catch {
-      toast({ title: "Error", description: "Failed to load sessions", variant: "destructive" });
+      toast({ title: t("common.error"), description: "Failed to load sessions", variant: "destructive" });
     } finally {
       setSessionsLoading(false);
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     if (isSupervisorOrAdmin) {
@@ -448,32 +450,32 @@ export default function EmployeesPage() {
   const deactivateMutation = useMutation({
     mutationFn: (id: number) => deactivateEmployee(id),
     onSuccess: async () => {
-      toast({ title: "Employee deactivated" });
+      toast({ title: t("employees.toast.deactivated") });
       await refreshEmployees();
       await loadAll();
       qc.invalidateQueries({ queryKey: ["employees"] });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("common.error"), description: e.message, variant: "destructive" }),
   });
 
   const activateMutation = useMutation({
     mutationFn: (id: number) => activateEmployee(id),
     onSuccess: async () => {
-      toast({ title: "Employee activated" });
+      toast({ title: t("employees.toast.activated") });
       await refreshEmployees();
       await loadAll();
       qc.invalidateQueries({ queryKey: ["employees"] });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("common.error"), description: e.message, variant: "destructive" }),
   });
 
   const revokeSessionMutation = useMutation({
     mutationFn: (token: string) => revokeSession(token),
     onSuccess: async () => {
-      toast({ title: "Session revoked", description: "The user has been logged out." });
+      toast({ title: t("employees.toast.sessionRevoked"), description: t("employees.toast.sessionRevokedDesc") });
       await loadSessions();
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("common.error"), description: e.message, variant: "destructive" }),
   });
 
   async function handleFormSuccess() {
@@ -504,12 +506,12 @@ export default function EmployeesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Employees</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Manage your team members and their access.</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t("employees.title")}</h1>
+          <p className="text-muted-foreground mt-1 text-sm">{t("employees.subtitle")}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && (
             <>
               <Button
@@ -517,11 +519,11 @@ export default function EmployeesPage() {
                 size="sm"
                 onClick={() => handleToggleShowInactive(!showInactive)}
               >
-                {showInactive ? "Hide Inactive" : "Show Inactive"}
+                {showInactive ? t("employees.hideInactive") : t("employees.showInactive")}
               </Button>
               <SystemSettingsDialog />
               <Button onClick={openAdd} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" /> Add Employee
+                <Plus className="h-4 w-4" /> {t("employees.addBtn")}
               </Button>
             </>
           )}
@@ -531,21 +533,24 @@ export default function EmployeesPage() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base text-muted-foreground font-medium">
-            {displayEmployees.length} {showInactive ? "total" : "active"} employee{displayEmployees.length !== 1 ? "s" : ""}
+            {displayEmployees.length} {showInactive ? (language === "ar" ? "إجمالي" : "total") : (language === "ar" ? "نشط" : "active")} {language === "ar" ? "موظف" : `employee${displayEmployees.length !== 1 ? "s" : ""}`}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {displayEmployees.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Users className="h-10 w-10 mx-auto mb-3 opacity-20" />
-              <p>No employees found.</p>
+              <p>{t("employees.noEmployees")}</p>
             </div>
           ) : (
             <div>
               {displayEmployees.map((emp) => (
                 <div
                   key={emp.id}
-                  className={`flex items-center gap-4 px-6 py-4 border-b last:border-0 ${!emp.isActive ? "opacity-50" : ""}`}
+                  className={cn(
+                    "flex items-center gap-4 px-6 py-4 border-b last:border-0",
+                    !emp.isActive && "opacity-50"
+                  )}
                 >
                   <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
                     style={{ background: "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)", color: "#022c22" }}>
@@ -555,7 +560,7 @@ export default function EmployeesPage() {
                     <div className="font-semibold text-sm flex items-center gap-2">
                       {emp.name}
                       {!emp.isActive && (
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Inactive</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{t("employees.inactive")}</span>
                       )}
                     </div>
                     <div className="text-xs text-muted-foreground">{emp.role} · @{emp.username}</div>
@@ -564,7 +569,7 @@ export default function EmployeesPage() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => navigate(`/customers?assignedEmployeeId=${emp.id}`)}
-                        title="Active customers"
+                        title={t("employees.activeCustomers")}
                         className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900 transition-colors font-medium"
                       >
                         <Users className="h-3 w-3" />
@@ -572,7 +577,7 @@ export default function EmployeesPage() {
                       </button>
                       <button
                         onClick={() => navigate(`/tickets?employeeId=${emp.id}`)}
-                        title="Open tickets"
+                        title={t("employees.openTickets")}
                         className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900 transition-colors font-medium"
                       >
                         <Tag className="h-3 w-3" />
@@ -585,7 +590,7 @@ export default function EmployeesPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        title="Edit"
+                        title={t("common.edit")}
                         onClick={() => openEdit(emp)}
                       >
                         <Pencil className="h-4 w-4" />
@@ -594,7 +599,7 @@ export default function EmployeesPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          title="Deactivate"
+                          title={t("employees.deactivateBtn")}
                           onClick={() => setConfirmDeactivate(emp)}
                           className="text-destructive hover:text-destructive"
                         >
@@ -604,7 +609,7 @@ export default function EmployeesPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          title="Reactivate"
+                          title={language === "ar" ? "تنشيط" : "Reactivate"}
                           onClick={() => activateMutation.mutate(emp.id)}
                           className="text-emerald-600 hover:text-emerald-700"
                         >
@@ -614,7 +619,7 @@ export default function EmployeesPage() {
                     </div>
                   )}
                   {emp.id === currentEmployee.id && (
-                    <span className="text-xs text-muted-foreground px-2 py-1 rounded-full bg-muted">You</span>
+                    <span className="text-xs text-muted-foreground px-2 py-1 rounded-full bg-muted">{t("employees.you")}</span>
                   )}
                 </div>
               ))}
@@ -629,7 +634,7 @@ export default function EmployeesPage() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <ShieldAlert className="h-4 w-4 text-muted-foreground" />
-                Active Sessions
+                {t("employees.activeSessions")}
               </CardTitle>
               <Button
                 variant="ghost"
@@ -638,16 +643,16 @@ export default function EmployeesPage() {
                 disabled={sessionsLoading}
                 className="flex items-center gap-1.5 text-xs"
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${sessionsLoading ? "animate-spin" : ""}`} />
-                Refresh
+                <RefreshCw className={cn("h-3.5 w-3.5", sessionsLoading && "animate-spin")} />
+                {t("employees.refresh")}
               </Button>
             </div>
           </CardHeader>
           <CardContent className="p-0">
             {activeSessions === null || sessionsLoading ? (
-              <div className="text-center py-8 text-muted-foreground text-sm">Loading sessions…</div>
+              <div className="text-center py-8 text-muted-foreground text-sm">{t("employees.loadingSessions")}</div>
             ) : activeSessions.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm">No active sessions found.</div>
+              <div className="text-center py-8 text-muted-foreground text-sm">{t("employees.noActiveSessions")}</div>
             ) : (
               <div>
                 {activeSessions.map((session) => {
@@ -664,25 +669,25 @@ export default function EmployeesPage() {
                           {session.name}
                           {isCurrentSession && (
                             <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                              You
+                              {t("employees.you")}
                             </span>
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground">{session.role}</div>
                       </div>
-                      <div className="text-right text-xs text-muted-foreground flex-shrink-0 hidden sm:block">
-                        <div>Logged in {loginTime.toLocaleString()}</div>
-                        <div>Expires {expiresTime.toLocaleString()}</div>
+                      <div className="text-right rtl:text-left text-xs text-muted-foreground flex-shrink-0 hidden sm:block">
+                        <div>{t("employees.loggedIn")}: {loginTime.toLocaleString()}</div>
+                        <div>{t("employees.expires")}: {expiresTime.toLocaleString()}</div>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
-                        title="Force logout"
+                        title={t("employees.forceLogout")}
                         onClick={() => setConfirmRevoke(session)}
                         className="flex items-center gap-1.5 text-xs text-destructive hover:text-destructive flex-shrink-0"
                       >
                         <LogOut className="h-3.5 w-3.5" />
-                        Revoke
+                        {t("employees.revoke")}
                       </Button>
                     </div>
                   );
@@ -708,13 +713,15 @@ export default function EmployeesPage() {
       <Dialog open={!!confirmRevoke} onOpenChange={(o) => { if (!o) setConfirmRevoke(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Revoke Session</DialogTitle>
+            <DialogTitle>{t("employees.revokeTitle")}</DialogTitle>
             <DialogDescription>
-              This will immediately log out <strong>{confirmRevoke?.name}</strong>. They will need to sign in again.
+              {language === "ar" 
+                ? `سيؤدي هذا إلى تسجيل خروج الموظف ${confirmRevoke?.name} على الفور. سيتعين عليه تسجيل الدخول مجدداً.`
+                : `This will immediately log out ${confirmRevoke?.name}. They will need to sign in again.`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmRevoke(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setConfirmRevoke(null)}>{t("common.cancel")}</Button>
             <Button
               variant="destructive"
               disabled={revokeSessionMutation.isPending}
@@ -725,7 +732,7 @@ export default function EmployeesPage() {
                 }
               }}
             >
-              {revokeSessionMutation.isPending ? "Revoking…" : "Force Logout"}
+              {revokeSessionMutation.isPending ? t("employees.revoking") : t("employees.forceLogoutBtn")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -734,13 +741,15 @@ export default function EmployeesPage() {
       <Dialog open={!!confirmDeactivate} onOpenChange={(o) => { if (!o) setConfirmDeactivate(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Deactivate Employee</DialogTitle>
+            <DialogTitle>{t("employees.deactivateTitle")}</DialogTitle>
             <DialogDescription>
-              This will prevent <strong>{confirmDeactivate?.name}</strong> from logging in. You can reactivate them at any time.
+              {language === "ar"
+                ? `سيؤدي هذا الإجراء إلى منع الموظف ${confirmDeactivate?.name} من تسجيل الدخول للنظام. يمكنك إعادة تفعيله في أي وقت.`
+                : `This will prevent ${confirmDeactivate?.name} from logging in. You can reactivate them at any time.`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDeactivate(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setConfirmDeactivate(null)}>{t("common.cancel")}</Button>
             <Button
               variant="destructive"
               disabled={deactivateMutation.isPending}
@@ -751,7 +760,7 @@ export default function EmployeesPage() {
                 }
               }}
             >
-              {deactivateMutation.isPending ? "Deactivating..." : "Deactivate"}
+              {deactivateMutation.isPending ? t("employees.deactivating") : t("employees.deactivateBtn")}
             </Button>
           </DialogFooter>
         </DialogContent>

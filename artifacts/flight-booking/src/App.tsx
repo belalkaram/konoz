@@ -25,8 +25,9 @@ import EmployeesPage from "@/pages/employees";
 import CompaniesPage from "@/pages/companies";
 import HRManagement from "@/pages/hr";
 import Reports from "@/pages/reports";
+import SupervisorDashboard from "@/pages/supervisor-dashboard";
+import AccountingLayout from "@/pages/accounting/accounting-layout";
 import NotAuthorized from "@/pages/not-authorized";
-import WhatsappSettings from "@/pages/whatsapp-settings";
 import Chat from "@/pages/chat";
 import WhatsappControls from "@/pages/whatsapp-controls";
 
@@ -100,13 +101,14 @@ function Router() {
         <Route path="/tickets" component={Tickets} />
         <Route path="/reminders" component={Reminders} />
         <Route path="/reports" component={Reports} />
+        <Route path="/supervisor">{() => <SupervisorOrAdminRoute component={SupervisorDashboard} />}</Route>
         <Route path="/hr">{() => <HRRoute component={HRManagement} />}</Route>
         <Route path="/employees">{() => <SupervisorOrAdminRoute component={EmployeesPage} />}</Route>
         <Route path="/companies">{() => <AdminRoute component={CompaniesPage} />}</Route>
         <Route path="/orders" component={Orders} />
         <Route path="/orders/new" component={Checkout} />
         <Route path="/orders/:orderId" component={OrderDetail} />
-        <Route path="/settings/whatsapp" component={WhatsappSettings} />
+        <Route path="/accounting">{() => <SupervisorOrAdminRoute component={AccountingLayout} />}</Route>
         <Route path="/whatsapp-controls" component={WhatsappControls} />
         <Route path="/whatsapp-controls/:tab" component={WhatsappControls} />
         <Route path="/chat" component={Chat} />

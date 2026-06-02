@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { authFetch, BASE } from "@/lib/api";
 import { FlexibleDatePriceSlider } from "@/components/flexible-date-price-slider";
 import { FarePackageCards } from "@/components/fare-package-cards";
+import { useLanguage } from "@/contexts/language-context";
 
 type TripType = "one_way" | "round_trip";
 type StopsFilter = "all" | "nonstop" | "stops";
@@ -155,6 +156,7 @@ const addDays = (days: number) => {
 
 function BaggagePackages({ services, currency }: { services: BaggageService[]; currency: string }) {
   const [open, setOpen] = useState(false);
+  const { t, language } = useLanguage();
   if (services.length === 0) return null;
 
   const uniqueServices = useMemo(() => {
@@ -174,10 +176,10 @@ function BaggagePackages({ services, currency }: { services: BaggageService[]; c
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+        className="flex items-center gap-1 text-xs text-primary hover:underline font-medium text-start"
       >
         <Luggage className="h-3 w-3" />
-        {uniqueServices.length} baggage add-on{uniqueServices.length !== 1 ? "s" : ""} available
+        {t("search.baggageAddonsAvailable").replace("{count}", String(uniqueServices.length))}
         {open ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
       </button>
       {open && (
@@ -189,10 +191,10 @@ function BaggagePackages({ services, currency }: { services: BaggageService[]; c
             >
               <Luggage className="h-3 w-3 text-muted-foreground flex-shrink-0" />
               <span>
-                +1 {svc.type === "carry_on" ? "carry-on" : "checked"}
+                +1 {svc.type === "carry_on" ? t("search.carryOn") : t("search.checked")}
                 {svc.maximumWeightKg ? ` · ${svc.maximumWeightKg}kg` : ""}
               </span>
-              <span className="font-semibold text-primary ml-1">
+              <span className="font-semibold text-primary ml-1 rtl:ml-0 rtl:mr-1">
                 +{formatCurrency(svc.totalAmount, svc.totalCurrency)}
               </span>
             </div>
@@ -206,6 +208,7 @@ function BaggagePackages({ services, currency }: { services: BaggageService[]; c
 export default function Search() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { t, language, isRtl } = useLanguage();
 
   const [origin, setOrigin] = useState("CAI");
   const [destination, setDestination] = useState("KWI");
@@ -215,7 +218,7 @@ export default function Search() {
   const [cabinClass, setCabinClass] = useState<SearchOffersBodyCabinClass>("economy");
   const [adults, setAdults] = useState(1);
   const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>(
-    () => (localStorage.getItem("displayCurrency") as DisplayCurrency) || "USD"
+    () => (localStorage.getItem("displayCurrency") as DisplayCurrency) || "KWD"
   );
 
   const [stopsFilter, setStopsFilter] = useState<StopsFilter>("all");
@@ -379,10 +382,24 @@ export default function Search() {
     const depDate = first?.departureDateTime ? formatShortDate(first.departureDateTime) : "";
     const arrDate = last?.arrivalDateTime ? formatShortDate(last.arrivalDateTime) : "";
     const stops = segs.length - 1;
+
+    const formatStops = (stopsCount: number) => {
+      if (stopsCount === 0) return t("search.direct");
+      if (language === "ar") {
+        if (stopsCount === 1) return "توقف واحد";
+        if (stopsCount === 2) return "توقفان";
+        if (stopsCount <= 10) return `${stopsCount} توقفات`;
+        return `${stopsCount} توقف`;
+      }
+      return `${stopsCount} stop${stopsCount > 1 ? "s" : ""}`;
+    };
+
     return (
       <div className="flex flex-col gap-1">
         {label && (
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground text-start">
+            {label === "Outbound" ? t("search.outbound") : label === "Return" ? t("search.return") : label}
+          </div>
         )}
         <div className="grid grid-cols-3 gap-2 text-center items-center">
           <div>
@@ -394,11 +411,11 @@ export default function Search() {
             <div className="text-xs text-muted-foreground mb-1">{slice?.duration ? formatDuration(slice.duration) : ""}</div>
             <div className="w-full flex items-center">
               <div className="h-px bg-border flex-1" />
-              <Plane className="h-3 w-3 text-muted-foreground mx-1 flex-shrink-0" />
+              <Plane className={cn("h-3 w-3 text-muted-foreground mx-1 flex-shrink-0", isRtl && "scale-x-[-1]")} />
               <div className="h-px bg-border flex-1" />
             </div>
-            <div className={`text-xs mt-1 font-medium ${stops === 0 ? "text-green-600" : "text-amber-600"}`}>
-              {stops === 0 ? "Non-stop" : `${stops} stop${stops > 1 ? "s" : ""}`}
+            <div className={`text-xs mt-1 font-medium ${stops === 0 ? "text-green-600 animate-pulse" : "text-amber-600"}`}>
+              {formatStops(stops)}
             </div>
           </div>
           <div>
@@ -414,9 +431,9 @@ export default function Search() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Flight Search</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t("search.title")}</h1>
         <p className="text-muted-foreground mt-1 text-sm md:text-base">
-          Search live flight availability and pricing via Duffel.
+          {t("search.subtitle")}
         </p>
       </div>
 
@@ -429,7 +446,7 @@ export default function Search() {
                 onClick={() => setTripType("one_way")}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${tripType === "one_way" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-accent"}`}
               >
-                One Way
+                {t("search.oneWay")}
               </button>
               <button
                 type="button"
@@ -437,63 +454,65 @@ export default function Search() {
                 className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors flex items-center gap-1.5 ${tripType === "round_trip" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-accent"}`}
               >
                 <RotateCcw className="h-3.5 w-3.5" />
-                Round Trip
+                {t("search.roundTrip")}
               </button>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
               <div className="flex-1">
-                <AirportCombobox id="origin" label="From" value={origin} onChange={setOrigin} placeholder="City or IATA code" />
+                <AirportCombobox id="origin" label={t("search.from")} value={origin} onChange={setOrigin} placeholder={language === "ar" ? "ابحث باسم المدينة أو الرمز" : "City or IATA code"} />
               </div>
               <button
                 type="button"
                 onClick={swapAirports}
                 className="self-center sm:self-auto p-2 rounded-full border border-border hover:bg-accent text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
-                title="Swap airports"
+                title={t("search.swapAirports")}
               >
                 <ArrowLeftRight className="h-4 w-4" />
               </button>
               <div className="flex-1">
-                <AirportCombobox id="destination" label="To" value={destination} onChange={setDestination} placeholder="City or IATA code" />
+                <AirportCombobox id="destination" label={t("search.to")} value={destination} onChange={setDestination} placeholder={language === "ar" ? "ابحث باسم المدينة أو الرمز" : "City or IATA code"} />
               </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="date">Departure</Label>
+                <Label htmlFor="date">{language === "ar" ? "تاريخ المغادرة" : "Departure"}</Label>
                 <Input id="date" type="date" value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} />
               </div>
               {tripType === "round_trip" && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="return-date">Return</Label>
+                  <Label htmlFor="return-date">{language === "ar" ? "تاريخ العودة" : "Return"}</Label>
                   <Input id="return-date" type="date" value={returnDate} min={departureDate} onChange={(e) => setReturnDate(e.target.value)} />
                 </div>
               )}
               <div className="space-y-1.5">
-                <Label>Passengers</Label>
+                <Label>{t("search.passengers")}</Label>
                 <div className="flex items-center gap-1.5">
                   <button type="button" onClick={() => setAdults((a) => Math.max(1, a - 1))} className="w-9 h-9 rounded-full border border-border flex items-center justify-center hover:bg-accent transition-colors font-bold text-base flex-shrink-0">−</button>
                   <div className="flex-1 h-9 border border-input rounded-full flex items-center justify-center gap-1.5 text-sm font-medium bg-background px-3">
                     <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                    {adults} Adult{adults > 1 ? "s" : ""}
+                    {language === "ar"
+                      ? `${adults} ${adults === 1 ? "بالغ" : adults === 2 ? "بالغان" : adults <= 10 ? "بالغين" : "بالغ"}`
+                      : `${adults} Adult${adults > 1 ? "s" : ""}`}
                   </div>
                   <button type="button" onClick={() => setAdults((a) => Math.min(9, a + 1))} className="w-9 h-9 rounded-full border border-border flex items-center justify-center hover:bg-accent transition-colors font-bold text-base flex-shrink-0">+</button>
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="cabin">Class</Label>
+                <Label htmlFor="cabin">{t("search.cabinClass")}</Label>
                 <Select value={cabinClass} onValueChange={(v) => setCabinClass(v as SearchOffersBodyCabinClass)}>
                   <SelectTrigger id="cabin"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="economy">Economy</SelectItem>
-                    <SelectItem value="premium_economy">Prem. Economy</SelectItem>
-                    <SelectItem value="business">Business</SelectItem>
-                    <SelectItem value="first">First</SelectItem>
+                    <SelectItem value="economy">{t("search.economy")}</SelectItem>
+                    <SelectItem value="premium_economy">{t("search.premiumEconomy")}</SelectItem>
+                    <SelectItem value="business">{t("search.business")}</SelectItem>
+                    <SelectItem value="first">{t("search.first")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="currency">Currency</Label>
+                <Label htmlFor="currency">{t("search.currency")}</Label>
                 <Select value={displayCurrency} onValueChange={(v) => setDisplayCurrency(v as DisplayCurrency)}>
                   <SelectTrigger id="currency"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -508,9 +527,9 @@ export default function Search() {
             <div className="flex justify-end">
               <Button type="submit" disabled={isLoading} className="w-full sm:w-auto px-8">
                 {isLoading ? (
-                  <span className="flex items-center gap-2"><SearchIcon className="h-4 w-4 animate-spin" /> Searching...</span>
+                  <span className="flex items-center gap-2"><SearchIcon className="h-4 w-4 animate-spin" /> {t("search.searching")}</span>
                 ) : (
-                  <span className="flex items-center gap-2"><SearchIcon className="h-4 w-4" /> Search Flights</span>
+                  <span className="flex items-center gap-2"><SearchIcon className="h-4 w-4" /> {t("search.btnSearch")}</span>
                 )}
               </Button>
             </div>
@@ -577,7 +596,7 @@ export default function Search() {
       {searchError && !isLoading && (
         <Card className="border-destructive bg-destructive/10">
           <CardContent className="p-5 text-destructive flex items-start gap-3">
-            <span className="font-medium">Search failed:</span>
+            <span className="font-medium">{t("search.searchFailed")}:</span>
             <span>{searchError}</span>
           </CardContent>
         </Card>
@@ -586,8 +605,8 @@ export default function Search() {
       {!isLoading && !searchError && hasSearched && allOffers.length === 0 && (
         <div className="text-center py-16 border rounded-lg bg-card">
           <Plane className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-          <h3 className="text-lg font-medium">No flights found</h3>
-          <p className="text-muted-foreground text-sm mt-1">Try different dates or airports.</p>
+          <h3 className="text-lg font-medium">{language === "ar" ? "لم يتم العثور على رحلات" : "No flights found"}</h3>
+          <p className="text-muted-foreground text-sm mt-1">{language === "ar" ? "جرّب تغيير التواريخ أو المطارات المحددة." : "Try different dates or airports."}</p>
         </div>
       )}
 
@@ -618,7 +637,7 @@ export default function Search() {
                   onClick={() => setStopsFilter(f)}
                   className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${stopsFilter === f ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                 >
-                  {f === "all" ? "All flights" : f === "nonstop" ? "Non-stop" : "1+ Stops"}
+                  {f === "all" ? t("search.allFlights") : f === "nonstop" ? t("search.nonStop") : t("search.onePlusStops")}
                 </button>
               ))}
             </div>
@@ -647,7 +666,7 @@ export default function Search() {
                     onClick={() => setSelectedAirlines(new Set())}
                     className="text-xs text-muted-foreground hover:text-foreground underline"
                   >
-                    Clear
+                    {language === "ar" ? "مسح" : "Clear"}
                   </button>
                 )}
               </div>
@@ -655,18 +674,22 @@ export default function Search() {
           </div>
 
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-muted-foreground">
-              {filteredOffers.length} of {allOffers.length} flights shown
-              {nextAfter ? " — more available" : ""}
-              {currentSearchKey.current?.tripType === "round_trip" ? " · Round trip" : " · One way"}
+            <h2 className="text-sm font-semibold text-muted-foreground text-start">
+              {language === "ar"
+                ? `تم عرض ${filteredOffers.length} من أصل ${allOffers.length} رحلة`
+                : `${filteredOffers.length} of ${allOffers.length} flights shown`}
+              {nextAfter ? (language === "ar" ? " — يتوفر المزيد" : " — more available") : ""}
+              {currentSearchKey.current?.tripType === "round_trip"
+                ? (language === "ar" ? " · ذهاب وعودة" : " · Round trip")
+                : (language === "ar" ? " · ذهاب فقط" : " · One way")}
             </h2>
           </div>
 
           {filteredOffers.length === 0 ? (
             <div className="text-center py-16 border rounded-lg bg-card">
               <Plane className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-              <h3 className="text-lg font-medium">No flights match your filters</h3>
-              <p className="text-muted-foreground text-sm mt-1">Try removing some filters.</p>
+              <h3 className="text-lg font-medium">{t("search.noFlightsMatchFilters")}</h3>
+              <p className="text-muted-foreground text-sm mt-1">{t("search.tryRemovingFilters")}</p>
             </div>
           ) : (
             <div className="grid gap-3">
@@ -693,22 +716,28 @@ export default function Search() {
                     {checkedBag && checkedBag.quantity > 0 ? (
                       <Badge variant="secondary" className="text-xs gap-1 px-1.5 py-0.5">
                         <Luggage className="h-3 w-3" />
-                        {checkedBag.quantity}✕ checked{checkedBag.maximumWeightKg ? ` · ${checkedBag.maximumWeightKg}kg` : ""}
+                        {checkedBag.quantity}✕ {t("search.checked")}{checkedBag.maximumWeightKg ? ` · ${checkedBag.maximumWeightKg}kg` : ""}
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="text-xs gap-1 px-1.5 py-0.5 text-muted-foreground">
                         <Luggage className="h-3 w-3" />
-                        No bag
+                        {t("search.noBag")}
                       </Badge>
                     )}
                     {carryOn && carryOn.quantity > 0 && (
                       <Badge variant="secondary" className="text-xs gap-1 px-1.5 py-0.5">
                         <ShoppingBag className="h-3 w-3" />
-                        {carryOn.quantity}✕ carry-on
+                        {carryOn.quantity}✕ {t("search.carryOn")}
                       </Badge>
                     )}
                   </div>
                 );
+
+                const getCabinClassLabel = (cc: string | null | undefined) => {
+                  if (!cc) return "";
+                  const key = cc === "premium_economy" ? "premiumEconomy" : cc;
+                  return t("search." + key);
+                };
 
                 return (
                   <Card key={offer.id} className="hover:border-primary/50 transition-colors">
@@ -726,9 +755,9 @@ export default function Search() {
                                 {airlineCode || "??"}
                               </div>
                             )}
-                            <div className="min-w-0">
+                            <div className="min-w-0 text-start">
                               <div className="text-xs font-semibold truncate">{offer.owner?.name}</div>
-                              <div className="text-[10px] text-muted-foreground uppercase">{offer.cabinClass?.replace("_", " ")}</div>
+                              <div className="text-[10px] text-muted-foreground uppercase">{getCabinClassLabel(offer.cabinClass)}</div>
                             </div>
                           </div>
                           <div className="text-right flex-shrink-0">
@@ -752,15 +781,16 @@ export default function Search() {
                         {/* Bottom row: baggage + select */}
                         <div className="flex items-center justify-between gap-2">
                           {baggageBadges}
-                          <Button size="sm" className="flex-shrink-0 h-8 px-4 text-xs" onClick={selectOffer}>
-                            Select <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                          <Button size="sm" className="flex-shrink-0 h-8 px-4 text-xs gap-1.5" onClick={selectOffer}>
+                            {t("search.select")}
+                            <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
                           </Button>
                         </div>
 
                         {airlineWebsite && (
                           <a href={airlineWebsite} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
                             className="flex items-center gap-0.5 text-[10px] text-primary hover:underline">
-                            <ExternalLink className="h-2.5 w-2.5" /> Website
+                            <ExternalLink className="h-2.5 w-2.5" /> {t("search.website")}
                           </a>
                         )}
                       </div>
@@ -780,7 +810,7 @@ export default function Search() {
                           {airlineWebsite && (
                             <a href={airlineWebsite} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
                               className="flex items-center gap-0.5 text-[10px] text-primary hover:underline">
-                              <ExternalLink className="h-2.5 w-2.5" /> Website
+                              <ExternalLink className="h-2.5 w-2.5" /> {t("search.website")}
                             </a>
                           )}
                         </div>
@@ -797,18 +827,19 @@ export default function Search() {
                         </div>
 
                         {/* Price + CTA */}
-                        <div className="flex flex-col items-end justify-center gap-2 border-l border-border pl-5 flex-shrink-0">
-                          <div className="text-right">
+                        <div className="flex flex-col items-end justify-center gap-2 border-l rtl:border-l-0 rtl:border-r border-border pl-5 rtl:pl-0 rtl:pr-5 flex-shrink-0 min-w-32">
+                          <div className="text-right rtl:text-left">
                             <div className="text-2xl font-bold text-primary">
                               {formatCurrency(offer.totalAmount, offer.totalCurrency, displayCurrency)}
                             </div>
                             <div className="text-xs text-muted-foreground uppercase tracking-wide">
-                              {offer.cabinClass?.replace("_", " ")}
+                              {getCabinClassLabel(offer.cabinClass)}
                             </div>
                             <div className="mt-1">{baggageBadges}</div>
                           </div>
-                          <Button size="sm" className="w-full" onClick={selectOffer}>
-                            Select <ArrowRight className="h-4 w-4 ml-1" />
+                          <Button size="sm" className="w-full gap-1.5" onClick={selectOffer}>
+                            {t("search.select")}
+                            <ArrowRight className="h-4 w-4 rtl:rotate-180" />
                           </Button>
                         </div>
                       </div>
@@ -839,7 +870,9 @@ export default function Search() {
           {nextAfter && (
             <div className="flex flex-col items-center gap-2 pt-2">
               <p className="text-sm text-muted-foreground">
-                Showing {allOffers.length} flights — more results available
+                {language === "ar"
+                  ? `تم عرض ${allOffers.length} رحلة — تتوفر نتائج أكثر`
+                  : `Showing ${allOffers.length} flights — more results available`}
               </p>
               <Button
                 variant="outline"
@@ -849,10 +882,10 @@ export default function Search() {
               >
                 {isLoadingMore ? (
                   <span className="flex items-center gap-2">
-                    <SearchIcon className="h-4 w-4 animate-spin" /> Loading...
+                    <SearchIcon className="h-4 w-4 animate-spin" /> {t("common.loading")}
                   </span>
                 ) : (
-                  "Load more flights"
+                  t("search.loadMoreFlights")
                 )}
               </Button>
             </div>
@@ -860,7 +893,7 @@ export default function Search() {
 
           {!nextAfter && allOffers.length > 0 && (
             <p className="text-center text-xs text-muted-foreground pt-2">
-              All {allOffers.length} available flights shown
+              {t("search.allFlightsShown").replace("{count}", String(allOffers.length))}
             </p>
           )}
         </div>

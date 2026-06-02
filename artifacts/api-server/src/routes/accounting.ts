@@ -52,7 +52,8 @@ router.post("/accounting/expense-categories", requireSupervisorOrAdmin, async (r
   try {
     const parsed = CreateExpenseCategorySchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "validation_error", message: parsed.error.errors[0]?.message });
+      res.status(400).json({ error: "validation_error", message: parsed.error.errors[0]?.message });
+      return;
     }
     const session = req.employee!;
     const [category] = await db
@@ -109,7 +110,8 @@ router.post("/accounting/expenses", requireSupervisorOrAdmin, async (req, res) =
   try {
     const parsed = CreateExpenseSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "validation_error", message: parsed.error.errors[0]?.message });
+      res.status(400).json({ error: "validation_error", message: parsed.error.errors[0]?.message });
+      return;
     }
     const session = req.employee!;
     const [expense] = await db
@@ -194,7 +196,8 @@ router.post("/accounting/payrolls", requireSupervisorOrAdmin, async (req, res) =
   try {
     const parsed = CreatePayrollSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "validation_error", message: parsed.error.errors[0]?.message });
+      res.status(400).json({ error: "validation_error", message: parsed.error.errors[0]?.message });
+      return;
     }
     const session = req.employee!;
     
@@ -224,7 +227,8 @@ router.post("/accounting/payrolls", requireSupervisorOrAdmin, async (req, res) =
         })
         .where(eq(payrollsTable.id, existing.id))
         .returning();
-      return res.json({ payroll: updated });
+      res.json({ payroll: updated });
+      return;
     }
 
     const [payroll] = await db

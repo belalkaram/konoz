@@ -37,7 +37,7 @@ export async function sendEmail({ to, subject, html }: { to: string; subject: st
 
   const pass = settings.smtp_pass || process.env.SMTP_PASS;
   const user = settings.smtp_user || process.env.SMTP_USER;
-  const fromName = settings.smtp_from_name || process.env.SMTP_FROM_NAME || "AeroOps";
+  const fromName = settings.smtp_from_name || process.env.SMTP_FROM_NAME || "Konoz System";
 
   if (!pass || pass === "your_gmail_app_password_here") {
     logger.warn("Email not sent: SMTP_PASS is not configured.");
@@ -113,7 +113,7 @@ export async function sendNewTravelerNotification(employeeEmail: string, travele
 
       <div style="background-color: #f1f5f9; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
         <p style="margin: 0; color: #94a3b8; font-size: 12px;">
-          This is an automated notification from <strong>AeroOps Premium</strong>.<br>
+          This is an automated notification from <strong>Konoz System</strong>.<br>
           Please do not reply to this email.
         </p>
       </div>
@@ -169,7 +169,7 @@ export async function sendTripReminderNotification(employeeEmail: string, travel
 
       <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #f1f5f9;">
         <p style="margin: 0; color: #94a3b8; font-size: 12px;">
-          Sent with care by <strong>AeroOps Premium</strong>.
+          Sent with care by <strong>Konoz System</strong>.
         </p>
       </div>
     </div>

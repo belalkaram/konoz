@@ -175,7 +175,7 @@ export function SystemSettingsDialog() {
                   {isRtl ? "اسم المرسل" : "Sender Name"}
                 </Label>
                 <Input
-                  placeholder="AeroOps System"
+                  placeholder="Konoz System"
                   value={form.fromName}
                   onChange={(e) => setForm({ ...form, fromName: e.target.value })}
                   className={isRtl ? "text-right" : "text-left"}

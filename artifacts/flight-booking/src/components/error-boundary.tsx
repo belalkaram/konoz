@@ -93,7 +93,7 @@ export class ErrorBoundary extends Component<Props, State> {
           </div>
           
           <div className="mt-8 pt-6 border-t border-gray-50 dark:border-border text-[10px] text-gray-400 uppercase tracking-widest font-bold">
-            AeroOps Premium Reliability System
+            Konoz System Reliability System
           </div>
         </div>
       </div>

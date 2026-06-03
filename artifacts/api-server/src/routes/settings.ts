@@ -28,7 +28,7 @@ router.get("/settings/email", requireAdmin, async (req, res) => {
       host: settings.smtp_host || process.env.SMTP_HOST || "smtp.gmail.com",
       port: parseInt(settings.smtp_port || process.env.SMTP_PORT || "587"),
       user: settings.smtp_user || process.env.SMTP_USER || "",
-      fromName: settings.smtp_from_name || process.env.SMTP_FROM_NAME || "AeroOps",
+      fromName: settings.smtp_from_name || process.env.SMTP_FROM_NAME || "Konoz System",
       hasPass: !!(process.env.SMTP_PASS || (await db.select().from(systemSettingsTable).where(eq(systemSettingsTable.key, "smtp_pass")))[0]),
     });
   } catch (err) {

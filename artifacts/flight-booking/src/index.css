@@ -53,47 +53,48 @@
 }
 
 :root {
-  /* ── Emerald Luxury Palette ── */
-  --background: 150 30% 97%;
-  --foreground: 161 40% 8%;
+  /* ── Dark Blue & Green Palette ── */
+  --background: 210 40% 98%;
+  --foreground: 222 47% 11%;
 
-  --border: 150 25% 87%;
-  --input: 150 25% 87%;
-  --ring: 161 88% 17%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 222 47% 20%;
 
   --card: 0 0% 100%;
-  --card-foreground: 161 40% 8%;
-  --card-border: 150 25% 90%;
+  --card-foreground: 222 47% 11%;
+  --card-border: 214 32% 91%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 161 40% 8%;
-  --popover-border: 150 25% 88%;
+  --popover-foreground: 222 47% 11%;
+  --popover-border: 214 32% 91%;
 
-  /* Deep emerald as the primary action colour */
-  --primary: 161 88% 17%;
-  --primary-foreground: 0 0% 100%;
+  /* Deep Blue as the primary action colour */
+  --primary: 222 47% 20%;
+  --primary-foreground: 210 40% 98%;
 
-  --secondary: 150 40% 93%;
-  --secondary-foreground: 161 88% 17%;
+  /* Green as secondary */
+  --secondary: 161 70% 40%;
+  --secondary-foreground: 0 0% 100%;
 
-  --muted: 150 20% 94%;
-  --muted-foreground: 150 10% 42%;
+  --muted: 214 32% 91%;
+  --muted-foreground: 215 16% 47%;
 
-  --accent: 150 35% 91%;
-  --accent-foreground: 161 88% 17%;
+  --accent: 214 32% 91%;
+  --accent-foreground: 222 47% 20%;
 
   --destructive: 0 84% 58%;
   --destructive-foreground: 0 0% 100%;
 
-  /* ── Deep emerald sidebar ── */
-  --sidebar: 161 88% 7%;
-  --sidebar-foreground: 0 0% 100%;
-  --sidebar-border: 161 50% 12%;
-  --sidebar-primary: 43 64% 52%;
-  --sidebar-primary-foreground: 161 88% 7%;
-  --sidebar-accent: 161 60% 12%;
-  --sidebar-accent-foreground: 151 80% 75%;
-  --sidebar-ring: 43 64% 52%;
+  /* ── Dark Blue Sidebar ── */
+  --sidebar: 222 47% 11%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-border: 222 47% 15%;
+  --sidebar-primary: 161 70% 40%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 222 47% 18%;
+  --sidebar-accent-foreground: 161 70% 40%;
+  --sidebar-ring: 161 70% 40%;
 
   --app-font-sans: 'Inter', sans-serif;
   --app-font-mono: 'Space Mono', monospace;
@@ -103,45 +104,45 @@
 }
 
 .dark {
-  --background: 160 20% 6%;
-  --foreground: 150 20% 96%;
+  --background: 222 47% 6%;
+  --foreground: 210 40% 98%;
 
-  --border: 160 12% 18%;
-  --input: 160 12% 18%;
-  --ring: 161 80% 35%;
+  --border: 222 47% 15%;
+  --input: 222 47% 15%;
+  --ring: 222 47% 30%;
 
-  --card: 160 18% 10%;
-  --card-foreground: 150 20% 96%;
-  --card-border: 160 12% 14%;
+  --card: 222 47% 8%;
+  --card-foreground: 210 40% 98%;
+  --card-border: 222 47% 15%;
 
-  --popover: 160 18% 9%;
-  --popover-foreground: 150 20% 96%;
-  --popover-border: 160 12% 14%;
+  --popover: 222 47% 8%;
+  --popover-foreground: 210 40% 98%;
+  --popover-border: 222 47% 15%;
 
-  --primary: 161 80% 35%;
+  --primary: 222 47% 30%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 160 12% 14%;
-  --secondary-foreground: 150 20% 96%;
+  --secondary: 161 70% 30%;
+  --secondary-foreground: 210 40% 98%;
 
-  --muted: 160 10% 14%;
-  --muted-foreground: 150 8% 65%;
+  --muted: 222 47% 15%;
+  --muted-foreground: 215 16% 65%;
 
-  --accent: 160 12% 14%;
-  --accent-foreground: 151 80% 85%;
+  --accent: 222 47% 15%;
+  --accent-foreground: 161 70% 40%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
   /* Dark theme sidebar options */
-  --sidebar: 160 22% 5%;
-  --sidebar-foreground: 150 20% 96%;
-  --sidebar-border: 160 15% 10%;
-  --sidebar-primary: 161 80% 35%;
+  --sidebar: 222 47% 6%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-border: 222 47% 12%;
+  --sidebar-primary: 161 70% 40%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 160 15% 11%;
-  --sidebar-accent-foreground: 151 80% 85%;
-  --sidebar-ring: 161 80% 35%;
+  --sidebar-accent: 222 47% 15%;
+  --sidebar-accent-foreground: 161 70% 40%;
+  --sidebar-ring: 161 70% 40%;
 }
 
 

@@ -80,12 +80,12 @@ export const translations: Record<string, Record<string, any>> = {
       failedToLoad: "Failed to load data. Please try again.",
       konoozLive: "Konooz Live System",
       premium: "Premium",
-      aeroOps: "AeroOps",
+      aeroOps: "Konoz System",
       expandSidebar: "Expand Sidebar",
       collapseSidebar: "Collapse Sidebar"
     },
     login: {
-      title: "Sign in to AeroOps",
+      title: "Sign in to Konoz System",
       subtitle: "Enter your username and PIN to access your account",
       username: "Username",
       pin: "PIN (4-digits)",
@@ -736,12 +736,12 @@ export const translations: Record<string, Record<string, any>> = {
       failedToLoad: "فشل في تحميل البيانات. يرجى المحاولة مرة أخرى.",
       konoozLive: "نظام كنوز المباشر",
       premium: "مميز",
-      aeroOps: "أيرو أوبس",
+      aeroOps: "نظام كنوز",
       expandSidebar: "توسيع القائمة الجانبية",
       collapseSidebar: "طي القائمة الجانبية"
     },
     login: {
-      title: "تسجيل الدخول إلى AeroOps",
+      title: "تسجيل الدخول إلى نظام كنوز",
       subtitle: "أدخل اسم المستخدم والرقم السري المكون من 4 أرقام للوصول إلى حسابك",
       username: "اسم المستخدم",
       pin: "الرمز السري (PIN)",

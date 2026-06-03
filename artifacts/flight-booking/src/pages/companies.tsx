@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/language-context";
 import { authFetch } from "@/lib/api";
+import { PageHeader } from "@/components/page-header";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -98,15 +99,16 @@ export default function CompaniesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="text-start">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t("common.companies")}</h1>
-          <p className="text-muted-foreground mt-1 text-sm">{language === "ar" ? "إدارة فروع وشركات الوكالة المتعاقدة بالنظام." : "Manage organizational structure and office locations."}</p>
-        </div>
-        <Button onClick={() => { setEditingCompany(null); setShowCompanySheet(true); }} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" /> {language === "ar" ? "إضافة شركة" : "Add Company"}
-        </Button>
-      </div>
+      <PageHeader
+        title={t("common.companies")}
+        description={language === "ar" ? "إدارة فروع وشركات الوكالة المتعاقدة بالنظام." : "Manage organizational structure and office locations."}
+        icon={Building2}
+        actions={
+          <Button onClick={() => { setEditingCompany(null); setShowCompanySheet(true); }} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" /> {language === "ar" ? "إضافة شركة" : "Add Company"}
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-start">
         <Card>

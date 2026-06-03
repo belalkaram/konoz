@@ -2,8 +2,8 @@ import { ShieldOff } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
-const GOLD_GRADIENT = "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)";
-const SIDEBAR_GRADIENT = "linear-gradient(180deg, #011a13 0%, #022c22 40%, #064e3b 100%)";
+const BRAND_GRADIENT = "linear-gradient(135deg, #1e40af 0%, #3b82f6 75%, #10b981 100%)";
+const SIDEBAR_GRADIENT = "linear-gradient(180deg, #070f2e 0%, #0f172a 50%, #1e293b 100%)";
 
 export default function NotAuthorized() {
   return (
@@ -20,7 +20,7 @@ export default function NotAuthorized() {
           <Link to="/">
             <Button
               className="mt-6 w-full font-semibold h-11 border-0 hover:opacity-90"
-              style={{ background: GOLD_GRADIENT, color: "#022c22" }}
+              style={{ background: BRAND_GRADIENT, color: "#ffffff" }}
             >
               Go to Dashboard
             </Button>

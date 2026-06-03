@@ -500,7 +500,7 @@ export default function CustomerProfile() {
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="flex items-center gap-4 text-start">
           <div className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0 text-xl font-bold"
-            style={{ background: "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)", color: "#022c22" }}>
+            style={{ background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 75%, #10b981 100%)", color: "#ffffff" }}>
             {c.fullName.charAt(0).toUpperCase()}
           </div>
           <div>

@@ -15,6 +15,7 @@ import { useLanguage } from "@/contexts/language-context";
 import { authFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { SystemSettingsDialog } from "@/components/system-settings-dialog";
+import { PageHeader } from "@/components/page-header";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -506,13 +507,12 @@ export default function EmployeesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t("employees.title")}</h1>
-          <p className="text-muted-foreground mt-1 text-sm">{t("employees.subtitle")}</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {isAdmin && (
+      <PageHeader
+        title={t("employees.title")}
+        description={t("employees.subtitle")}
+        icon={Users}
+        actions={
+          isAdmin && (
             <>
               <Button
                 variant={showInactive ? "default" : "outline"}
@@ -526,9 +526,9 @@ export default function EmployeesPage() {
                 <Plus className="h-4 w-4" /> {t("employees.addBtn")}
               </Button>
             </>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
 
       <Card>
         <CardHeader className="pb-2">
@@ -552,8 +552,8 @@ export default function EmployeesPage() {
                     !emp.isActive && "opacity-50"
                   )}
                 >
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-                    style={{ background: "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)", color: "#022c22" }}>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 text-white"
+                    style={{ background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 75%, #10b981 100%)" }}>
                     {emp.initials}
                   </div>
                   <div className="flex-1 min-w-0">

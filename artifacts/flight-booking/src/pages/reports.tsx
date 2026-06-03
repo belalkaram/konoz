@@ -9,6 +9,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { useCurrentEmployee } from "@/contexts/employee-context";
 import { useLanguage } from "@/contexts/language-context";
 import { authFetch, BASE } from "@/lib/api";
+import { PageHeader } from "@/components/page-header";
 import {
   BarChart3, TrendingUp, Users, Tag, DollarSign, Target,
   CheckCircle2, XCircle, Download, Calendar, ChevronRight, Award,
@@ -42,9 +43,9 @@ interface ReportsData {
 
 /* ─── Constants ─── */
 const CHART_COLORS = [
-  "#059669", "#0ea5e9", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6",
+  "#2563eb", "#10b981", "#0ea5e9", "#6366f1", "#8b5cf6", "#ec4899", "#14b8a6",
 ];
-const PIE_COLORS = ["#059669", "#0ea5e9", "#f59e0b", "#ef4444", "#8b5cf6", "#64748b", "#ec4899"];
+const PIE_COLORS = ["#2563eb", "#10b981", "#0ea5e9", "#6366f1", "#8b5cf6", "#64748b", "#ec4899"];
 
 /* ─── Helpers ─── */
 function getDateRange(period: string) {
@@ -164,61 +165,56 @@ export default function Reports() {
   return (
     <div className="space-y-8">
       {/* ─── Header ─── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3 text-start">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #059669 0%, #0ea5e9 100%)" }}>
-            <BarChart3 className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t("reports.title")}</h1>
-            <p className="text-muted-foreground mt-1 text-sm">{t("reports.subtitle")}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Date Range */}
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-[140px] h-9 text-sm" id="reports-date-range">
-              <Calendar className="h-3.5 w-3.5 mr-1.5 rtl:mr-0 rtl:ml-1.5 text-muted-foreground" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">{t("supervisor.last7Days")}</SelectItem>
-              <SelectItem value="30d">{t("supervisor.last30Days")}</SelectItem>
-              <SelectItem value="90d">{t("supervisor.last90Days")}</SelectItem>
-              <SelectItem value="6m">{t("supervisor.last6Months")}</SelectItem>
-              <SelectItem value="1y">{t("supervisor.last12Months")}</SelectItem>
-              <SelectItem value="ytd">{t("supervisor.yearToDate")}</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Employee filter (supervisor/admin only) */}
-          {isSupervisorOrAdmin && data?.filterableEmployees && data.filterableEmployees.length > 0 && (
-            <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
-              <SelectTrigger className="w-[180px] h-9 text-sm" id="reports-employee-filter">
-                <Users className="h-3.5 w-3.5 mr-1.5 rtl:mr-0 rtl:ml-1.5 text-muted-foreground" />
-                <SelectValue placeholder={t("supervisor.allEmployees")} />
+      <PageHeader
+        title={t("reports.title")}
+        description={t("reports.subtitle")}
+        icon={BarChart3}
+        actions={
+          <>
+            {/* Date Range */}
+            <Select value={period} onValueChange={setPeriod}>
+              <SelectTrigger className="w-[140px] h-9 text-sm" id="reports-date-range">
+                <Calendar className="h-3.5 w-3.5 mr-1.5 rtl:mr-0 rtl:ml-1.5 text-muted-foreground" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t("supervisor.allEmployees")}</SelectItem>
-                {data.filterableEmployees.map(e => (
-                  <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>
-                ))}
+                <SelectItem value="7d">{t("supervisor.last7Days")}</SelectItem>
+                <SelectItem value="30d">{t("supervisor.last30Days")}</SelectItem>
+                <SelectItem value="90d">{t("supervisor.last90Days")}</SelectItem>
+                <SelectItem value="6m">{t("supervisor.last6Months")}</SelectItem>
+                <SelectItem value="1y">{t("supervisor.last12Months")}</SelectItem>
+                <SelectItem value="ytd">{t("supervisor.yearToDate")}</SelectItem>
               </SelectContent>
             </Select>
-          )}
 
-          {data && (
-            <button
-              onClick={() => exportCSV(data, language)}
-              className="h-9 px-3 rounded-lg border text-sm font-medium flex items-center gap-1.5 hover:bg-muted transition-colors"
-              id="reports-export-csv"
-            >
-              <Download className="h-3.5 w-3.5" /> {t("reports.exportCsv")}
-            </button>
-          )}
-        </div>
-      </div>
+            {/* Employee filter (supervisor/admin only) */}
+            {isSupervisorOrAdmin && data?.filterableEmployees && data.filterableEmployees.length > 0 && (
+              <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+                <SelectTrigger className="w-[180px] h-9 text-sm" id="reports-employee-filter">
+                  <Users className="h-3.5 w-3.5 mr-1.5 rtl:mr-0 rtl:ml-1.5 text-muted-foreground" />
+                  <SelectValue placeholder={t("supervisor.allEmployees")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("supervisor.allEmployees")}</SelectItem>
+                  {data.filterableEmployees.map(e => (
+                    <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {data && (
+              <button
+                onClick={() => exportCSV(data, language)}
+                className="h-9 px-3 rounded-lg border text-sm font-medium flex items-center gap-1.5 hover:bg-muted transition-colors"
+                id="reports-export-csv"
+              >
+                <Download className="h-3.5 w-3.5" /> {t("reports.exportCsv")}
+              </button>
+            )}
+          </>
+        }
+      />
 
       {isLoading && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -234,16 +230,16 @@ export default function Reports() {
         <>
           {/* ─── KPI Cards ─── */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KPICard title={t("reports.kpis.totalRevenue")} value={formatCurrency(data.kpis.totalRevenue, "KWD")} icon={<DollarSign className="h-4 w-4" />} color="#059669" />
+            <KPICard title={t("reports.kpis.totalRevenue")} value={formatCurrency(data.kpis.totalRevenue, "KWD")} icon={<DollarSign className="h-4 w-4" />} color="#2563eb" />
             <KPICard title={t("reports.kpis.totalTickets")} value={data.kpis.totalTickets} icon={<Tag className="h-4 w-4" />} color="#0ea5e9" sub={language === "ar" ? `${data.kpis.issuedTickets} مصدرة` : `${data.kpis.issuedTickets} issued`} />
             <KPICard title={t("reports.kpis.customers")} value={data.kpis.totalCustomers} icon={<Users className="h-4 w-4" />} color="#8b5cf6" />
-            <KPICard title={t("reports.kpis.conversionRate")} value={`${data.kpis.conversionRate}%`} icon={<Target className="h-4 w-4" />} color="#f59e0b" />
+            <KPICard title={t("reports.kpis.conversionRate")} value={`${data.kpis.conversionRate}%`} icon={<Target className="h-4 w-4" />} color="#10b981" />
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KPICard title={t("reports.kpis.avgTicketValue")} value={formatCurrency(data.kpis.avgTicketValue, "KWD")} icon={<TrendingUp className="h-4 w-4" />} color="#14b8a6" />
-            <KPICard title={t("reports.kpis.issuedTickets")} value={data.kpis.issuedTickets} icon={<CheckCircle2 className="h-4 w-4" />} color="#059669" />
+            <KPICard title={t("reports.kpis.issuedTickets")} value={data.kpis.issuedTickets} icon={<CheckCircle2 className="h-4 w-4" />} color="#2563eb" />
             <KPICard title={t("reports.kpis.cancelledTickets")} value={data.kpis.cancelledTickets} icon={<XCircle className="h-4 w-4" />} color="#ef4444" />
-            <KPICard title={t("reports.kpis.totalProfit")} value={formatCurrency(data.kpis.totalProfit, "KWD")} icon={<Award className="h-4 w-4" />} color="#d4af37" />
+            <KPICard title={t("reports.kpis.totalProfit")} value={formatCurrency(data.kpis.totalProfit, "KWD")} icon={<Award className="h-4 w-4" />} color="#10b981" />
           </div>
 
           {/* ─── Revenue Trend ─── */}
@@ -422,7 +418,7 @@ export default function Reports() {
             <Card className="text-start">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Award className="h-4 w-4 text-amber-500" /> {t("reports.employeePerformance")}
+                  <Award className="h-4 w-4 text-primary" /> {t("reports.employeePerformance")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
@@ -443,14 +439,14 @@ export default function Reports() {
                             <div
                               className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
                               style={{
-                                background: i === 0 ? "linear-gradient(135deg, #d4af37 0%, #f5d76e 100%)" : "#f1f5f9",
-                                color: i === 0 ? "#022c22" : "#475569",
+                                background: i === 0 ? "linear-gradient(135deg, #1e40af 0%, #3b82f6 75%, #10b981 100%)" : "#f1f5f9",
+                                color: i === 0 ? "#ffffff" : "#475569",
                               }}
                             >
                               {e.initials}
                             </div>
                             <span className="text-sm font-medium">{e.name}</span>
-                            {i === 0 && <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium">{language === "ar" ? "الأفضل" : "Top"}</span>}
+                            {i === 0 && <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 font-medium">{language === "ar" ? "الأفضل" : "Top"}</span>}
                           </div>
                         </TableCell>
                         <TableCell className="text-end text-sm font-medium">{e.tickets}</TableCell>

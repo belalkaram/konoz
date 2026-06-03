@@ -10,8 +10,8 @@ import { EmployeeSettingsDialog } from "./employee-settings-dialog";
 import { ConnectivityBanner } from "./connectivity-banner";
 import { useLanguage } from "@/contexts/language-context";
 
-const SIDEBAR_GRADIENT = "linear-gradient(180deg, #011a13 0%, #022c22 40%, #064e3b 100%)";
-const GOLD_GRADIENT = "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)";
+const SIDEBAR_GRADIENT = "linear-gradient(180deg, #070f2e 0%, #0f172a 50%, #1e293b 100%)";
+const BRAND_GRADIENT = "linear-gradient(135deg, #1e40af 0%, #3b82f6 75%, #10b981 100%)";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -39,8 +39,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }, []);
 
   const sidebarBackground = mounted && theme === "dark"
-    ? "linear-gradient(180deg, #070f0d 0%, #0a1411 50%, #0d1a16 100%)"
-    : "linear-gradient(180deg, #011a13 0%, #022c22 40%, #064e3b 100%)";
+    ? "linear-gradient(180deg, #020617 0%, #090d16 50%, #0f172a 100%)"
+    : "linear-gradient(180deg, #070f2e 0%, #0f172a 50%, #1e293b 100%)";
 
   const isSupervisorOrAdmin = role === "Administrator" || role === "Supervisor";
   const isAdmin = role === "Administrator";
@@ -75,8 +75,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className={cn("flex h-20 items-center border-b transition-all duration-300", isCollapsed ? "justify-center px-0" : "px-6")} style={{ borderColor: "rgba(255,255,255,0.08)" }}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{ background: GOLD_GRADIENT }}>
-              <Plane className={cn("h-4 w-4", isRtl ? "-rotate-45" : "rotate-45")} style={{ color: "#022c22" }} />
+              style={{ background: BRAND_GRADIENT }}>
+              <Plane className={cn("h-4 w-4", isRtl ? "-rotate-45" : "rotate-45")} style={{ color: "#ffffff" }} />
             </div>
             {!isCollapsed && (
               <div className="animate-in fade-in duration-300">
@@ -104,11 +104,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   "flex items-center transition-all text-sm font-semibold",
                   isCollapsed ? "justify-center h-12 w-12 mx-auto rounded-full" : "px-4 py-3 rounded-full",
                   active
-                    ? "shadow-sm shadow-amber-500/10"
+                    ? "shadow-sm shadow-blue-500/10"
                     : "text-white/60 hover:text-white hover:bg-white/5"
                 )}
                 style={active
-                  ? { background: GOLD_GRADIENT, color: "#022c22" }
+                  ? { background: BRAND_GRADIENT, color: "#ffffff" }
                   : undefined
                 }
                 title={isCollapsed ? item.label : undefined}
@@ -124,7 +124,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="p-4 border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
           <div className={cn("flex items-center transition-all duration-300", isCollapsed ? "flex-col justify-center gap-2" : "gap-3 px-2")}>
             <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-              style={{ background: GOLD_GRADIENT, color: "#022c22" }}>
+              style={{ background: BRAND_GRADIENT, color: "#ffffff" }}>
               {currentEmployee?.initials ?? "?"}
             </div>
             {!isCollapsed && (
@@ -150,10 +150,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f0fdf4] dark:bg-background">
+    <div className="flex h-screen overflow-hidden bg-[#f8fafc] dark:bg-background">
       {/* Desktop Sidebar */}
       <aside className={cn(
-        "hidden md:flex flex-col flex-shrink-0 transition-all duration-300 border-r rtl:border-r-0 rtl:border-l border-[#d1fae5]/10 dark:border-border/30",
+        "hidden md:flex flex-col flex-shrink-0 transition-all duration-300 border-r rtl:border-r-0 rtl:border-l border-slate-700/10 dark:border-border/30",
         collapsed ? "w-20" : "w-64"
       )}
         style={{ background: sidebarBackground }}>
@@ -172,7 +172,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile Drawer */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 rtl:left-auto rtl:right-0 z-50 w-64 flex flex-col transform transition-transform duration-300 md:hidden border-r rtl:border-r-0 rtl:border-l border-[#d1fae5]/10 dark:border-border/30",
+          "fixed inset-y-0 left-0 rtl:left-auto rtl:right-0 z-50 w-64 flex flex-col transform transition-transform duration-300 md:hidden border-r rtl:border-r-0 rtl:border-l border-slate-700/10 dark:border-border/30",
           mobileOpen 
             ? "translate-x-0" 
             : (isRtl ? "translate-x-full" : "-translate-x-full")
@@ -193,11 +193,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <ConnectivityBanner />
         {/* Topbar */}
-        <header className="h-16 flex items-center justify-between px-4 md:px-8 flex-shrink-0 bg-white dark:bg-card border-b border-[#d1fae5] dark:border-border">
+        <header className="h-16 flex items-center justify-between px-4 md:px-8 flex-shrink-0 bg-white dark:bg-card border-b border-slate-100 dark:border-border">
           <div className="flex items-center gap-3">
             {/* Hamburger */}
             <button
-              className="md:hidden p-2 rounded-full transition-colors bg-[#f0fdf4] dark:bg-muted text-[#047857] dark:text-foreground"
+              className="md:hidden p-2 rounded-full transition-colors bg-blue-50/50 dark:bg-muted text-primary dark:text-foreground"
               onClick={() => setMobileOpen(true)}
               aria-label="Open menu"
             >
@@ -207,7 +207,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {/* Desktop Sidebar Toggle */}
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="hidden md:flex p-2 rounded-full transition-all hover:bg-[#f0fdf4] dark:hover:bg-muted text-[#047857] dark:text-muted-foreground mr-2 rtl:mr-0 rtl:ml-2"
+              className="hidden md:flex p-2 rounded-full transition-all hover:bg-blue-50 dark:hover:bg-muted text-primary dark:text-muted-foreground mr-2 rtl:mr-0 rtl:ml-2"
               title={collapsed ? t("common.expandSidebar") : t("common.collapseSidebar")}
             >
               {collapsed ? (
@@ -219,10 +219,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
             {/* Mobile brand */}
             <div className="flex items-center gap-2 md:hidden">
-              <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: GOLD_GRADIENT }}>
-                <Plane className={cn("h-3.5 w-3.5", isRtl ? "-rotate-45" : "rotate-45")} style={{ color: "#022c22" }} />
+              <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: BRAND_GRADIENT }}>
+                <Plane className={cn("h-3.5 w-3.5", isRtl ? "-rotate-45" : "rotate-45")} style={{ color: "#ffffff" }} />
               </div>
-              <span className="font-bold tracking-wide text-sm text-[#022c22] dark:text-foreground" style={isRtl ? undefined : { fontFamily: "'Playfair Display', 'Georgia', serif" }}>{t("common.aeroOps")}</span>
+              <span className="font-bold tracking-wide text-sm text-primary dark:text-foreground" style={isRtl ? undefined : { fontFamily: "'Playfair Display', 'Georgia', serif" }}>{t("common.aeroOps")}</span>
             </div>
 
             {/* Desktop env label */}
@@ -236,7 +236,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {/* Language Switcher */}
             <button
               onClick={() => setLanguage(language === "ar" ? "en" : "ar")}
-              className="px-2.5 py-1.5 rounded-full border border-emerald-100 dark:border-border transition-all text-xs font-bold flex items-center justify-center hover:bg-[#f0fdf4] dark:hover:bg-muted text-[#047857] dark:text-muted-foreground gap-1"
+              className="px-2.5 py-1.5 rounded-full border border-blue-100 dark:border-border transition-all text-xs font-bold flex items-center justify-center hover:bg-blue-50 dark:hover:bg-muted text-primary dark:text-muted-foreground gap-1"
               title={language === "ar" ? "Switch to English" : "تغيير إلى العربية"}
             >
               <span className="text-sm">🌐</span>
@@ -246,7 +246,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {/* Theme Toggle Button */}
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="p-2 rounded-full transition-all text-sm font-semibold flex items-center justify-center hover:bg-[#f0fdf4] dark:hover:bg-muted text-[#047857] dark:text-muted-foreground"
+              className="p-2 rounded-full transition-all text-sm font-semibold flex items-center justify-center hover:bg-blue-50 dark:hover:bg-muted text-primary dark:text-muted-foreground"
               title={mounted && theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
               {mounted && theme === "dark" ? (
@@ -257,13 +257,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </button>
 
             <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold"
-              style={{ background: GOLD_GRADIENT, color: "#022c22" }}>
+              style={{ background: BRAND_GRADIENT, color: "#ffffff" }}>
               {currentEmployee?.initials ?? "?"}
             </div>
             <button
               onClick={logout}
               title={t("common.signOut")}
-              className="hidden md:flex p-2 rounded-full transition-colors items-center gap-1.5 text-xs font-medium text-[#047857] dark:text-muted-foreground hover:bg-[#f0fdf4] dark:hover:bg-muted"
+              className="hidden md:flex p-2 rounded-full transition-colors items-center gap-1.5 text-xs font-medium text-primary dark:text-muted-foreground hover:bg-blue-50 dark:hover:bg-muted"
             >
               <LogOut className="h-4 w-4" />
               {t("common.signOut")}

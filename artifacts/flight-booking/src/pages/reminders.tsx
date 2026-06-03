@@ -14,6 +14,7 @@ import { formatDateTime } from "@/lib/formatters";
 import { useCurrentEmployee, useEmployee } from "@/contexts/employee-context";
 import { useLanguage } from "@/contexts/language-context";
 import { authFetch, BASE } from "@/lib/api";
+import { PageHeader } from "@/components/page-header";
 
 interface FollowUpNote {
   id: number;
@@ -293,33 +294,31 @@ export default function Reminders() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t("reminders.title")}</h1>
-          <p className="text-muted-foreground mt-1 text-sm md:text-base font-normal">
-            {t("reminders.subtitle")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={myReminders ? "default" : "outline"}
-            size="sm"
-            onClick={toggleMyReminders}
-            className="gap-1.5"
-          >
-            <UserCheck className="h-4 w-4" />
-            {t("reminders.myReminders")}
-          </Button>
-          <Button
-            variant={hasFilters && !myReminders ? "default" : "outline"}
-            size="sm"
-            onClick={() => setShowFilters((v) => !v)}
-          >
-            <Filter className="h-4 w-4 mr-1.5 rtl:mr-0 rtl:ml-1.5" />
-            {t("reminders.filters")} {hasFilters && !myReminders ? t("reminders.active") : ""}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={t("reminders.title")}
+        description={t("reminders.subtitle")}
+        icon={Bell}
+        actions={
+          <>
+            <Button
+              variant={myReminders ? "default" : "outline"}
+              onClick={toggleMyReminders}
+              className="gap-1.5"
+            >
+              <UserCheck className="h-4 w-4" />
+              {t("reminders.myReminders")}
+            </Button>
+            <Button
+              variant={hasFilters && !myReminders ? "default" : "outline"}
+              onClick={() => setShowFilters((v) => !v)}
+              className="gap-1.5"
+            >
+              <Filter className="h-4 w-4" />
+              {t("reminders.filters")} {hasFilters && !myReminders ? t("reminders.active") : ""}
+            </Button>
+          </>
+        }
+      />
 
       {showFilters && (
         <Card>

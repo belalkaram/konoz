@@ -1,6 +1,6 @@
 import { AlertCircle } from "lucide-react";
 
-const SIDEBAR_GRADIENT = "linear-gradient(180deg, #011a13 0%, #022c22 40%, #064e3b 100%)";
+const SIDEBAR_GRADIENT = "linear-gradient(180deg, #070f2e 0%, #0f172a 50%, #1e293b 100%)";
 
 export default function NotFound() {
   return (

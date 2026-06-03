@@ -79,7 +79,7 @@ export const translations: Record<string, Record<string, any>> = {
       loadingStats: "Loading stats...",
       failedToLoad: "Failed to load data. Please try again.",
       konoozLive: "Konooz Live System",
-      premium: "Premium",
+      premium: "Konoz CRM System",
       aeroOps: "Konoz System",
       expandSidebar: "Expand Sidebar",
       collapseSidebar: "Collapse Sidebar"
@@ -735,7 +735,7 @@ export const translations: Record<string, Record<string, any>> = {
       loadingStats: "جاري تحميل الإحصائيات...",
       failedToLoad: "فشل في تحميل البيانات. يرجى المحاولة مرة أخرى.",
       konoozLive: "نظام كنوز المباشر",
-      premium: "مميز",
+      premium: "Konoz CRM System",
       aeroOps: "نظام كنوز",
       expandSidebar: "توسيع القائمة الجانبية",
       collapseSidebar: "طي القائمة الجانبية"

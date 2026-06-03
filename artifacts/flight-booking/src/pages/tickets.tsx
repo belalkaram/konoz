@@ -22,6 +22,7 @@ import { useCurrentEmployee, useEmployee } from "@/contexts/employee-context";
 import { useLanguage } from "@/contexts/language-context";
 import { authFetch, BASE } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { PageHeader } from "@/components/page-header";
 
 interface Ticket {
   id: number;
@@ -179,31 +180,31 @@ export default function Tickets() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t("tickets.title")}</h1>
-          <p className="text-muted-foreground mt-1 text-sm">{t("tickets.subtitle")}</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {isAdmin && selectedIds.size > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setConfirmDeleteOpen(true)}
-              disabled={isDeleting}
-              className="gap-1.5"
-            >
-              <Trash2 className="h-4 w-4" />
-              {language === "ar" ? `حذف المحدد (${selectedIds.size})` : `Delete Selected (${selectedIds.size})`}
-            </Button>
-          )}
-          <Link href="/tickets/new">
-            <Button>
-              <Plus className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" /> {t("tickets.newTicket")}
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title={t("tickets.title")}
+        description={t("tickets.subtitle")}
+        icon={Tag}
+        actions={
+          <>
+            {isAdmin && selectedIds.size > 0 && (
+              <Button
+                variant="destructive"
+                onClick={() => setConfirmDeleteOpen(true)}
+                disabled={isDeleting}
+                className="gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                {language === "ar" ? `حذف المحدد (${selectedIds.size})` : `Delete Selected (${selectedIds.size})`}
+              </Button>
+            )}
+            <Link href="/tickets/new">
+              <Button>
+                <Plus className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" /> {t("tickets.newTicket")}
+              </Button>
+            </Link>
+          </>
+        }
+      />
 
       <Card>
         <CardContent className="p-4 space-y-4">

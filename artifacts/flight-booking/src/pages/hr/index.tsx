@@ -59,6 +59,7 @@ import { useLanguage } from "../../contexts/language-context";
 import { authFetch, BASE } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
+import { PageHeader } from "@/components/page-header";
 
 // --- API Helpers ---
 async function fetchAttendance(): Promise<{ attendance: Attendance[] }> {
@@ -168,17 +169,11 @@ export default function HRManagement() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary flex items-center gap-3">
-            <ShieldCheck className="h-8 w-8 text-[#d4af37]" />
-            {t("hr.title")}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {t("hr.subtitle")}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={t("hr.title")}
+        description={t("hr.subtitle")}
+        icon={ShieldCheck}
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white dark:bg-muted border border-border p-1 mb-6 rounded-full inline-flex">
@@ -663,13 +658,13 @@ function ReportsTab({ employees, attendance, leaves }: { employees: Employee[]; 
         <title>${reportTitle}</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 40px; color: #333; line-height: 1.6; }
-          .header { border-bottom: 2px solid #16423c; padding-bottom: 20px; margin-bottom: 30px; text-align: center; }
-          h1 { margin: 0; color: #16423c; }
+          .header { border-bottom: 2px solid #1e40af; padding-bottom: 20px; margin-bottom: 30px; text-align: center; }
+          h1 { margin: 0; color: #1e40af; }
           .meta { margin-top: 10px; color: #666; font-size: 14px; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
           th, td { border: 1px solid #ddd; padding: 12px; text-align: ${isArReport ? 'right' : 'left'}; }
-          th { background: #f8fafc; font-weight: bold; color: #16423c; }
-          .section-title { font-size: 18px; font-weight: bold; margin: 20px 0 10px; color: #16423c; border-${isArReport ? 'right' : 'left'}: 4px solid #d4af37; padding-${isArReport ? 'right' : 'left'}: 10px; }
+          th { background: #f8fafc; font-weight: bold; color: #1e40af; }
+          .section-title { font-size: 18px; font-weight: bold; margin: 20px 0 10px; color: #1e40af; border-${isArReport ? 'right' : 'left'}: 4px solid #10b981; padding-${isArReport ? 'right' : 'left'}: 10px; }
           .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
           .badge-present { background: #dcfce7; color: #166534; }
           .badge-absent { background: #fee2e2; color: #991b1b; }
@@ -832,7 +827,7 @@ function ReportsTab({ employees, attendance, leaves }: { employees: Employee[]; 
                 <h4 className="text-sm font-semibold text-primary mb-3 uppercase tracking-wider">{language === "ar" ? "ملخص الإجازات" : "Leave Summary"}</h4>
                 <div className="bg-muted/50 p-4 rounded-2xl border border-border">
                     <p className="text-muted-foreground text-xs">{language === "ar" ? "إجمالي أيام الإجازات" : "Total Leave Days"}</p>
-                    <p className="text-2xl font-bold text-[#d4af37]">
+                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                       {leaves.filter(l => (selectedEmployeeId === 'all' || l.employeeId.toString() === selectedEmployeeId) && ((l.startDate >= dateRange.from && l.startDate <= dateRange.to) || (l.endDate >= dateRange.from && l.endDate <= dateRange.to))).length}
                     </p>
                 </div>

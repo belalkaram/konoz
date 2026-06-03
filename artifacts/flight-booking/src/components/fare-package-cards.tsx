@@ -90,7 +90,7 @@ export function FarePackageCards({ packages, displayCurrency, onSelect }: FarePa
               </div>
 
               <Button
-                className={`w-full mt-2 font-bold ${isCheapest ? "" : "bg-yellow-500 hover:bg-yellow-600 text-yellow-950"}`}
+                className={`w-full mt-2 font-bold ${isCheapest ? "" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
                 variant={isCheapest ? "outline" : "default"}
                 onClick={(e) => {
                   e.stopPropagation();

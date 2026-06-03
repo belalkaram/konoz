@@ -7,7 +7,7 @@ import { Link, useLocation } from "wouter";
 import { formatCurrency, formatShortDate, formatDateTime } from "@/lib/formatters";
 import {
   Users, Tag, TrendingUp, Plane, CheckCircle2, XCircle, AlertCircle,
-  Bell, Clock, ChevronRight, CreditCard, UserCheck,
+  Bell, Clock, ChevronRight, CreditCard, UserCheck, LayoutDashboard,
 } from "lucide-react";
 import { TICKET_STATUS_COLORS, TICKET_STATUS_LABELS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS } from "@/lib/ticket-constants";
 import { STATUS_COLORS, STATUS_LABELS } from "@/lib/customer-constants";
@@ -15,6 +15,7 @@ import { useCurrentEmployee } from "@/contexts/employee-context";
 import { authFetch, BASE } from "@/lib/api";
 import { useLanguage } from "@/contexts/language-context";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/page-header";
 
 interface DashboardStats {
   customers: {
@@ -139,10 +140,11 @@ export default function Dashboard() {
   if (isHR) {
     return (
       <div className="space-y-10">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("dashboard.title")}</h1>
-          <p className="text-muted-foreground mt-1">{t("dashboard.welcome")} {currentEmployee.name}.</p>
-        </div>
+        <PageHeader 
+          title={t("dashboard.title")}
+          description={`${t("dashboard.welcome")} ${currentEmployee.name}.`}
+          icon={LayoutDashboard}
+        />
 
         <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 dark:border-emerald-800">
           <CardContent className="p-8 flex flex-col items-center text-center gap-4">
@@ -212,12 +214,11 @@ export default function Dashboard() {
   // ── Standard dashboard (Employee / Supervisor / Administrator) ─────────────
   return (
     <div className="space-y-10">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t("dashboard.title")}</h1>
-        <p className="text-muted-foreground mt-1">
-          {language === "ar" ? "نظرة عامة على إدارة العملاء وحجوزات الطيران." : "CRM and flight booking overview."}
-        </p>
-      </div>
+      <PageHeader 
+        title={t("dashboard.title")}
+        description={language === "ar" ? "نظرة عامة على إدارة العملاء وحجوزات الطيران." : "CRM and flight booking overview."}
+        icon={LayoutDashboard}
+      />
 
       <section className="space-y-5">
         <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">

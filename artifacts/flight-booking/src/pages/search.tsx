@@ -20,6 +20,7 @@ import { authFetch, BASE } from "@/lib/api";
 import { FlexibleDatePriceSlider } from "@/components/flexible-date-price-slider";
 import { FarePackageCards } from "@/components/fare-package-cards";
 import { useLanguage } from "@/contexts/language-context";
+import { PageHeader } from "@/components/page-header";
 
 type TripType = "one_way" | "round_trip";
 type StopsFilter = "all" | "nonstop" | "stops";
@@ -430,12 +431,11 @@ export default function Search() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t("search.title")}</h1>
-        <p className="text-muted-foreground mt-1 text-sm md:text-base">
-          {t("search.subtitle")}
-        </p>
-      </div>
+      <PageHeader
+        title={t("search.title")}
+        description={t("search.subtitle")}
+        icon={SearchIcon}
+      />
 
       <Card>
         <CardContent className="pt-5 pb-5">

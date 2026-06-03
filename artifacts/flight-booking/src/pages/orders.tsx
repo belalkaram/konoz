@@ -9,6 +9,7 @@ import { Eye, Plane } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/language-context";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/page-header";
 
 function statusVariant(status: string) {
   if (status === "confirmed") return "default";
@@ -22,12 +23,11 @@ export default function Orders() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t("orders.title")}</h1>
-        <p className="text-muted-foreground mt-1 text-sm md:text-base">
-          {t("orders.subtitle")}
-        </p>
-      </div>
+      <PageHeader
+        title={t("orders.title")}
+        description={t("orders.subtitle")}
+        icon={Plane}
+      />
 
       <Card>
         <CardHeader className="pb-3">

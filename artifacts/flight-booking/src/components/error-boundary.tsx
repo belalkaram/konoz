@@ -38,17 +38,17 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-[#f0fdf4] dark:bg-background">
-        <div className="max-w-md w-full bg-white dark:bg-card rounded-2xl shadow-2xl p-8 border border-emerald-100 dark:border-border text-center relative overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#f8fafc] dark:bg-background">
+        <div className="max-w-md w-full bg-white dark:bg-card rounded-2xl shadow-2xl p-8 border border-blue-100 dark:border-border text-center relative overflow-hidden">
           {/* Background decoration */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-amber-400 to-emerald-500" />
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-blue-400 to-emerald-500" />
           
           <div className="flex justify-center mb-6">
             <div className={
-              `w-20 h-20 rounded-full flex items-center justify-center ${this.state.isNetworkError ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-red-50 dark:bg-red-950/20'}`
+              `w-20 h-20 rounded-full flex items-center justify-center ${this.state.isNetworkError ? 'bg-blue-50 dark:bg-blue-950/20' : 'bg-red-50 dark:bg-red-950/20'}`
             }>
               {this.state.isNetworkError ? (
-                <Globe className="w-10 h-10 text-amber-600 dark:text-amber-400 animate-pulse" />
+                <Globe className="w-10 h-10 text-blue-600 dark:text-blue-400 animate-pulse" />
               ) : (
                 <AlertTriangle className="w-10 h-10 text-red-600 dark:text-red-400" />
               )}
@@ -61,7 +61,7 @@ export class ErrorBoundary extends Component<Props, State> {
           
           <p className="text-gray-600 dark:text-muted-foreground mb-6 leading-relaxed">
             {this.state.isNetworkError 
-              ? "We're having trouble connecting to the system. This is usually caused by an unstable internet connection."
+               ? "We're having trouble connecting to the system. This is usually caused by an unstable internet connection."
               : "An unexpected error occurred while processing your request. Our system logs have been updated."}
           </p>
 
@@ -73,7 +73,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="flex flex-col gap-3">
             <Button
               onClick={this.handleReset}
-              className="w-full bg-emerald-700 hover:bg-emerald-800 h-12 text-base font-semibold transition-all active:scale-[0.98]"
+              className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-base font-semibold transition-all active:scale-[0.98]"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               {this.state.isNetworkError ? "Retry Connection" : "Attempt Recovery"}
@@ -85,7 +85,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 this.handleReset();
                 window.location.href = "/";
               }}
-              className="w-full border-emerald-100 dark:border-border text-emerald-700 dark:text-foreground hover:bg-emerald-50 dark:hover:bg-muted"
+              className="w-full border-blue-100 dark:border-border text-blue-600 dark:text-foreground hover:bg-blue-50 dark:hover:bg-muted"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Return to Dashboard

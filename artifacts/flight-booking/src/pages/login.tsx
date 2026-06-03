@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/contexts/language-context";
 import { cn } from "@/lib/utils";
 
-const GOLD_GRADIENT = "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)";
-const SIDEBAR_GRADIENT = "linear-gradient(180deg, #011a13 0%, #022c22 40%, #064e3b 100%)";
+const BRAND_GRADIENT = "linear-gradient(135deg, #1e40af 0%, #3b82f6 75%, #10b981 100%)";
+const SIDEBAR_GRADIENT = "linear-gradient(180deg, #070f2e 0%, #0f172a 50%, #1e293b 100%)";
 
 export default function Login() {
   const { login } = useEmployee();
@@ -67,8 +67,8 @@ export default function Login() {
       <div className="w-full max-w-sm mx-4">
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{ background: GOLD_GRADIENT }}>
-            <Plane className={cn("h-7 w-7", isRtl ? "-rotate-45" : "rotate-45")} style={{ color: "#022c22" }} />
+            style={{ background: BRAND_GRADIENT }}>
+            <Plane className={cn("h-7 w-7", isRtl ? "-rotate-45" : "rotate-45")} style={{ color: "#ffffff" }} />
           </div>
           <h1 className="text-white font-bold text-2xl tracking-wide animate-in fade-in duration-300"
             style={isRtl ? undefined : { fontFamily: "'Playfair Display', 'Georgia', serif" }}>
@@ -134,7 +134,7 @@ export default function Login() {
               type="submit"
               disabled={loading}
               className="w-full font-semibold h-11 border-0 hover:opacity-90 transition-all duration-300"
-              style={{ background: GOLD_GRADIENT, color: "#022c22" }}
+              style={{ background: BRAND_GRADIENT, color: "#ffffff" }}
             >
               {loading ? t("login.signingIn") : t("login.btnText")}
             </Button>

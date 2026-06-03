@@ -85,9 +85,9 @@ interface BookingsData {
 }
 
 /* ─── Constants ─── */
-const CHART_COLORS = ["#059669", "#0ea5e9", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6"];
-const PIE_COLORS = ["#059669", "#0ea5e9", "#f59e0b", "#ef4444", "#8b5cf6", "#64748b", "#ec4899"];
-const GOLD_GRADIENT = "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)";
+const CHART_COLORS = ["#2563eb", "#10b981", "#0ea5e9", "#059669", "#6366f1", "#14b8a6", "#8b5cf6"];
+const PIE_COLORS = ["#2563eb", "#10b981", "#0ea5e9", "#059669", "#6366f1", "#64748b", "#8b5cf6"];
+const BRAND_GRADIENT = "linear-gradient(135deg, #1e40af 0%, #3b82f6 75%, #10b981 100%)";
 
 const TICKET_STATUSES_ALL = [
   { value: "all", label: "All Statuses" },
@@ -400,8 +400,8 @@ export default function SupervisorDashboard() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg"
-              style={{ background: "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)" }}>
-              <Plane className={cn("h-5 w-5", isRtl ? "-rotate-45" : "rotate-45")} style={{ color: "#022c22" }} />
+              style={{ background: BRAND_GRADIENT }}>
+              <Plane className={cn("h-5 w-5", isRtl ? "-rotate-45" : "rotate-45")} style={{ color: "#ffffff" }} />
             </div>
             <span>{t("supervisor.title")}</span>
           </h1>
@@ -542,7 +542,7 @@ export default function SupervisorDashboard() {
                   title="Net Profit"
                   value={formatCurrency(dashData.kpis.netProfit, "KWD")}
                   icon={<Award className="h-4 w-4 text-white" />}
-                  gradient={GOLD_GRADIENT}
+                  gradient="linear-gradient(135deg, #10b981 0%, #059669 100%)"
                   sub={`${dashData.kpis.issuedTickets} issued tickets`}
                 />
                 <KPICard
@@ -575,7 +575,7 @@ export default function SupervisorDashboard() {
                   title="Issued"
                   value={dashData.kpis.issuedTickets}
                   icon={<Plane className="h-4 w-4 text-white" />}
-                  gradient="linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)"
+                  gradient="linear-gradient(135deg, #2563eb 0%, #60a5fa 100%)"
                 />
               </div>
 
@@ -596,8 +596,8 @@ export default function SupervisorDashboard() {
                             <stop offset="95%" stopColor="#059669" stopOpacity={0} />
                           </linearGradient>
                           <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#d4af37" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#d4af37" stopOpacity={0} />
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -609,7 +609,7 @@ export default function SupervisorDashboard() {
                         />
                         <Legend />
                         <Area type="monotone" dataKey="sales" name="Sales" stroke="#059669" fill="url(#salesGrad)" strokeWidth={2.5} />
-                        <Area type="monotone" dataKey="profit" name="Profit" stroke="#d4af37" fill="url(#profitGrad)" strokeWidth={2} strokeDasharray="5 5" />
+                        <Area type="monotone" dataKey="profit" name="Profit" stroke="#10b981" fill="url(#profitGrad)" strokeWidth={2} strokeDasharray="5 5" />
                         <Bar dataKey="tickets" name="Tickets" fill="#0ea5e9" radius={[4, 4, 0, 0]} barSize={16} yAxisId={0} />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -682,7 +682,7 @@ export default function SupervisorDashboard() {
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Award className="h-4 w-4 text-amber-500" /> Top Performers
+                      <Award className="h-4 w-4 text-emerald-500" /> Top Performers
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -690,17 +690,17 @@ export default function SupervisorDashboard() {
                       {dashData.employeePerformance.slice(0, 5).map((emp, i) => (
                         <div key={emp.id}
                           className="flex items-center gap-3 p-3 rounded-xl border hover:shadow-md transition-all duration-300 group"
-                          style={i === 0 ? { borderColor: "#d4af3740", background: "linear-gradient(135deg, #fefce820, #fef9c320)" } : undefined}>
+                          style={i === 0 ? { borderColor: "#3b82f640", background: "linear-gradient(135deg, #eff6ff20, #dbeafe20)" } : undefined}>
                           <div className="relative">
                             <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
                               style={{
-                                background: i === 0 ? GOLD_GRADIENT : i === 1 ? "linear-gradient(135deg, #94a3b8, #cbd5e1)" : i === 2 ? "linear-gradient(135deg, #d97706, #f59e0b)" : "#f1f5f9",
-                                color: i < 3 ? "#1e293b" : "#64748b",
+                                background: i === 0 ? BRAND_GRADIENT : i === 1 ? "linear-gradient(135deg, #3b82f6, #60a5fa)" : i === 2 ? "linear-gradient(135deg, #10b981, #34d399)" : "#f1f5f9",
+                                color: i < 3 ? "#ffffff" : "#64748b",
                               }}>
                               {emp.initials}
                             </div>
                             {i < 3 && (
-                              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold bg-white shadow-sm border" style={{ color: i === 0 ? "#d4af37" : i === 1 ? "#94a3b8" : "#d97706" }}>
+                              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold bg-white shadow-sm border" style={{ color: i === 0 ? "#1d4ed8" : i === 1 ? "#3b82f6" : "#10b981" }}>
                                 {i + 1}
                               </span>
                             )}
@@ -746,19 +746,19 @@ export default function SupervisorDashboard() {
                                 <div className="flex items-center gap-2">
                                   <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
                                     style={{
-                                      background: i === 0 ? GOLD_GRADIENT : "#f1f5f9",
-                                      color: i === 0 ? "#022c22" : "#475569",
+                                      background: i === 0 ? BRAND_GRADIENT : i === 1 ? "linear-gradient(135deg, #3b82f6, #60a5fa)" : i === 2 ? "linear-gradient(135deg, #10b981, #34d399)" : "#f1f5f9",
+                                      color: i < 3 ? "#ffffff" : "#475569",
                                     }}>
                                     {emp.initials}
                                   </div>
                                   <span className="text-sm font-medium">{emp.name}</span>
-                                  {i === 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold">Top</span>}
+                                  {i === 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-semibold">Top</span>}
                                 </div>
                               </TableCell>
                               <TableCell className="text-xs text-muted-foreground">{emp.role}</TableCell>
                               <TableCell className="text-right text-sm font-medium">{emp.tickets}</TableCell>
                               <TableCell className="text-right text-sm font-medium">{formatCurrency(emp.revenue, "KWD")}</TableCell>
-                              <TableCell className="text-right text-sm font-medium text-amber-700 dark:text-amber-400">{formatCurrency(emp.profit, "KWD")}</TableCell>
+                              <TableCell className="text-right text-sm font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(emp.profit, "KWD")}</TableCell>
                               <TableCell className="text-right text-sm">{emp.customers}</TableCell>
                               <TableCell className="text-right text-sm text-emerald-600">{emp.confirmedTickets}</TableCell>
                               <TableCell className="text-right text-sm text-red-500">{emp.cancelledTickets}</TableCell>
@@ -890,7 +890,7 @@ export default function SupervisorDashboard() {
                           <TableCell className="text-sm whitespace-nowrap">{formatDate(b.bookingDate || b.createdAt)}</TableCell>
                           <TableCell className="text-sm whitespace-nowrap">{b.departureDatetime ? formatDateTime(b.departureDatetime) : "—"}</TableCell>
                           <TableCell className={cn("text-right text-sm font-medium", isRtl && "text-left")}>{formatCurrency(b.price, b.currency || "KWD")}</TableCell>
-                          <TableCell className={cn("text-right text-sm font-medium text-amber-700 dark:text-amber-400", isRtl && "text-left")}>
+                          <TableCell className={cn("text-right text-sm font-medium text-emerald-600 dark:text-emerald-400", isRtl && "text-left")}>
                             {formatCurrency(b.invoiceProfit, "KWD")}
                           </TableCell>
                           <TableCell>

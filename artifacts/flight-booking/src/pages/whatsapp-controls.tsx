@@ -14,6 +14,7 @@ import { useLocation, useRoute } from "wouter";
 import { useLanguage } from "@/contexts/language-context";
 import WhatsappSettings from "./whatsapp-settings";
 import WhatsappRoutingTab from "./whatsapp-routing-tab";
+import { PageHeader } from "@/components/page-header";
 
 export default function WhatsappControls() {
   const [, setLocation] = useLocation();
@@ -200,7 +201,11 @@ export default function WhatsappControls() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 space-y-6 animate-in fade-in zoom-in-95 duration-500">
-      <h1 className="text-3xl font-bold text-foreground mb-6 text-start">{t("common.whatsappControls")}</h1>
+      <PageHeader
+        title={t("common.whatsappControls")}
+        description={language === "ar" ? "أدوات متقدمة للتحكم في حساب الواتساب وإرسال الحملات وتوزيع العملاء تلقائياً." : "Advanced tools for WhatsApp account management, bulk campaigns, and lead routing."}
+        icon={Layers}
+      />
 
       <Tabs value={currentTab} onValueChange={(val) => setLocation(`/whatsapp-controls/${val}`)} className="space-y-6">
         <TabsList className="flex flex-col sm:flex-row h-auto w-full max-w-4xl mx-auto gap-2 bg-muted/50 p-1 rounded-lg">

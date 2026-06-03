@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatShortDate, calculateDaysRemaining } from "@/lib/formatters";
 import { CustomerForm, EMPTY_CUSTOMER_FORM } from "@/components/customer-form";
 import { ExcelImportDialog } from "@/components/excel-import";
+import { PageHeader } from "@/components/page-header";
 import { STATUS_COLORS, STATUS_LABELS, CUSTOMER_STATUSES } from "@/lib/customer-constants";
 import { authFetch, BASE } from "@/lib/api";
 import { useCurrentEmployee } from "@/contexts/employee-context";
@@ -325,43 +326,44 @@ export default function Customers() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t("customers.title")}</h1>
-          <p className="text-muted-foreground mt-1 text-sm">{t("customers.subtitle")}</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {isAdmin && selectedIds.size > 0 && (
+      <PageHeader
+        title={t("customers.title")}
+        description={t("customers.subtitle")}
+        icon={Users}
+        actions={
+          <>
+            {isAdmin && selectedIds.size > 0 && (
+              <Button
+                variant="destructive"
+                onClick={() => setConfirmDeleteOpen(true)}
+                className="flex items-center gap-2"
+                disabled={isDeleting}
+              >
+                <Trash2 className="h-4 w-4" />
+                {t("customers.deleteSelected")} ({selectedIds.size})
+              </Button>
+            )}
             <Button
-              variant="destructive"
-              onClick={() => setConfirmDeleteOpen(true)}
+              variant="outline"
+              onClick={exportToExcel}
               className="flex items-center gap-2"
-              disabled={isDeleting}
             >
-              <Trash2 className="h-4 w-4" />
-              {t("customers.deleteSelected")} ({selectedIds.size})
+              <Download className="h-4 w-4" /> {t("customers.exportBtn")}
             </Button>
-          )}
-          <Button
-            variant="outline"
-            onClick={exportToExcel}
-            className="flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" /> {t("customers.exportBtn")}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setImportOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <FileSpreadsheet className="h-4 w-4 text-green-600" />
-            {t("customers.importBtn")}
-          </Button>
-          <Button onClick={() => setAddOpen(true)} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" /> {t("customers.addBtn")}
-          </Button>
-        </div>
-      </div>
+            <Button
+              variant="outline"
+              onClick={() => setImportOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-green-600" />
+              {t("customers.importBtn")}
+            </Button>
+            <Button onClick={() => setAddOpen(true)} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" /> {t("customers.addBtn")}
+            </Button>
+          </>
+        }
+      />
 
       <Card>
         <CardHeader className="pb-3">
@@ -481,8 +483,8 @@ export default function Customers() {
                       <Link href={`/customers/${c.id}`} className="flex-1 min-w-0">
                         <div className="grid md:grid-cols-[2fr_1fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_1fr_1fr_0.9fr_auto] grid-cols-1 gap-2 md:gap-3 px-6 py-3.5 cursor-pointer group items-center text-start">
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                              style={{ background: "linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)", color: "#022c22" }}>
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold text-white"
+                              style={{ background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 75%, #10b981 100%)" }}>
                               {c.fullName.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">

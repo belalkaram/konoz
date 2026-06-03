@@ -16,6 +16,8 @@ import { authFetch, BASE } from "@/lib/api";
 import { useLanguage } from "@/contexts/language-context";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
+import { SecurityEyeToggle } from "@/components/security-eye-toggle";
+import { SecretNumber } from "@/components/secret-number";
 
 interface DashboardStats {
   customers: {
@@ -82,7 +84,7 @@ function StatCard({
   href,
 }: {
   title: string;
-  value: number | string;
+  value: React.ReactNode;
   icon: React.ReactNode;
   color?: string;
   href?: string;
@@ -144,6 +146,7 @@ export default function Dashboard() {
           title={t("dashboard.title")}
           description={`${t("dashboard.welcome")} ${currentEmployee.name}.`}
           icon={LayoutDashboard}
+          actions={<SecurityEyeToggle />}
         />
 
         <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 dark:border-emerald-800">
@@ -218,6 +221,7 @@ export default function Dashboard() {
         title={t("dashboard.title")}
         description={language === "ar" ? "نظرة عامة على إدارة العملاء وحجوزات الطيران." : "CRM and flight booking overview."}
         icon={LayoutDashboard}
+        actions={<SecurityEyeToggle />}
       />
 
       <section className="space-y-5">
@@ -233,7 +237,7 @@ export default function Dashboard() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <StatCard title={t("supervisor.kpis.totalCustomers")} value={crmData.customers.total} icon={<Users className="h-4 w-4" />} color="text-primary" href="/customers" />
               <StatCard title={t("dashboard.newCustomersToday")} value={crmData.customers.newToday} icon={<Users className="h-4 w-4" />} color="text-blue-500" href="/customers" />
-              <StatCard title={t("supervisor.kpis.totalRevenue")} value={formatCurrency(crmData.totalRevenue, "USD")} icon={<TrendingUp className="h-4 w-4" />} color="text-green-600" />
+              <StatCard title={t("supervisor.kpis.totalRevenue")} value={<SecretNumber>{formatCurrency(crmData.totalRevenue, "USD")}</SecretNumber>} icon={<TrendingUp className="h-4 w-4" />} color="text-green-600" />
               <StatCard title={t("dashboard.pendingFollowups")} value={crmData.customers.followUpsToday} icon={<Bell className="h-4 w-4" />} color="text-yellow-500" href="/reminders" />
               <StatCard title={t("dashboard.missedFollowups")} value={crmData.customers.missedFollowUps} icon={<AlertCircle className="h-4 w-4" />} color="text-destructive" href="/reminders" />
             </div>
@@ -467,7 +471,7 @@ export default function Dashboard() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <StatCard
                   title={t("dashboard.totalRevenue")}
-                  value={formatCurrency(flightStats.totalRevenue, flightStats.currency)}
+                  value={<SecretNumber>{formatCurrency(flightStats.totalRevenue, flightStats.currency)}</SecretNumber>}
                   icon={<TrendingUp className="h-4 w-4" />}
                   color="text-primary"
                 />
@@ -507,7 +511,9 @@ export default function Dashboard() {
                             </div>
                           </div>
                           <div className="text-end">
-                            <div className="font-medium text-sm">{formatCurrency(order.totalAmount, order.totalCurrency)}</div>
+                            <div className="font-medium text-sm">
+                              <SecretNumber>{formatCurrency(order.totalAmount, order.totalCurrency)}</SecretNumber>
+                            </div>
                             <span className={`text-xs px-2 py-0.5 rounded-full ${
                               order.status === "confirmed" ? "bg-green-100 text-green-800" :
                               order.status === "cancelled" ? "bg-red-100 text-red-800" :

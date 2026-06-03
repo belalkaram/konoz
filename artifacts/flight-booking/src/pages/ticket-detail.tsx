@@ -168,6 +168,7 @@ function AddPaymentDialog({
       qc.invalidateQueries({ queryKey: ["ticket", ticketId] });
       qc.invalidateQueries({ queryKey: ["tickets"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      qc.invalidateQueries({ queryKey: ["accounting-report"] });
       onClose();
       setAmount(""); setNotes("");
     },
@@ -306,6 +307,7 @@ export default function TicketDetail() {
       qc.invalidateQueries({ queryKey: ["ticket", id] });
       qc.invalidateQueries({ queryKey: ["tickets"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      qc.invalidateQueries({ queryKey: ["accounting-report"] });
     },
     onError: (e: Error, _newStatus, _ctx) => {
       setStatusValue(data?.ticket?.ticketStatus ?? "");
@@ -320,6 +322,7 @@ export default function TicketDetail() {
       qc.invalidateQueries({ queryKey: ["ticket", id] });
       qc.invalidateQueries({ queryKey: ["tickets"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      qc.invalidateQueries({ queryKey: ["accounting-report"] });
       setStatusValue("cancelled");
       setCancelOpen(false);
     },
@@ -335,6 +338,7 @@ export default function TicketDetail() {
       toast({ title: language === "ar" ? `تم حذف التذكرة #${id}` : `Ticket #${id} deleted` });
       qc.invalidateQueries({ queryKey: ["tickets"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      qc.invalidateQueries({ queryKey: ["accounting-report"] });
       navigate("/tickets");
     },
     onError: (e: Error) => {

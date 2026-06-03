@@ -2,9 +2,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, QrCode, LogOut, CheckCircle2, RefreshCw } from "lucide-react";
+import { Loader2, QrCode, LogOut, CheckCircle2, RefreshCw, BrainCircuit, Key, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
+import { useEmployee } from "@/contexts/employee-context";
 import { authFetch, BASE } from "@/lib/api";
 
 const QR_LIFETIME_SECONDS = 55; // Refresh just before 60s expiry
@@ -13,6 +15,13 @@ export default function WhatsappSettings() {
   const { toast } = useToast();
   const { t, language } = useLanguage();
   const queryClient = useQueryClient();
+  const { currentEmployee } = useEmployee();
+  const isAdmin = currentEmployee?.role === "admin";
+
+  // Gemini key state
+  const [geminiKey, setGeminiKey] = useState("");
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
+
   const [isPolling, setIsPolling] = useState(false);
   const [qrCountdown, setQrCountdown] = useState<number | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -27,6 +36,17 @@ export default function WhatsappSettings() {
       return res.json() as Promise<{ instanceName: string; status: string; qrCode: string | null; isMainInstance?: boolean }>;
     },
     refetchInterval: isPolling ? 3000 : false,
+  });
+
+  // ── Fetch Gemini key status (admin only) ──────────────────────────────────
+  const { data: geminiStatus, isLoading: geminiLoading } = useQuery({
+    queryKey: ["gemini-settings"],
+    queryFn: async () => {
+      const res = await authFetch(`${BASE}/api/settings/gemini`);
+      if (!res.ok) throw new Error("Failed to fetch Gemini settings");
+      return res.json() as Promise<{ hasKey: boolean }>;
+    },
+    enabled: isAdmin,
   });
 
   // ── Stop polling once connected ───────────────────────────────────────────
@@ -88,6 +108,29 @@ export default function WhatsappSettings() {
     },
     onError: (err: any) => {
       toast({ title: language === "ar" ? "خطأ في الاتصال" : "Connection Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const saveGeminiKeyMutation = useMutation({
+    mutationFn: async (apiKey: string) => {
+      const res = await authFetch(`${BASE}/api/settings/gemini`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error((errData as any).message || "Failed to save key");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: language === "ar" ? "✅ تم حفظ مفتاح Gemini بنجاح" : "✅ Gemini API key saved!" });
+      queryClient.invalidateQueries({ queryKey: ["gemini-settings"] });
+      setGeminiKey("");
+    },
+    onError: (err: any) => {
+      toast({ title: language === "ar" ? "خطأ في حفظ المفتاح" : "Save Error", description: err.message, variant: "destructive" });
     },
   });
 
@@ -285,6 +328,107 @@ export default function WhatsappSettings() {
           )}
         </CardContent>
       </Card>
+
+      {/* ── Gemini AI Settings (Admin only) ──────────────────────────────── */}
+      {isAdmin && (
+        <Card className="bg-card border-border shadow-sm text-start">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl text-foreground">
+              <BrainCircuit className="h-5 w-5 text-primary" />
+              {language === "ar" ? "إعدادات Gemini AI" : "Gemini AI Settings"}
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              {language === "ar"
+                ? "أضف مفتاح Gemini API لتفعيل خاصية توليد رسائل الحملات بالذكاء الاصطناعي."
+                : "Add your Gemini API key to enable AI-powered campaign message generation."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+
+            {/* Key Status */}
+            <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/20 flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className={`h-5 w-5 ${geminiStatus?.hasKey ? "text-emerald-500" : "text-muted-foreground"}`} />
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {language === "ar" ? "حالة المفتاح" : "Key Status"}
+                  </p>
+                  <p className={`text-sm mt-0.5 ${geminiStatus?.hasKey ? "text-emerald-600 font-medium" : "text-muted-foreground"}`}>
+                    {geminiLoading
+                      ? (language === "ar" ? "جارٍ التحقق..." : "Checking...")
+                      : geminiStatus?.hasKey
+                        ? (language === "ar" ? "✅ مفتاح Gemini محفوظ وجاهز للاستخدام" : "✅ Gemini API key is saved and ready")
+                        : (language === "ar" ? "⚠️ لم يتم إعداد مفتاح Gemini بعد" : "⚠️ No Gemini API key configured yet")}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2.5 py-1.5 rounded-md border border-border/50">
+                <Key className="h-3 w-3" />
+                <span>{language === "ar" ? "للمسؤول فقط" : "Admin only"}</span>
+              </div>
+            </div>
+
+            {/* Key Input */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                {language === "ar"
+                  ? (geminiStatus?.hasKey ? "تحديث مفتاح Gemini API" : "إضافة مفتاح Gemini API")
+                  : (geminiStatus?.hasKey ? "Update Gemini API Key" : "Add Gemini API Key")}
+              </label>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    id="gemini-key-input"
+                    type={showGeminiKey ? "text" : "password"}
+                    placeholder={language === "ar" ? "AIza... (أدخل مفتاح Gemini API)" : "AIza... (Enter Gemini API key)"}
+                    value={geminiKey}
+                    onChange={(e) => setGeminiKey(e.target.value)}
+                    className="pe-10 font-mono text-sm"
+                    dir="ltr"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 end-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowGeminiKey(v => !v)}
+                    tabIndex={-1}
+                  >
+                    {showGeminiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <Button
+                  id="save-gemini-key-btn"
+                  onClick={() => saveGeminiKeyMutation.mutate(geminiKey)}
+                  disabled={saveGeminiKeyMutation.isPending || geminiKey.trim().length < 10}
+                  className="bg-primary hover:bg-primary/90 shrink-0"
+                >
+                  {saveGeminiKeyMutation.isPending
+                    ? <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                    : <Key className="me-2 h-4 w-4" />}
+                  {language === "ar"
+                    ? (geminiStatus?.hasKey ? "تحديث" : "حفظ")
+                    : (geminiStatus?.hasKey ? "Update" : "Save")}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {language === "ar"
+                  ? "احصل على مفتاحك من Google AI Studio: aistudio.google.com — المفتاح لن يظهر مرة أخرى بعد الحفظ."
+                  : "Get your key from Google AI Studio: aistudio.google.com — The key will not be shown again after saving."}
+              </p>
+            </div>
+
+            {/* Usage info */}
+            <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/30">
+              <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">
+                {language === "ar"
+                  ? "ℹ️ حد الاستخدام: يمكن لكل موظف توليد رسائل بالذكاء الاصطناعي مرتين فقط كل 24 ساعة."
+                  : "ℹ️ Usage limit: Each employee can generate AI messages up to 2 times per 24 hours."}
+              </p>
+            </div>
+
+          </CardContent>
+        </Card>
+      )}
+
     </div>
   );
 }

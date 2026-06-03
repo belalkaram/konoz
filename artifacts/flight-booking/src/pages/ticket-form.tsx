@@ -209,6 +209,7 @@ export default function TicketForm() {
       qc.invalidateQueries({ queryKey: ["tickets"] });
       qc.invalidateQueries({ queryKey: ["ticket", editId] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      qc.invalidateQueries({ queryKey: ["accounting-report"] });
       navigate(`/tickets/${data.ticket.id}`);
     },
     onError: (e: Error) => toast({ title: t("common.error"), description: e.message, variant: "destructive" }),

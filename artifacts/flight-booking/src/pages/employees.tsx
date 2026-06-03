@@ -16,6 +16,7 @@ import { authFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { SystemSettingsDialog } from "@/components/system-settings-dialog";
 import { PageHeader } from "@/components/page-header";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -382,6 +383,32 @@ export default function EmployeesPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
 
+  const [viewingActiveCustomersEmployee, setViewingActiveCustomersEmployee] = useState<EmployeeRow | null>(null);
+  const [activeCustomersList, setActiveCustomersList] = useState<any[]>([]);
+  const [loadingActiveCustomers, setLoadingActiveCustomers] = useState(false);
+
+  useEffect(() => {
+    if (viewingActiveCustomersEmployee) {
+      setLoadingActiveCustomers(true);
+      authFetch(`${BASE}/api/customers?assignedEmployeeId=${viewingActiveCustomersEmployee.id}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch customers");
+          return res.json();
+        })
+        .then((data) => {
+          setActiveCustomersList(data.customers || []);
+        })
+        .catch((err) => {
+          toast({ title: t("common.error"), description: err.message, variant: "destructive" });
+        })
+        .finally(() => {
+          setLoadingActiveCustomers(false);
+        });
+    } else {
+      setActiveCustomersList([]);
+    }
+  }, [viewingActiveCustomersEmployee, toast, t]);
+
   const role = currentEmployee.role;
   const isAdmin = role === "Administrator";
   const isSupervisorOrAdmin = role === "Administrator" || role === "Supervisor";
@@ -568,20 +595,12 @@ export default function EmployeesPage() {
                   {emp.activeCustomers !== undefined && (
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
-                        onClick={() => navigate(`/customers?assignedEmployeeId=${emp.id}`)}
+                        onClick={() => setViewingActiveCustomersEmployee(emp)}
                         title={t("employees.activeCustomers")}
                         className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900 transition-colors font-medium"
                       >
                         <Users className="h-3 w-3" />
                         {emp.activeCustomers}
-                      </button>
-                      <button
-                        onClick={() => navigate(`/tickets?employeeId=${emp.id}`)}
-                        title={t("employees.openTickets")}
-                        className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900 transition-colors font-medium"
-                      >
-                        <Tag className="h-3 w-3" />
-                        {emp.openTickets}
                       </button>
                     </div>
                   )}
@@ -762,6 +781,63 @@ export default function EmployeesPage() {
             >
               {deactivateMutation.isPending ? t("employees.deactivating") : t("employees.deactivateBtn")}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!viewingActiveCustomersEmployee} onOpenChange={(o) => { if (!o) setViewingActiveCustomersEmployee(null); }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {language === "ar"
+                ? `العملاء النشطون لـ ${viewingActiveCustomersEmployee?.name}`
+                : `Active Customers for ${viewingActiveCustomersEmployee?.name}`}
+            </DialogTitle>
+            <DialogDescription>
+              {language === "ar"
+                ? "قائمة بالمسافرين والعملاء المسجلين تحت إشراف هذا الموظف."
+                : "List of travelers and customers registered under this employee's supervision."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {loadingActiveCustomers ? (
+            <div className="flex items-center justify-center py-12">
+              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : activeCustomersList.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Users className="h-10 w-10 mx-auto mb-3 opacity-20" />
+              <p>{language === "ar" ? "لا يوجد عملاء مرتبطين بهذا الموظف حالياً." : "No customers associated with this employee yet."}</p>
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{language === "ar" ? "الاسم بالكامل" : "Full Name"}</TableHead>
+                    <TableHead>{language === "ar" ? "رقم الهاتف" : "Phone"}</TableHead>
+                    <TableHead>{language === "ar" ? "الحالة" : "Status"}</TableHead>
+                    <TableHead>{language === "ar" ? "تاريخ الإضافة" : "Date Added"}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {activeCustomersList.map((cust) => (
+                    <TableRow key={cust.id}>
+                      <TableCell className="font-medium">{cust.fullName}</TableCell>
+                      <TableCell className="dir-ltr text-start">{cust.phone || "-"}</TableCell>
+                      <TableCell>
+                        <span className="capitalize">{cust.status}</span>
+                      </TableCell>
+                      <TableCell>{new Date(cust.createdAt).toLocaleDateString(language === "ar" ? "ar-EG" : "en-US")}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button onClick={() => setViewingActiveCustomersEmployee(null)}>{language === "ar" ? "إغلاق" : "Close"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

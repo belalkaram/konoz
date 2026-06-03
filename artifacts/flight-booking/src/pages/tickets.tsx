@@ -23,6 +23,8 @@ import { useLanguage } from "@/contexts/language-context";
 import { authFetch, BASE } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/page-header";
+import { SecurityEyeToggle } from "@/components/security-eye-toggle";
+import { SecretNumber } from "@/components/secret-number";
 
 interface Ticket {
   id: number;
@@ -186,6 +188,7 @@ export default function Tickets() {
         icon={Tag}
         actions={
           <>
+            <SecurityEyeToggle />
             {isAdmin && selectedIds.size > 0 && (
               <Button
                 variant="destructive"
@@ -380,7 +383,7 @@ export default function Tickets() {
                             </span>
                           </TableCell>
                           <TableCell className="text-end font-medium">
-                            {tRow.price ? formatCurrency(tRow.price, tRow.currency) : "—"}
+                            {tRow.price ? <SecretNumber>{formatCurrency(tRow.price, tRow.currency)}</SecretNumber> : "—"}
                           </TableCell>
                         </TableRow>
                       );
@@ -402,7 +405,9 @@ export default function Tickets() {
                       </div>
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>{tRow.flightRoute ?? "—"} {tRow.airline ? `· ${tRow.airline}` : ""}</span>
-                        <span className="font-medium text-foreground">{tRow.price ? formatCurrency(tRow.price, tRow.currency) : "—"}</span>
+                        <span className="font-medium text-foreground">
+                          {tRow.price ? <SecretNumber>{formatCurrency(tRow.price, tRow.currency)}</SecretNumber> : "—"}
+                        </span>
                       </div>
                       {tRow.pnr && <div className="text-xs text-muted-foreground mt-1">{t("tickets.table.pnr")}: <span className="font-mono">{tRow.pnr}</span></div>}
                       {tRow.employeeId && (

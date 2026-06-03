@@ -13,6 +13,8 @@ import { authFetch, BASE } from "@/lib/api";
 import { TICKET_STATUS_LABELS, TICKET_STATUS_COLORS, PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS } from "@/lib/ticket-constants";
 import { useLanguage } from "@/contexts/language-context";
 import { cn } from "@/lib/utils";
+import { SecurityEyeToggle } from "@/components/security-eye-toggle";
+import { SecretNumber } from "@/components/secret-number";
 import {
   BarChart3, TrendingUp, Users, Tag, DollarSign, Award,
   CheckCircle2, XCircle, Download, Calendar, ChevronRight,
@@ -119,7 +121,7 @@ function getDateRange(period: string) {
 
 /* ─── KPI Card ─── */
 function KPICard({ title, value, icon, gradient, sub }: {
-  title: string; value: string | number; icon: React.ReactNode; gradient: string; sub?: string;
+  title: string; value: React.ReactNode; icon: React.ReactNode; gradient: string; sub?: string;
 }) {
   return (
     <Card className="relative overflow-hidden group hover:shadow-xl hover:scale-[1.02] transition-all duration-300 border-0" id={`kpi-${title.toLowerCase().replace(/\s+/g, '-')}`}>
@@ -219,6 +221,17 @@ export default function SupervisorDashboard() {
   const employee = useCurrentEmployee();
   const { t, language, isRtl } = useLanguage();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [selectedCurrency, setSelectedCurrency] = useState("KWD");
+
+  const convertVal = useCallback((kwdAmount: number | string) => {
+    const val = parseFloat(String(kwdAmount)) || 0;
+    if (selectedCurrency === "EGP") {
+      return val * 160; // conversion rate: 1 KWD = 160 EGP
+    }
+    return val;
+  }, [selectedCurrency]);
+
+  const currencySuffix = selectedCurrency === "EGP" ? (language === "ar" ? "ج.م" : "EGP") : (language === "ar" ? "د.ك" : "KWD");
 
   // ── Filters ──
   const [period, setPeriod] = useState("1y");
@@ -378,9 +391,11 @@ export default function SupervisorDashboard() {
   const trendData = useMemo(() =>
     (dashData?.revenueTrend ?? []).map(t => ({
       ...t,
-      monthLabel: new Date(t.month + "-01").toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
+      sales: convertVal(t.sales || 0),
+      profit: convertVal(t.profit || 0),
+      monthLabel: new Date(t.month + "-01").toLocaleDateString(language === "ar" ? "ar-EG" : "en-US", { month: "short", year: "2-digit" }),
     })),
-    [dashData?.revenueTrend]
+    [dashData?.revenueTrend, convertVal, language]
   );
 
   const toggleSort = (col: string) => {
@@ -410,6 +425,18 @@ export default function SupervisorDashboard() {
               ? t("supervisor.subtitleAdmin")
               : t("supervisor.subtitleSupervisor")}
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
+            <SelectTrigger className="w-[120px] h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="KWD">{language === "ar" ? "دينار كويتي" : "KWD"}</SelectItem>
+              <SelectItem value="EGP">{language === "ar" ? "جنيه مصري" : "EGP"}</SelectItem>
+            </SelectContent>
+          </Select>
+          <SecurityEyeToggle />
         </div>
       </div>
 
@@ -503,7 +530,7 @@ export default function SupervisorDashboard() {
 
           {dashError && (
             <div className="text-destructive text-sm p-4 bg-destructive/10 rounded-lg">
-              Failed to load dashboard data. Please try again.
+              {language === "ar" ? "فشل تحميل بيانات لوحة التحكم. يرجى المحاولة مرة أخرى." : "Failed to load dashboard data. Please try again."}
             </div>
           )}
 
@@ -527,26 +554,26 @@ export default function SupervisorDashboard() {
               {/* ── KPI Cards ── */}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <KPICard
-                  title="Total Sales"
-                  value={formatCurrency(dashData.kpis.totalSales, "KWD")}
+                  title={language === "ar" ? "إجمالي المبيعات" : "Total Sales"}
+                  value={<><SecretNumber>{convertVal(dashData.kpis.totalSales).toFixed(2)}</SecretNumber> {currencySuffix}</>}
                   icon={<DollarSign className="h-4 w-4 text-white" />}
                   gradient="linear-gradient(135deg, #059669 0%, #10b981 100%)"
                 />
                 <KPICard
-                  title="Total Revenue"
-                  value={formatCurrency(dashData.kpis.totalRevenue, "KWD")}
+                  title={language === "ar" ? "إجمالي الإيرادات" : "Total Revenue"}
+                  value={<><SecretNumber>{convertVal(dashData.kpis.totalRevenue).toFixed(2)}</SecretNumber> {currencySuffix}</>}
                   icon={<TrendingUp className="h-4 w-4 text-white" />}
                   gradient="linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%)"
                 />
                 <KPICard
-                  title="Net Profit"
-                  value={formatCurrency(dashData.kpis.netProfit, "KWD")}
+                  title={language === "ar" ? "صافي الأرباح" : "Net Profit"}
+                  value={<><SecretNumber>{convertVal(dashData.kpis.netProfit).toFixed(2)}</SecretNumber> {currencySuffix}</>}
                   icon={<Award className="h-4 w-4 text-white" />}
                   gradient="linear-gradient(135deg, #10b981 0%, #059669 100%)"
-                  sub={`${dashData.kpis.issuedTickets} issued tickets`}
+                  sub={language === "ar" ? `${dashData.kpis.issuedTickets} تذكرة مصدرة` : `${dashData.kpis.issuedTickets} issued tickets`}
                 />
                 <KPICard
-                  title="Total Customers"
+                  title={language === "ar" ? "إجمالي العملاء" : "Total Customers"}
                   value={dashData.kpis.totalCustomers}
                   icon={<Users className="h-4 w-4 text-white" />}
                   gradient="linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)"
@@ -554,25 +581,25 @@ export default function SupervisorDashboard() {
               </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <KPICard
-                  title="Total Bookings"
+                  title={language === "ar" ? "إجمالي الحجوزات" : "Total Bookings"}
                   value={dashData.kpis.totalTickets}
                   icon={<Tag className="h-4 w-4 text-white" />}
                   gradient="linear-gradient(135deg, #14b8a6 0%, #2dd4bf 100%)"
                 />
                 <KPICard
-                  title="Confirmed"
+                  title={language === "ar" ? "مؤكد" : "Confirmed"}
                   value={dashData.kpis.confirmedTickets}
                   icon={<CheckCircle2 className="h-4 w-4 text-white" />}
                   gradient="linear-gradient(135deg, #22c55e 0%, #4ade80 100%)"
                 />
                 <KPICard
-                  title="Cancelled"
+                  title={language === "ar" ? "ملغي" : "Cancelled"}
                   value={dashData.kpis.cancelledTickets}
                   icon={<XCircle className="h-4 w-4 text-white" />}
                   gradient="linear-gradient(135deg, #ef4444 0%, #f87171 100%)"
                 />
                 <KPICard
-                  title="Issued"
+                  title={language === "ar" ? "مصدر" : "Issued"}
                   value={dashData.kpis.issuedTickets}
                   icon={<Plane className="h-4 w-4 text-white" />}
                   gradient="linear-gradient(135deg, #2563eb 0%, #60a5fa 100%)"
@@ -583,7 +610,7 @@ export default function SupervisorDashboard() {
               <Card className="overflow-hidden">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-emerald-600" /> Sales, Revenue & Profit Trend
+                    <TrendingUp className="h-4 w-4 text-emerald-600" /> {language === "ar" ? "اتجاه المبيعات والأرباح" : "Sales, Revenue & Profit Trend"}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -605,12 +632,12 @@ export default function SupervisorDashboard() {
                         <YAxis tick={{ fontSize: 11 }} />
                         <Tooltip
                           contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
-                          formatter={(val: number) => [formatCurrency(val, "KWD"), undefined]}
+                          formatter={(val: number) => [`${convertVal(val).toFixed(2)} ${currencySuffix}`, undefined]}
                         />
                         <Legend />
-                        <Area type="monotone" dataKey="sales" name="Sales" stroke="#059669" fill="url(#salesGrad)" strokeWidth={2.5} />
-                        <Area type="monotone" dataKey="profit" name="Profit" stroke="#10b981" fill="url(#profitGrad)" strokeWidth={2} strokeDasharray="5 5" />
-                        <Bar dataKey="tickets" name="Tickets" fill="#0ea5e9" radius={[4, 4, 0, 0]} barSize={16} yAxisId={0} />
+                        <Area type="monotone" dataKey="sales" name={language === "ar" ? "المبيعات" : "Sales"} stroke="#059669" fill="url(#salesGrad)" strokeWidth={2.5} />
+                        <Area type="monotone" dataKey="profit" name={language === "ar" ? "الأرباح" : "Profit"} stroke="#10b981" fill="url(#profitGrad)" strokeWidth={2} strokeDasharray="5 5" />
+                        <Bar dataKey="tickets" name={language === "ar" ? "التذاكر" : "Tickets"} fill="#0ea5e9" radius={[4, 4, 0, 0]} barSize={16} yAxisId={0} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -622,7 +649,7 @@ export default function SupervisorDashboard() {
                 {/* Ticket Status Pie */}
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Ticket Status Distribution</CardTitle>
+                    <CardTitle className="text-base">{language === "ar" ? "توزيع حالات التذاكر" : "Ticket Status Distribution"}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="h-[240px]">
@@ -650,7 +677,7 @@ export default function SupervisorDashboard() {
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-muted-foreground" /> Employee Performance Comparison
+                      <BarChart3 className="h-4 w-4 text-muted-foreground" /> {language === "ar" ? "مقارنة أداء الموظفين" : "Employee Performance Comparison"}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -663,13 +690,13 @@ export default function SupervisorDashboard() {
                           <Tooltip
                             contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb" }}
                             formatter={(val: number, name: string) => {
-                              if (name === "Revenue") return [formatCurrency(val, "KWD"), name];
-                              return [val, name];
+                              if (name === "Revenue" || name === "الإيرادات") return [`${convertVal(val).toFixed(2)} ${currencySuffix}`, language === "ar" ? "الإيرادات" : "Revenue"];
+                              return [val, language === "ar" ? "التذاكر" : "Tickets"];
                             }}
                           />
                           <Legend />
-                          <Bar dataKey="revenue" name="Revenue" fill="#059669" radius={[0, 4, 4, 0]} barSize={14} />
-                          <Bar dataKey="tickets" name="Tickets" fill="#0ea5e9" radius={[0, 4, 4, 0]} barSize={14} />
+                          <Bar dataKey="revenue" name={language === "ar" ? "الإيرادات" : "Revenue"} fill="#059669" radius={[0, 4, 4, 0]} barSize={14} />
+                          <Bar dataKey="tickets" name={language === "ar" ? "التذاكر" : "Tickets"} fill="#0ea5e9" radius={[0, 4, 4, 0]} barSize={14} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -682,7 +709,7 @@ export default function SupervisorDashboard() {
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Award className="h-4 w-4 text-emerald-500" /> Top Performers
+                      <Award className="h-4 w-4 text-emerald-500" /> {language === "ar" ? "الموظفون الأكثر تميزاً" : "Top Performers"}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -707,7 +734,7 @@ export default function SupervisorDashboard() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-semibold truncate">{emp.name}</div>
-                            <div className="text-xs text-muted-foreground">{formatCurrency(emp.revenue, "KWD")} · {emp.tickets} tickets</div>
+                            <div className="text-xs text-muted-foreground"><SecretNumber>{convertVal(emp.revenue).toFixed(2)}</SecretNumber> {currencySuffix} · {emp.tickets} {language === "ar" ? "تذاكر" : "tickets"}</div>
                           </div>
                         </div>
                       ))}
@@ -721,7 +748,7 @@ export default function SupervisorDashboard() {
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground" /> Detailed Employee Performance
+                      <Users className="h-4 w-4 text-muted-foreground" /> {language === "ar" ? "أداء الموظفين التفصيلي" : "Detailed Employee Performance"}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
@@ -729,14 +756,14 @@ export default function SupervisorDashboard() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Employee</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead className="text-end">Tickets</TableHead>
-                            <TableHead className="text-end">Revenue</TableHead>
-                            <TableHead className="text-end">Profit</TableHead>
-                            <TableHead className="text-end">Customers</TableHead>
-                            <TableHead className="text-end">Confirmed</TableHead>
-                            <TableHead className="text-end">Cancelled</TableHead>
+                            <TableHead>{language === "ar" ? "الموظف" : "Employee"}</TableHead>
+                            <TableHead>{language === "ar" ? "الدور" : "Role"}</TableHead>
+                            <TableHead className="text-end">{language === "ar" ? "التذاكر" : "Tickets"}</TableHead>
+                            <TableHead className="text-end">{language === "ar" ? "الإيرادات" : "Revenue"}</TableHead>
+                            <TableHead className="text-end">{language === "ar" ? "الأرباح" : "Profit"}</TableHead>
+                            <TableHead className="text-end">{language === "ar" ? "العملاء" : "Customers"}</TableHead>
+                            <TableHead className="text-end">{language === "ar" ? "المؤكدة" : "Confirmed"}</TableHead>
+                            <TableHead className="text-end">{language === "ar" ? "الملغاة" : "Cancelled"}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -752,13 +779,13 @@ export default function SupervisorDashboard() {
                                     {emp.initials}
                                   </div>
                                   <span className="text-sm font-medium">{emp.name}</span>
-                                  {i === 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-semibold">Top</span>}
+                                  {i === 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-semibold">{language === "ar" ? "الأول" : "Top"}</span>}
                                 </div>
                               </TableCell>
                               <TableCell className="text-xs text-muted-foreground">{emp.role}</TableCell>
                               <TableCell className="text-end text-sm font-medium">{emp.tickets}</TableCell>
-                              <TableCell className="text-end text-sm font-medium">{formatCurrency(emp.revenue, "KWD")}</TableCell>
-                              <TableCell className="text-end text-sm font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(emp.profit, "KWD")}</TableCell>
+                              <TableCell className="text-end text-sm font-medium"><SecretNumber>{convertVal(emp.revenue).toFixed(2)}</SecretNumber> {currencySuffix}</TableCell>
+                              <TableCell className="text-end text-sm font-medium text-emerald-600 dark:text-emerald-400"><SecretNumber>{convertVal(emp.profit).toFixed(2)}</SecretNumber> {currencySuffix}</TableCell>
                               <TableCell className="text-end text-sm">{emp.customers}</TableCell>
                               <TableCell className="text-end text-sm text-emerald-600">{emp.confirmedTickets}</TableCell>
                               <TableCell className="text-end text-sm text-red-500">{emp.cancelledTickets}</TableCell>
@@ -889,9 +916,9 @@ export default function SupervisorDashboard() {
                           </TableCell>
                           <TableCell className="text-sm whitespace-nowrap">{formatDate(b.bookingDate || b.createdAt)}</TableCell>
                           <TableCell className="text-sm whitespace-nowrap">{b.departureDatetime ? formatDateTime(b.departureDatetime) : "—"}</TableCell>
-                          <TableCell className="text-end text-sm font-medium">{formatCurrency(b.price, b.currency || "KWD")}</TableCell>
+                          <TableCell className="text-end text-sm font-medium"><SecretNumber>{convertVal(b.price || 0).toFixed(2)}</SecretNumber> {currencySuffix}</TableCell>
                           <TableCell className="text-end text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                            {formatCurrency(b.invoiceProfit, "KWD")}
+                            <SecretNumber>{convertVal(b.invoiceProfit || 0).toFixed(2)}</SecretNumber> {currencySuffix}
                           </TableCell>
                           <TableCell>
                             <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${TICKET_STATUS_COLORS[b.ticketStatus] ?? ""}`}>

@@ -4,10 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, Send, Clock, Layers, FileText, Play, CheckCircle, Users, Filter, Pause, CheckCircle2 } from "lucide-react";
+import { Loader2, Upload, Send, Clock, Layers, FileText, Play, CheckCircle, Users, Filter, Pause, CheckCircle2, BrainCircuit, Sparkles, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { authFetch, BASE } from "@/lib/api";
 import * as XLSX from "xlsx";
 import { useLocation, useRoute } from "wouter";
@@ -33,6 +34,14 @@ export default function WhatsappControls() {
   const [scheduledAt, setScheduledAt] = useState("");
   const [checkingNumbers, setCheckingNumbers] = useState(false);
   const [filteredNumbers, setFilteredNumbers] = useState<string[]>([]);
+
+  // ── AI Generation state ──────────────────────────────────────────────────────
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiCount, setAiCount] = useState(5);
+  const [aiVariants, setAiVariants] = useState<string[]>([]);
+  const [selectedVariantIdx, setSelectedVariantIdx] = useState<number | null>(null);
+  const [aiUsageLeft, setAiUsageLeft] = useState<number | null>(null);
+  const [showAiPanel, setShowAiPanel] = useState(false);
 
   // ── Fetch Campaigns ────────────────────────────────────────────────────────
   const { data: campaignsData, isLoading: campaignsLoading } = useQuery({
@@ -86,14 +95,26 @@ export default function WhatsappControls() {
       }
       return res.json();
     },
-    onSuccess: () => {
-      toast({ title: language === "ar" ? "✅ تم إنشاء الحملة بنجاح!" : "✅ Campaign created!" });
+    onSuccess: (data: any) => {
+      if (data?.truncated) {
+        toast({
+          title: language === "ar" ? `✅ تم إنشاء الحملة — تم الإرسال لـ 150 رقم فقط` : `✅ Campaign created — Sending to 150 numbers only`,
+          description: language === "ar"
+            ? `تم تجاهل ${data.originalCount - 150} رقم تجاوزت الحد المسموح`
+            : `${data.originalCount - 150} numbers over the 150 limit were ignored`,
+        });
+      } else {
+        toast({ title: language === "ar" ? "✅ تم إنشاء الحملة بنجاح!" : "✅ Campaign created!" });
+      }
       queryClient.invalidateQueries({ queryKey: ["whatsapp-campaigns"] });
       setCampaignName("");
       setMessageTemplate("");
       setNumbers([]);
       setFilteredNumbers([]);
       setScheduledAt("");
+      setAiVariants([]);
+      setSelectedVariantIdx(null);
+      setAiPrompt("");
     },
     onError: (err: any) => {
       toast({ title: t("common.error"), description: err.message, variant: "destructive" });
@@ -133,6 +154,35 @@ export default function WhatsappControls() {
     },
     onError: (err: any) => {
       toast({ title: t("common.error"), description: err.message, variant: "destructive" });
+    }
+  });
+
+  // ── AI Generate Messages Mutation ──────────────────────────────────────────────
+  const generateMessagesMutation = useMutation({
+    mutationFn: async () => {
+      const res = await authFetch(`${BASE}/api/whatsapp/generate-messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: aiPrompt, count: aiCount })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error((errData as any).message || "فشل توليد الرسائل");
+      }
+      return res.json() as Promise<{ variants: string[]; usageLeft: number }>;
+    },
+    onSuccess: (data) => {
+      setAiVariants(data.variants);
+      setAiUsageLeft(data.usageLeft);
+      setSelectedVariantIdx(null);
+      toast({
+        title: language === "ar"
+          ? `✨ تم توليد ${data.variants.length} صيغة — متبقى: ${data.usageLeft} استخدام اليوم`
+          : `✨ Generated ${data.variants.length} variants — ${data.usageLeft} uses left today`
+      });
+    },
+    onError: (err: any) => {
+      toast({ title: language === "ar" ? "خطأ في التوليد" : "Generation Error", description: err.message, variant: "destructive" });
     }
   });
 
@@ -249,6 +299,17 @@ export default function WhatsappControls() {
                       {filteredNumbers.length > 0 && (language === "ar" ? ` (المصفى: ${filteredNumbers.length} صالحة)` : ` (Filtered: ${filteredNumbers.length} valid)`)}
                     </p>
                   )}
+                  {/* 150-recipient warning */}
+                  {(filteredNumbers.length > 150 || (filteredNumbers.length === 0 && numbers.length > 150)) && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 dark:bg-amber-950/20 dark:border-amber-800/30 dark:text-amber-300">
+                      <AlertTriangle className="h-4 w-4 shrink-0" />
+                      <p className="text-xs font-medium">
+                        {language === "ar"
+                          ? `⚠️ سيتم الإرسال لـ 150 رقم فقط من أصل ${filteredNumbers.length > 0 ? filteredNumbers.length : numbers.length}`
+                          : `⚠️ Only 150 out of ${filteredNumbers.length > 0 ? filteredNumbers.length : numbers.length} numbers will be sent`}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* 2. Filter Numbers */}
@@ -286,14 +347,134 @@ export default function WhatsappControls() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{language === "ar" ? "نص الرسالة" : "Message Template"}</label>
-                  <Textarea 
-                    placeholder={language === "ar" ? "اكتب رسالتك هنا..." : "Type your message here..."} 
-                    rows={5}
-                    value={messageTemplate}
-                    onChange={(e) => setMessageTemplate(e.target.value)}
-                  />
+                {/* 4. Message — AI Panel + Textarea */}
+                <div className="space-y-3">
+                  {/* AI Generation Toggle */}
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors text-start"
+                    onClick={() => setShowAiPanel(v => !v)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <BrainCircuit className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold text-primary">
+                        {language === "ar" ? "✨ توليد رسائل بالذكاء الاصطناعي" : "✨ Generate messages with AI"}
+                      </span>
+                      {aiUsageLeft !== null && (
+                        <Badge variant="secondary" className="text-xs">
+                          {language === "ar" ? `متبقى ${aiUsageLeft} استخدام اليوم` : `${aiUsageLeft} uses left today`}
+                        </Badge>
+                      )}
+                    </div>
+                    {showAiPanel ? <ChevronUp className="h-4 w-4 text-primary" /> : <ChevronDown className="h-4 w-4 text-primary" />}
+                  </button>
+
+                  {/* AI Panel */}
+                  {showAiPanel && (
+                    <div className="border border-border rounded-lg p-4 space-y-4 bg-muted/20">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium flex items-center gap-1">
+                          <Sparkles className="h-4 w-4 text-yellow-500" />
+                          {language === "ar" ? "فكرة / برومبت الرسالة" : "Message idea / prompt"}
+                        </label>
+                        <Textarea
+                          placeholder={language === "ar"
+                            ? "مثال: رسالة ترحيب لعملاء جدد بعد شراء باقة سياحية مع عرض خصم على الحجز القادم"
+                            : "e.g. Welcome message for new customers after buying a travel package with discount offer on next booking"}
+                          rows={3}
+                          value={aiPrompt}
+                          onChange={(e) => setAiPrompt(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="flex items-end gap-3">
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">
+                            {language === "ar" ? "عدد الصيغ (5-50)" : "Number of variants (5-50)"}
+                          </label>
+                          <Input
+                            type="number"
+                            min={5}
+                            max={50}
+                            value={aiCount}
+                            onChange={(e) => setAiCount(Math.min(50, Math.max(5, parseInt(e.target.value) || 5)))}
+                            className="w-24"
+                          />
+                        </div>
+                        <Button
+                          id="generate-ai-messages-btn"
+                          onClick={() => generateMessagesMutation.mutate()}
+                          disabled={generateMessagesMutation.isPending || aiPrompt.trim().length < 5}
+                          className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                        >
+                          {generateMessagesMutation.isPending
+                            ? <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                            : <BrainCircuit className="me-2 h-4 w-4" />}
+                          {language === "ar" ? "توليد بالذكاء الاصطناعي" : "Generate with AI"}
+                        </Button>
+                      </div>
+
+                      {/* Generated Variants */}
+                      {aiVariants.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                            {language === "ar" ? `اختر صيغة (${aiVariants.length} متاح)` : `Select a variant (${aiVariants.length} available)`}
+                          </p>
+                          <div className="max-h-64 overflow-y-auto space-y-2 pe-1">
+                            {aiVariants.map((variant, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedVariantIdx(idx);
+                                  setMessageTemplate(variant);
+                                }}
+                                className={`w-full text-start p-3 rounded-lg border text-sm transition-all ${
+                                  selectedVariantIdx === idx
+                                    ? "border-primary bg-primary/10 ring-1 ring-primary"
+                                    : "border-border hover:border-primary/50 hover:bg-muted/50"
+                                }`}
+                              >
+                                <div className="flex items-start gap-2">
+                                  <span className={`text-xs font-mono shrink-0 mt-0.5 w-5 h-5 rounded-full flex items-center justify-center ${
+                                    selectedVariantIdx === idx ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                                  }`}>{idx + 1}</span>
+                                  <span className="text-foreground whitespace-pre-wrap leading-relaxed">{variant}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <p className="text-xs text-muted-foreground">
+                        {language === "ar"
+                          ? "ℹ️ حد الاستخدام: مرتان لكل موظف يومياً. يتم توزيع الصيغ تلقائياً على المستلمين."
+                          : "ℹ️ Limit: 2 requests per employee per day. Variants are distributed round-robin across recipients."}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Manual message textarea */}
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">
+                      {language === "ar" ? "نص الرسالة" : "Message Template"}
+                      {selectedVariantIdx !== null && (
+                        <span className="ms-2 text-xs text-primary font-normal">
+                          {language === "ar" ? `(الصيغة ${selectedVariantIdx + 1} مختارة)` : `(Variant ${selectedVariantIdx + 1} selected)`}
+                        </span>
+                      )}
+                    </label>
+                    <Textarea
+                      placeholder={language === "ar" ? "اكتب رسالتك هنا أو اختر صيغة من الذكاء الاصطناعي أعلاه..." : "Type your message here or select an AI variant above..."}
+                      rows={5}
+                      value={messageTemplate}
+                      onChange={(e) => {
+                        setMessageTemplate(e.target.value);
+                        setSelectedVariantIdx(null); // deselect when manual edit
+                      }}
+                    />
+                  </div>
                 </div>
 
                 {/* Settings */}

@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Edit } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { SecretNumber } from "@/components/secret-number";
 
 const BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -101,6 +102,7 @@ export function PayrollTab() {
     onSuccess: () => {
       toast({ title: language === "ar" ? "تم الحفظ" : "Saved successfully" });
       queryClient.invalidateQueries({ queryKey: ["payrolls"] });
+      queryClient.invalidateQueries({ queryKey: ["accounting-report"] });
       setIsAddOpen(false);
       resetForm();
     },
@@ -284,10 +286,10 @@ export function PayrollTab() {
               payrolls?.map(p => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.employeeName}</TableCell>
-                  <TableCell>{p.baseSalary} {p.currency}</TableCell>
-                  <TableCell className="text-emerald-600 dark:text-emerald-400">+{p.commissionEarned} {p.currency}</TableCell>
-                  <TableCell className="text-red-600 dark:text-red-400">-{p.deductions} {p.currency}</TableCell>
-                  <TableCell className="font-bold">{p.netSalary} {p.currency}</TableCell>
+                  <TableCell><SecretNumber>{p.baseSalary}</SecretNumber> {p.currency}</TableCell>
+                  <TableCell className="text-emerald-600 dark:text-emerald-400">+<SecretNumber>{p.commissionEarned}</SecretNumber> {p.currency}</TableCell>
+                  <TableCell className="text-red-600 dark:text-red-400">-<SecretNumber>{p.deductions}</SecretNumber> {p.currency}</TableCell>
+                  <TableCell className="font-bold"><SecretNumber>{p.netSalary}</SecretNumber> {p.currency}</TableCell>
                   <TableCell>
                     <Badge variant={p.status === "paid" ? "default" : "secondary"} className={p.status === "paid" ? "bg-emerald-500" : ""}>
                       {p.status === "paid" 

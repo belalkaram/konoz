@@ -12,6 +12,7 @@ import { Loader2, Plus, CalendarIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
+import { SecretNumber } from "@/components/secret-number";
 
 const BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -66,6 +67,7 @@ export function ExpensesTab() {
     onSuccess: () => {
       toast({ title: language === "ar" ? "تمت الإضافة" : "Added successfully" });
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["accounting-report"] });
       setIsAddOpen(false);
       setAmount("");
       setCategoryId("");
@@ -193,7 +195,7 @@ export function ExpensesTab() {
                   <TableCell>{exp.categoryName}</TableCell>
                   <TableCell>{exp.description || "-"}</TableCell>
                   <TableCell className="font-bold text-red-600 dark:text-red-400">
-                    {exp.amount} {exp.currency}
+                    <SecretNumber>{exp.amount}</SecretNumber> {exp.currency}
                   </TableCell>
                   <TableCell>{exp.creatorName}</TableCell>
                 </TableRow>

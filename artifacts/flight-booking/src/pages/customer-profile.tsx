@@ -374,7 +374,7 @@ function NoteCard({ note, customerId }: { note: Note; customerId: number }) {
                       disabled={markDone.isPending}
                       onClick={() => markDone.mutate()}
                     >
-                      <Check className="h-3 w-3 mr-1 rtl:mr-0 rtl:ml-1" /> {t("customerProfile.noteForm.markDone")}
+                      <Check className="h-3 w-3 me-1" /> {t("customerProfile.noteForm.markDone")}
                     </Button>
                   )}
                 </div>
@@ -382,7 +382,7 @@ function NoteCard({ note, customerId }: { note: Note; customerId: number }) {
             </div>
           )}
         </div>
-        <div className="text-xs text-muted-foreground mt-1 ml-1 rtl:ml-0 rtl:mr-1 flex items-center gap-2">
+        <div className="text-xs text-muted-foreground mt-1 ms-1 flex items-center gap-2">
           <span>{formatDateTime(note.createdAt)}</span>
           {note.employeeId && <span>{language === "ar" ? ` · موظف #${note.employeeId}` : ` · Employee #${note.employeeId}`}</span>}
         </div>
@@ -391,12 +391,12 @@ function NoteCard({ note, customerId }: { note: Note; customerId: number }) {
   );
 }
 
-function InfoRow({ label, value, icon }: { label: string; value?: string | null; icon?: React.ReactNode }) {
+function InfoRow({ label, value, icon, isLtrData }: { label: string; value?: string | null; icon?: React.ReactNode; isLtrData?: boolean }) {
   if (!value) return null;
   return (
     <div className="flex gap-2 text-sm text-start">
       <span className="text-muted-foreground w-32 flex-shrink-0 flex items-center gap-1">{icon}{label}</span>
-      <span className="font-medium break-all">{value}</span>
+      <span className={cn("font-medium break-all", isLtrData && "dir-ltr text-start inline-block")}>{value}</span>
     </div>
   );
 }
@@ -490,8 +490,8 @@ export default function CustomerProfile() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/customers">
-          <Button variant="ghost" size="sm" className="flex items-center gap-1.5 -ml-2 rtl:-mr-2 rtl:ml-0">
-            <ArrowLeft className="h-4 w-4" /> {t("customerProfile.backBtn")}
+          <Button variant="ghost" size="sm" className="flex items-center gap-1.5 -ms-2">
+            <ArrowLeft className="h-4 w-4 rtl:rotate-180" /> {t("customerProfile.backBtn")}
           </Button>
         </Link>
       </div>
@@ -594,12 +594,12 @@ export default function CustomerProfile() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-y-3">
-              <InfoRow label={t("customerProfile.labels.phone")} value={c.phone} icon={<Phone className="h-3.5 w-3.5" />} />
-              <InfoRow label={t("customerProfile.labels.whatsapp")} value={c.whatsapp} icon={<Phone className="h-3.5 w-3.5" />} />
-              <InfoRow label={t("customerProfile.labels.email")} value={c.email} icon={<Mail className="h-3.5 w-3.5" />} />
+              <InfoRow label={t("customerProfile.labels.phone")} value={c.phone} icon={<Phone className="h-3.5 w-3.5" />} isLtrData={true} />
+              <InfoRow label={t("customerProfile.labels.whatsapp")} value={c.whatsapp} icon={<Phone className="h-3.5 w-3.5" />} isLtrData={true} />
+              <InfoRow label={t("customerProfile.labels.email")} value={c.email} icon={<Mail className="h-3.5 w-3.5" />} isLtrData={true} />
               <InfoRow label={t("customerProfile.labels.nationality")} value={c.nationality} icon={<Globe className="h-3.5 w-3.5" />} />
-              <InfoRow label={t("customerProfile.labels.passportNo")} value={c.passportNumber} icon={<CreditCard className="h-3.5 w-3.5" />} />
-              <InfoRow label={t("customerProfile.labels.nationalId")} value={c.nationalId} icon={<CreditCard className="h-3.5 w-3.5" />} />
+              <InfoRow label={t("customerProfile.labels.passportNo")} value={c.passportNumber} icon={<CreditCard className="h-3.5 w-3.5" />} isLtrData={true} />
+              <InfoRow label={t("customerProfile.labels.nationalId")} value={c.nationalId} icon={<CreditCard className="h-3.5 w-3.5" />} isLtrData={true} />
               <InfoRow label={t("customerProfile.labels.address")} value={c.address} icon={<MapPin className="h-3.5 w-3.5" />} />
               <InfoRow label={t("customerProfile.labels.added")} value={formatShortDate(c.createdAt)} />
             </div>

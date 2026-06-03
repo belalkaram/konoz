@@ -94,13 +94,13 @@ export function SystemSettingsDialog() {
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit} className={isRtl ? "text-right" : "text-left"}>
-          <DialogHeader className={isRtl ? "text-right" : "text-left"}>
+        <form onSubmit={handleSubmit} className="text-start">
+          <DialogHeader className="text-start">
             <DialogTitle className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
               <Server className="h-5 w-5" />
               {isRtl ? "إعدادات النظام العامة" : "Global System Settings"}
             </DialogTitle>
-            <DialogDescription className={isRtl ? "text-right" : "text-left"}>
+            <DialogDescription className="text-start">
               {isRtl
                 ? "تكوين إعدادات SMTP والمعلمات العامة الأخرى للنظام. يتم حفظها بشكل دائم في قاعدة البيانات."
                 : "Configure SMTP and other system-wide parameters. These are saved permanently in the database."}
@@ -123,7 +123,7 @@ export function SystemSettingsDialog() {
                     placeholder="smtp.gmail.com"
                     value={form.host}
                     onChange={(e) => setForm({ ...form, host: e.target.value })}
-                    className={isRtl ? "text-right dir-ltr" : "text-left"}
+                    className="text-start dir-ltr"
                   />
                 </div>
                 <div className="space-y-2">
@@ -136,7 +136,7 @@ export function SystemSettingsDialog() {
                     placeholder="587"
                     value={form.port}
                     onChange={(e) => setForm({ ...form, port: parseInt(e.target.value) || 0 })}
-                    className={isRtl ? "text-right dir-ltr" : "text-left"}
+                    className="text-start dir-ltr"
                   />
                 </div>
               </div>
@@ -151,7 +151,7 @@ export function SystemSettingsDialog() {
                   placeholder="system@gmail.com"
                   value={form.user}
                   onChange={(e) => setForm({ ...form, user: e.target.value })}
-                  className={isRtl ? "text-right dir-ltr" : "text-left"}
+                  className="text-start dir-ltr"
                 />
               </div>
 
@@ -165,7 +165,7 @@ export function SystemSettingsDialog() {
                   placeholder={settings?.hasPass ? (isRtl ? "اتركه فارغاً للاحتفاظ بالحالية" : "Leave blank to keep current") : (isRtl ? "أدخل كلمة مرور التطبيق" : "Enter App Password")}
                   value={form.pass}
                   onChange={(e) => setForm({ ...form, pass: e.target.value })}
-                  className={isRtl ? "text-right dir-ltr" : "text-left"}
+                  className="text-start dir-ltr"
                 />
               </div>
 
@@ -178,7 +178,7 @@ export function SystemSettingsDialog() {
                   placeholder="Konoz System"
                   value={form.fromName}
                   onChange={(e) => setForm({ ...form, fromName: e.target.value })}
-                  className={isRtl ? "text-right" : "text-left"}
+                  className="text-start"
                 />
               </div>
             </div>

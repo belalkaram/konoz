@@ -174,7 +174,7 @@ export default function Reports() {
             {/* Date Range */}
             <Select value={period} onValueChange={setPeriod}>
               <SelectTrigger className="w-[140px] h-9 text-sm" id="reports-date-range">
-                <Calendar className="h-3.5 w-3.5 mr-1.5 rtl:mr-0 rtl:ml-1.5 text-muted-foreground" />
+                <Calendar className="h-3.5 w-3.5 me-1.5 text-muted-foreground" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -191,7 +191,7 @@ export default function Reports() {
             {isSupervisorOrAdmin && data?.filterableEmployees && data.filterableEmployees.length > 0 && (
               <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
                 <SelectTrigger className="w-[180px] h-9 text-sm" id="reports-employee-filter">
-                  <Users className="h-3.5 w-3.5 mr-1.5 rtl:mr-0 rtl:ml-1.5 text-muted-foreground" />
+                  <Users className="h-3.5 w-3.5 me-1.5 text-muted-foreground" />
                   <SelectValue placeholder={t("supervisor.allEmployees")} />
                 </SelectTrigger>
                 <SelectContent>

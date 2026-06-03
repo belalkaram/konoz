@@ -393,15 +393,15 @@ export default function TicketDetail() {
 
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={() => setPaymentOpen(true)}>
-            <CreditCard className="h-4 w-4 mr-1.5 rtl:mr-0 rtl:ml-1.5" /> {t("ticketDetail.addPayment")}
+            <CreditCard className="h-4 w-4 me-1.5" /> {t("ticketDetail.addPayment")}
           </Button>
           <Button variant="outline" size="sm" onClick={() => setInvoiceOpen(true)}>
-            <FileText className="h-4 w-4 mr-1.5 rtl:mr-0 rtl:ml-1.5" /> {t("ticketDetail.invoiceBtn")}
+            <FileText className="h-4 w-4 me-1.5" /> {t("ticketDetail.invoiceBtn")}
           </Button>
 
           <Link href={`/tickets/${id}/edit`}>
             <Button variant="outline" size="sm">
-              <Edit className="h-4 w-4 mr-1.5 rtl:mr-0 rtl:ml-1.5" /> {t("common.edit")}
+              <Edit className="h-4 w-4 me-1.5" /> {t("common.edit")}
             </Button>
           </Link>
           <Button
@@ -411,7 +411,7 @@ export default function TicketDetail() {
             onClick={() => setCancelOpen(true)}
             disabled={ticket.ticketStatus === "cancelled"}
           >
-            <XCircle className="h-4 w-4 mr-1.5 rtl:mr-0 rtl:ml-1.5" /> {language === "ar" ? "إلغاء التذكرة" : "Cancel Ticket"}
+            <XCircle className="h-4 w-4 me-1.5" /> {language === "ar" ? "إلغاء التذكرة" : "Cancel Ticket"}
           </Button>
           {isAdmin && (
             <Button
@@ -420,7 +420,7 @@ export default function TicketDetail() {
               onClick={() => setDeleteOpen(true)}
               disabled={deleteMutation.isPending}
             >
-              <Trash2 className="h-4 w-4 mr-1.5 rtl:mr-0 rtl:ml-1.5" /> {language === "ar" ? "حذف التذكرة" : "Delete Ticket"}
+              <Trash2 className="h-4 w-4 me-1.5" /> {language === "ar" ? "حذف التذكرة" : "Delete Ticket"}
             </Button>
           )}
         </div>
@@ -533,7 +533,7 @@ export default function TicketDetail() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-muted-foreground" /> {t("ticketDetail.paymentHistory")}
-              <span className="ml-auto rtl:ml-0 rtl:mr-auto text-sm font-normal text-muted-foreground">
+              <span className="ms-auto text-sm font-normal text-muted-foreground">
                 {t("ticketDetail.invoice.total")}: {formatCurrency(
                   payments.reduce((sum, p) => sum + parseFloat(p.amount || "0"), 0),
                   payments[0]?.currency ?? ticket.currency
@@ -573,11 +573,11 @@ export default function TicketDetail() {
           {history.length === 0 ? (
             <p className="text-sm text-muted-foreground">{language === "ar" ? "لا يوجد سجل للحالات." : "No status changes recorded."}</p>
           ) : (
-            <div className="relative pl-6 rtl:pl-0 rtl:pr-6 space-y-4">
-              <div className="absolute left-2 rtl:left-auto rtl:right-2 top-2 bottom-2 w-px bg-border" />
+            <div className="relative ps-6 space-y-4">
+              <div className="absolute start-2 top-2 bottom-2 w-px bg-border" />
               {history.map((entry, i) => (
                 <div key={entry.id} className="relative">
-                  <div className={`absolute -left-4 rtl:-left-auto rtl:-right-4 w-3 h-3 rounded-full border-2 border-background ${i === 0 ? "bg-primary" : "bg-muted-foreground/40"}`} />
+                  <div className={`absolute -start-4 w-3 h-3 rounded-full border-2 border-background ${i === 0 ? "bg-primary" : "bg-muted-foreground/40"}`} />
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="text-sm font-medium">

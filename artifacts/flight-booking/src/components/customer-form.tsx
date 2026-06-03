@@ -89,31 +89,31 @@ export function CustomerForm({ initialValues, submitLabel, isPending, onSubmit, 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 py-4">
-      <div className="space-y-1.5 text-right rtl:text-right ltr:text-left">
+    <form onSubmit={handleSubmit} className="space-y-4 py-4 text-start">
+      <div className="space-y-1.5">
         <Label htmlFor="cf-fullName">{t("employees.fullName")}</Label>
         <Input id="cf-fullName" value={form.fullName} onChange={(e) => set("fullName", e.target.value)} placeholder={isRtl ? "أحمد حسن" : "Ahmed Hassan"} />
         {errors.fullName && <p className="text-xs text-destructive">{errors.fullName}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5 text-right rtl:text-right ltr:text-left">
+        <div className="space-y-1.5">
           <Label htmlFor="cf-phone">{t("customerProfile.labels.phone")} *</Label>
-          <Input id="cf-phone" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+96512345678" />
+          <Input id="cf-phone" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+96512345678" className="dir-ltr text-start" />
           {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
         </div>
-        <div className="space-y-1.5 text-right rtl:text-right ltr:text-left">
+        <div className="space-y-1.5">
           <Label htmlFor="cf-whatsapp">{t("customerProfile.labels.whatsapp")}</Label>
-          <Input id="cf-whatsapp" value={form.whatsapp} onChange={(e) => set("whatsapp", e.target.value)} placeholder="+96512345678" />
+          <Input id="cf-whatsapp" value={form.whatsapp} onChange={(e) => set("whatsapp", e.target.value)} placeholder="+96512345678" className="dir-ltr text-start" />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5 text-right rtl:text-right ltr:text-left">
+        <div className="space-y-1.5">
           <Label htmlFor="cf-email">{t("common.email")}</Label>
-          <Input id="cf-email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="ahmed@example.com" />
+          <Input id="cf-email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="ahmed@example.com" className="dir-ltr text-start" />
         </div>
-        <div className="space-y-1.5 text-right rtl:text-right ltr:text-left">
+        <div className="space-y-1.5">
           <Label>{t("common.status")}</Label>
           <Select value={form.status} onValueChange={(v) => set("status", v)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
@@ -129,13 +129,13 @@ export function CustomerForm({ initialValues, submitLabel, isPending, onSubmit, 
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5 text-right rtl:text-right ltr:text-left">
+        <div className="space-y-1.5">
           <Label htmlFor="cf-nationality">{t("customerProfile.labels.nationality")}</Label>
           <Input id="cf-nationality" value={form.nationality} onChange={(e) => set("nationality", e.target.value)} placeholder={isRtl ? "كويتي" : "Kuwaiti"} />
         </div>
-        <div className="space-y-1.5 text-right rtl:text-right ltr:text-left">
+        <div className="space-y-1.5">
           <Label htmlFor="cf-passportNumber">{t("customerProfile.labels.passportNo")}</Label>
-          <Input id="cf-passportNumber" value={form.passportNumber} onChange={(e) => set("passportNumber", e.target.value)} placeholder="A12345678" />
+          <Input id="cf-passportNumber" value={form.passportNumber} onChange={(e) => set("passportNumber", e.target.value)} placeholder="A12345678" className="dir-ltr text-start" />
         </div>
       </div>
 
@@ -144,25 +144,25 @@ export function CustomerForm({ initialValues, submitLabel, isPending, onSubmit, 
           {isRtl ? "تفاصيل التذكرة (اختياري)" : "Ticket Information (Optional)"}
         </h3>
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5 text-right rtl:text-right ltr:text-left">
+          <div className="space-y-1.5">
             <Label htmlFor="cf-pnr">{t("common.pnr")}</Label>
-            <Input id="cf-pnr" value={form.pnr} onChange={(e) => set("pnr", e.target.value)} placeholder="PNR / Reference" />
+            <Input id="cf-pnr" value={form.pnr} onChange={(e) => set("pnr", e.target.value)} placeholder="PNR / Reference" className="dir-ltr text-start font-mono" />
           </div>
-          <div className="space-y-1.5 text-right rtl:text-right ltr:text-left">
+          <div className="space-y-1.5">
             <Label htmlFor="cf-bookingDate">{t("common.bookingDate")}</Label>
             <Input id="cf-bookingDate" type="date" value={form.bookingDate} onChange={(e) => set("bookingDate", e.target.value)} />
           </div>
-          <div className="space-y-1.5 text-right rtl:text-right ltr:text-left">
+          <div className="space-y-1.5">
             <Label htmlFor="cf-travelDate">{t("common.travelDate")}</Label>
             <Input id="cf-travelDate" type="date" value={form.travelDate} onChange={(e) => set("travelDate", e.target.value)} />
           </div>
-          <div className="space-y-1.5 text-right rtl:text-right ltr:text-left">
+          <div className="space-y-1.5">
             <Label htmlFor="cf-ticketPrice">{t("common.price")}</Label>
-            <Input id="cf-ticketPrice" type="number" step="0.001" value={form.ticketPrice} onChange={(e) => set("ticketPrice", e.target.value)} placeholder="0.000" />
+            <Input id="cf-ticketPrice" type="number" step="0.001" value={form.ticketPrice} onChange={(e) => set("ticketPrice", e.target.value)} placeholder="0.000" className="dir-ltr text-start" />
           </div>
-          <div className="space-y-1.5 text-right rtl:text-right ltr:text-left">
+          <div className="space-y-1.5">
             <Label htmlFor="cf-costPrice">{t("common.costPrice")}</Label>
-            <Input id="cf-costPrice" type="number" step="0.001" value={form.costPrice} onChange={(e) => set("costPrice", e.target.value)} placeholder="0.000" />
+            <Input id="cf-costPrice" type="number" step="0.001" value={form.costPrice} onChange={(e) => set("costPrice", e.target.value)} placeholder="0.000" className="dir-ltr text-start" />
           </div>
         </div>
       </div>

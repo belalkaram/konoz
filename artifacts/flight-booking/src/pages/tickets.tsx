@@ -199,7 +199,7 @@ export default function Tickets() {
             )}
             <Link href="/tickets/new">
               <Button>
-                <Plus className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" /> {t("tickets.newTicket")}
+                <Plus className="h-4 w-4 me-2" /> {t("tickets.newTicket")}
               </Button>
             </Link>
           </>
@@ -210,9 +210,9 @@ export default function Tickets() {
         <CardContent className="p-4 space-y-4">
           <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
             <div className="relative flex-1 min-w-48">
-              <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                className="pl-9 rtl:pl-3 rtl:pr-9"
+                className="ps-9 pe-3"
                 placeholder={t("tickets.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}

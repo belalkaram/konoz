@@ -147,7 +147,7 @@ export default function CompaniesPage() {
               onClick={() => { setEditingBranch(null); setShowBranchSheet(true); }}
               className="h-8"
             >
-              <Plus className="h-3.5 w-3.5 mr-1 rtl:mr-0 rtl:ml-1" /> {language === "ar" ? "إضافة فرع" : "Add Branch"}
+              <Plus className="h-3.5 w-3.5 me-1" /> {language === "ar" ? "إضافة فرع" : "Add Branch"}
             </Button>
           </CardHeader>
           <CardContent className="space-y-2">

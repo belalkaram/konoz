@@ -122,13 +122,13 @@ function NoteItem({ note, showMarkDone, isAdmin }: { note: FollowUpNote; showMar
             disabled={markDone.isPending}
             onClick={() => markDone.mutate()}
           >
-            <CheckCircle2 className="h-3 w-3 mr-1 rtl:mr-0 rtl:ml-1" /> {t("reminders.doneBtn")}
+            <CheckCircle2 className="h-3 w-3 me-1" /> {t("reminders.doneBtn")}
           </Button>
         )}
         {note.customerId && (
           <Link href={`/customers/${note.customerId}`}>
             <Button size="sm" variant="ghost" className="h-7 text-xs px-2">
-              {t("common.view")} <ChevronRight className="h-3 w-3 ml-0.5 rtl:ml-0 rtl:mr-0.5 rtl:rotate-180" />
+              {t("common.view")} <ChevronRight className="h-3 w-3 ms-0.5 rtl:rotate-180" />
             </Button>
           </Link>
         )}
@@ -209,7 +209,7 @@ function NoteGroupList({ notes, showMarkDone, isAdmin }: { notes: FollowUpNote[]
               {group.notes.length}
             </span>
           </div>
-          <div className="space-y-2 pl-3 rtl:pl-0 rtl:pr-3 border-l-2 rtl:border-l-0 rtl:border-r-2 border-border">
+          <div className="space-y-2 ps-3 border-s-2 border-border">
             {group.notes.map((note) => (
               <NoteItem key={note.id} note={note} showMarkDone={showMarkDone} isAdmin={isAdmin} />
             ))}
@@ -385,7 +385,7 @@ export default function Reminders() {
               <Calendar className="h-3.5 w-3.5" />
               {t("reminders.tabs.today")}
               {filtered.today.length > 0 && (
-                <span className="ml-1 rtl:ml-0 rtl:mr-1 rounded-full bg-primary text-primary-foreground text-xs px-1.5 py-0.5 font-medium">
+                <span className="ms-1 rounded-full bg-primary text-primary-foreground text-xs px-1.5 py-0.5 font-medium">
                   {filtered.today.length}
                 </span>
               )}
@@ -394,7 +394,7 @@ export default function Reminders() {
               <Clock className="h-3.5 w-3.5" />
               {t("reminders.tabs.upcoming")}
               {filtered.upcoming.length > 0 && (
-                <span className="ml-1 rtl:ml-0 rtl:mr-1 rounded-full bg-blue-500 text-white text-xs px-1.5 py-0.5 font-medium">
+                <span className="ms-1 rounded-full bg-blue-500 text-white text-xs px-1.5 py-0.5 font-medium">
                   {filtered.upcoming.length}
                 </span>
               )}
@@ -403,7 +403,7 @@ export default function Reminders() {
               <AlertCircle className="h-3.5 w-3.5" />
               {t("reminders.tabs.missed")}
               {filtered.missed.length > 0 && (
-                <span className="ml-1 rtl:ml-0 rtl:mr-1 rounded-full bg-destructive text-destructive-foreground text-xs px-1.5 py-0.5 font-medium">
+                <span className="ms-1 rounded-full bg-destructive text-destructive-foreground text-xs px-1.5 py-0.5 font-medium">
                   {filtered.missed.length}
                 </span>
               )}
@@ -412,7 +412,7 @@ export default function Reminders() {
               <CheckCircle2 className="h-3.5 w-3.5" />
               {t("reminders.tabs.done")}
               {filtered.done.length > 0 && (
-                <span className="ml-1 rtl:ml-0 rtl:mr-1 rounded-full bg-green-500 text-white text-xs px-1.5 py-0.5 font-medium">
+                <span className="ms-1 rounded-full bg-green-500 text-white text-xs px-1.5 py-0.5 font-medium">
                   {filtered.done.length}
                 </span>
               )}

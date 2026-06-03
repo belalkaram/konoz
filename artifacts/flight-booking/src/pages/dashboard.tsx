@@ -267,7 +267,7 @@ export default function Dashboard() {
                           <TableRow>
                             <TableHead>{t("common.name")}</TableHead>
                             <TableHead>{language === "ar" ? "الملاحظة" : "Note"}</TableHead>
-                            <TableHead className={cn("text-right", isRtl && "text-left")}>{language === "ar" ? "الوقت" : "Time"}</TableHead>
+                            <TableHead className="text-end">{language === "ar" ? "الوقت" : "Time"}</TableHead>
                             <TableHead></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -278,14 +278,14 @@ export default function Dashboard() {
                                 {f.customerName ?? "Unknown"}
                               </TableCell>
                               <TableCell className="text-xs text-muted-foreground line-clamp-1 max-w-[100px]">{f.note}</TableCell>
-                              <TableCell className={cn("text-xs text-muted-foreground whitespace-nowrap text-right", isRtl && "text-left")}>
+                              <TableCell className="text-xs text-muted-foreground whitespace-nowrap text-end">
                                 {f.followUpDate ? formatDateTime(f.followUpDate).split(",")[1]?.trim() ?? "" : "—"}
                               </TableCell>
-                              <TableCell className={cn("text-right", isRtl && "text-left")}>
+                              <TableCell className="text-end">
                                 {f.customerId ? (
                                   <Link href={`/customers/${f.customerId}`}>
-                                    <span className={cn("text-xs text-primary hover:underline flex items-center justify-end gap-0.5 cursor-pointer", isRtl && "justify-start")}>
-                                      {t("common.view")} <ChevronRight className={cn("h-3 w-3", isRtl && "rotate-180")} />
+                                    <span className="text-xs text-primary hover:underline flex items-center justify-end gap-0.5 cursor-pointer">
+                                      {t("common.view")} <ChevronRight className="h-3 w-3 rtl:rotate-180" />
                                     </span>
                                   </Link>
                                 ) : null}
@@ -320,7 +320,7 @@ export default function Dashboard() {
                           <TableRow>
                             <TableHead>{t("common.name")}</TableHead>
                             <TableHead>{language === "ar" ? "الملاحظة" : "Note"}</TableHead>
-                            <TableHead className={cn("text-right", isRtl && "text-left")}>{language === "ar" ? "الوقت" : "Time"}</TableHead>
+                            <TableHead className="text-end">{language === "ar" ? "الوقت" : "Time"}</TableHead>
                             <TableHead></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -331,14 +331,14 @@ export default function Dashboard() {
                                 {f.customerName ?? "Unknown"}
                               </TableCell>
                               <TableCell className="text-xs text-muted-foreground line-clamp-1 max-w-[100px]">{f.note}</TableCell>
-                              <TableCell className={cn("text-xs text-muted-foreground whitespace-nowrap text-right", isRtl && "text-left")}>
+                              <TableCell className="text-xs text-muted-foreground whitespace-nowrap text-end">
                                 {f.followUpDate ? formatDateTime(f.followUpDate).split(",")[1]?.trim() ?? "" : "—"}
                               </TableCell>
-                              <TableCell className={cn("text-right", isRtl && "text-left")}>
+                              <TableCell className="text-end">
                                 {f.customerId ? (
                                   <Link href={`/customers/${f.customerId}`}>
-                                    <span className={cn("text-xs text-primary hover:underline flex items-center justify-end gap-0.5 cursor-pointer", isRtl && "justify-start")}>
-                                      {t("common.view")} <ChevronRight className={cn("h-3 w-3", isRtl && "rotate-180")} />
+                                    <span className="text-xs text-primary hover:underline flex items-center justify-end gap-0.5 cursor-pointer">
+                                      {t("common.view")} <ChevronRight className="h-3 w-3 rtl:rotate-180" />
                                     </span>
                                   </Link>
                                 ) : null}
@@ -506,7 +506,7 @@ export default function Dashboard() {
                               {order.slices?.[0]?.origin.iataCode} → {order.slices?.[0]?.destination.iataCode}
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className="text-end">
                             <div className="font-medium text-sm">{formatCurrency(order.totalAmount, order.totalCurrency)}</div>
                             <span className={`text-xs px-2 py-0.5 rounded-full ${
                               order.status === "confirmed" ? "bg-green-100 text-green-800" :

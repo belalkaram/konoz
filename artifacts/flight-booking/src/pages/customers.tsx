@@ -369,9 +369,9 @@ export default function Customers() {
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
             <div className="relative flex-1 min-w-48">
-              <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                className="pl-9 rtl:pl-3 rtl:pr-9"
+                className="ps-9 pe-3"
                 placeholder={t("customers.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -439,7 +439,7 @@ export default function Customers() {
                   </div>
                 )}
                 <div className="flex-1 grid grid-cols-[2fr_1fr_1.3fr_0.7fr_0.9fr_0.9fr_1fr_1fr_1fr_0.9fr_auto] gap-3 px-6 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  <button type="button" onClick={() => toggleSort("name")} className="flex items-center hover:text-foreground transition-colors text-left">
+                  <button type="button" onClick={() => toggleSort("name")} className="flex items-center hover:text-foreground transition-colors text-start">
                     {t("customers.table.name")}<SortIcon col="name" />
                   </button>
                   <span>{t("customers.table.uploadedBy")}</span>
@@ -447,12 +447,12 @@ export default function Customers() {
                   <span>{t("customers.table.status")}</span>
                   <span>{t("customers.table.passport")}</span>
                   <span>{t("customers.table.pnr")}</span>
-                  <button type="button" onClick={() => toggleSort("bookingDate")} className="flex items-center hover:text-foreground transition-colors text-left">
+                  <button type="button" onClick={() => toggleSort("bookingDate")} className="flex items-center hover:text-foreground transition-colors text-start">
                     {t("customers.table.bookingDate")}<SortIcon col="bookingDate" />
                   </button>
                   <span>{t("customers.table.travelDate")}</span>
                   <span>{t("customers.table.daysLeft")}</span>
-                  <button type="button" onClick={() => toggleSort("netProfit")} className="flex items-center hover:text-foreground transition-colors text-left">
+                  <button type="button" onClick={() => toggleSort("netProfit")} className="flex items-center hover:text-foreground transition-colors text-start">
                     {t("customers.table.netProfit")}<SortIcon col="netProfit" />
                   </button>
                   <span className="w-4" />

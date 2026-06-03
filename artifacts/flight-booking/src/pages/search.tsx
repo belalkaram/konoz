@@ -21,6 +21,7 @@ import { FlexibleDatePriceSlider } from "@/components/flexible-date-price-slider
 import { FarePackageCards } from "@/components/fare-package-cards";
 import { useLanguage } from "@/contexts/language-context";
 import { PageHeader } from "@/components/page-header";
+import { cn } from "@/lib/utils";
 
 type TripType = "one_way" | "round_trip";
 type StopsFilter = "all" | "nonstop" | "stops";
@@ -195,7 +196,7 @@ function BaggagePackages({ services, currency }: { services: BaggageService[]; c
                 +1 {svc.type === "carry_on" ? t("search.carryOn") : t("search.checked")}
                 {svc.maximumWeightKg ? ` · ${svc.maximumWeightKg}kg` : ""}
               </span>
-              <span className="font-semibold text-primary ml-1 rtl:ml-0 rtl:mr-1">
+              <span className="font-semibold text-primary ms-1">
                 +{formatCurrency(svc.totalAmount, svc.totalCurrency)}
               </span>
             </div>
@@ -302,8 +303,8 @@ export default function Search() {
       setNextAfter(result.nextAfter);
     } catch (err) {
       toast({
-        title: "Failed to load more",
-        description: err instanceof Error ? err.message : "Try again.",
+        title: language === "ar" ? "فشل تحميل المزيد" : "Failed to load more",
+        description: err instanceof Error ? err.message : (language === "ar" ? "يرجى المحاولة مرة أخرى." : "Try again."),
         variant: "destructive",
       });
     } finally {
@@ -352,11 +353,19 @@ export default function Search() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!origin || !destination || !departureDate) {
-      toast({ title: "Missing fields", description: "Please fill in origin, destination, and date.", variant: "destructive" });
+      toast({
+        title: language === "ar" ? "حقول مطلوبة مفقودة" : "Missing fields",
+        description: language === "ar" ? "يرجى ملء مطار المغادرة ومطار الوصول والتاريخ." : "Please fill in origin, destination, and date.",
+        variant: "destructive",
+      });
       return;
     }
     if (tripType === "round_trip" && !returnDate) {
-      toast({ title: "Missing return date", description: "Please select a return date for round trip.", variant: "destructive" });
+      toast({
+        title: language === "ar" ? "تاريخ العودة مفقود" : "Missing return date",
+        description: language === "ar" ? "يرجى تحديد تاريخ العودة لرحلة الذهاب والعودة." : "Please select a return date for round trip.",
+        variant: "destructive",
+      });
       return;
     }
     const key: SearchKey = {
@@ -542,7 +551,9 @@ export default function Search() {
         <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
         <div className="min-w-0">
           <p className="font-medium text-amber-800 dark:text-amber-300 text-xs leading-snug">
-            بعض الشركات لا تظهر في البحث — احجز مباشرة من موقعها:
+            {language === "ar"
+              ? "بعض شركات الطيران لا تظهر في نتائج البحث — يرجى الحجز مباشرة عبر مواقعها الرسمية:"
+              : "Some airlines do not appear in search results — please book directly via their official websites:"}
           </p>
           <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
             {[
@@ -760,7 +771,7 @@ export default function Search() {
                               <div className="text-[10px] text-muted-foreground uppercase">{getCabinClassLabel(offer.cabinClass)}</div>
                             </div>
                           </div>
-                          <div className="text-right flex-shrink-0">
+                          <div className="text-end flex-shrink-0">
                             <div className="text-lg font-bold text-primary leading-none">
                               {formatCurrency(offer.totalAmount, offer.totalCurrency, displayCurrency)}
                             </div>
@@ -827,8 +838,8 @@ export default function Search() {
                         </div>
 
                         {/* Price + CTA */}
-                        <div className="flex flex-col items-end justify-center gap-2 border-l rtl:border-l-0 rtl:border-r border-border pl-5 rtl:pl-0 rtl:pr-5 flex-shrink-0 min-w-32">
-                          <div className="text-right rtl:text-left">
+                        <div className="flex flex-col items-end justify-center gap-2 border-s border-border ps-5 flex-shrink-0 min-w-32">
+                          <div className="text-end">
                             <div className="text-2xl font-bold text-primary">
                               {formatCurrency(offer.totalAmount, offer.totalCurrency, displayCurrency)}
                             </div>

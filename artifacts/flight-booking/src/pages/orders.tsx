@@ -63,7 +63,7 @@ export default function Orders() {
                       <TableHead>{t("orders.route")}</TableHead>
                       <TableHead>{t("orders.passenger")}</TableHead>
                       <TableHead>{t("orders.status")}</TableHead>
-                      <TableHead className="text-right rtl:text-left">{t("orders.total")}</TableHead>
+                      <TableHead className="text-end">{t("orders.total")}</TableHead>
                       <TableHead />
                     </TableRow>
                   </TableHeader>
@@ -92,10 +92,10 @@ export default function Orders() {
                               {t(`statuses.${order.status?.toLowerCase()}`) || order.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right rtl:text-left font-medium">
+                          <TableCell className="text-end font-medium">
                             {formatCurrency(order.totalAmount, order.totalCurrency)}
                           </TableCell>
-                          <TableCell className="text-right rtl:text-left">
+                          <TableCell className="text-end">
                             <Link href={`/orders/${order.id}`}>
                               <Button variant="ghost" size="icon">
                                 <Eye className="h-4 w-4" />

@@ -229,6 +229,7 @@ export default function Checkout() {
                       required 
                       value={passenger.email} 
                       onChange={e => setPassenger({...passenger, email: e.target.value})} 
+                      className="dir-ltr text-start"
                     />
                   </div>
                   <div className="space-y-2">
@@ -240,6 +241,7 @@ export default function Checkout() {
                       value={passenger.phoneNumber} 
                       onChange={e => setPassenger({...passenger, phoneNumber: e.target.value})}
                       placeholder="+1234567890" 
+                      className="dir-ltr text-start"
                     />
                   </div>
                 </div>

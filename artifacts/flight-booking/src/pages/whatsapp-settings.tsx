@@ -24,7 +24,7 @@ export default function WhatsappSettings() {
     queryFn: async () => {
       const res = await authFetch(`${BASE}/api/whatsapp/instance`);
       if (!res.ok) throw new Error("Failed to fetch instance");
-      return res.json() as Promise<{ instanceName: string; status: string; qrCode: string | null }>;
+      return res.json() as Promise<{ instanceName: string; status: string; qrCode: string | null; isMainInstance?: boolean }>;
     },
     refetchInterval: isPolling ? 3000 : false,
   });
@@ -104,6 +104,24 @@ export default function WhatsappSettings() {
       stopCountdown();
       queryClient.invalidateQueries({ queryKey: ["whatsapp-instance"] });
       toast({ title: language === "ar" ? "تم تسجيل الخروج بنجاح" : "Logged out successfully" });
+    },
+    onError: (err: any) => {
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
+    },
+  });
+
+  const setMainMutation = useMutation({
+    mutationFn: async () => {
+      const res = await authFetch(`${BASE}/api/whatsapp/instance/set-main`, { method: "POST" });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error((errData as any).message || "Failed to set as main");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-instance"] });
+      toast({ title: language === "ar" ? "✅ تم التعيين كرقم رئيسي بنجاح" : "✅ Set as main number successfully!" });
     },
     onError: (err: any) => {
       toast({ title: t("common.error"), description: err.message, variant: "destructive" });
@@ -205,7 +223,7 @@ export default function WhatsappSettings() {
                       onClick={refreshQR}
                       disabled={connectMutation.isPending}
                     >
-                      <RefreshCw className="mr-1.5 h-3.5 w-3.5 rtl:mr-0 rtl:ml-1.5" />
+                      <RefreshCw className="me-1.5 h-3.5 w-3.5" />
                       {language === "ar" ? "تحديث الرمز" : "Refresh QR"}
                     </Button>
                   </div>
@@ -219,7 +237,7 @@ export default function WhatsappSettings() {
                     disabled={connectMutation.isPending}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
-                    {connectMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {connectMutation.isPending ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : null}
                     {language === "ar" ? "توليد رمز الاستجابة السريعة" : "Generate QR Code"}
                   </Button>
                 </div>
@@ -244,7 +262,7 @@ export default function WhatsappSettings() {
                 onClick={() => setMainMutation.mutate()}
                 className={data?.isMainInstance ? "bg-emerald-50 text-emerald-700 border-emerald-200 pointer-events-none" : ""}
               >
-                {setMainMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {setMainMutation.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                 {data?.isMainInstance 
                   ? (language === "ar" ? "الرقم الرئيسي ✓" : "Main Number ✓") 
                   : (language === "ar" ? "تعيين كرقم رئيسي" : "Set as Main")}
@@ -260,7 +278,7 @@ export default function WhatsappSettings() {
                 onClick={() => logoutMutation.mutate()}
                 disabled={logoutMutation.isPending}
               >
-                {logoutMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
+                {logoutMutation.isPending ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <LogOut className="me-2 h-4 w-4" />}
                 {language === "ar" ? "تسجيل الخروج وقطع الاتصال" : "Logout and Disconnect"}
               </Button>
             </div>

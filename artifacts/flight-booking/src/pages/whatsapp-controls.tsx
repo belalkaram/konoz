@@ -259,7 +259,7 @@ export default function WhatsappControls() {
                     onClick={handleFilterNumbers}
                     disabled={numbers.length === 0 || checkingNumbers}
                   >
-                    {checkingNumbers ? <Loader2 className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4 animate-spin" /> : <Filter className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />}
+                    {checkingNumbers ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Filter className="me-2 h-4 w-4" />}
                     {language === "ar" ? "فحص وتصفية الأرقام (التحقق من وجود واتساب)" : "Filter Numbers (Check WhatsApp existence)"}
                   </Button>
                 </div>
@@ -321,7 +321,7 @@ export default function WhatsappControls() {
                   onClick={() => createCampaignMutation.mutate()}
                   disabled={createCampaignMutation.isPending || numbers.length === 0 || !messageTemplate || !campaignName}
                 >
-                  {createCampaignMutation.isPending ? <Loader2 className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />}
+                  {createCampaignMutation.isPending ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Play className="me-2 h-4 w-4" />}
                   {language === "ar" ? "بدء إرسال الحملة" : "Start Campaign"}
                 </Button>
 
@@ -405,7 +405,7 @@ export default function WhatsappControls() {
                                 onClick={() => resumeCampaignMutation.mutate(camp.id)}
                                 disabled={resumeCampaignMutation.isPending}
                               >
-                                <Play className="mr-1 rtl:mr-0 rtl:ml-1 h-3.5 w-3.5" /> {language === "ar" ? "استئناف" : "Resume"}
+                                <Play className="me-1 h-3.5 w-3.5" /> {language === "ar" ? "استئناف" : "Resume"}
                               </Button>
                             )}
                             {camp.status === 'running' && (
@@ -416,7 +416,7 @@ export default function WhatsappControls() {
                                 onClick={() => pauseCampaignMutation.mutate(camp.id)}
                                 disabled={pauseCampaignMutation.isPending}
                               >
-                                <Pause className="mr-1 rtl:mr-0 rtl:ml-1 h-3.5 w-3.5" /> {language === "ar" ? "إيقاف مؤقت" : "Pause"}
+                                <Pause className="me-1 h-3.5 w-3.5" /> {language === "ar" ? "إيقاف مؤقت" : "Pause"}
                               </Button>
                             )}
                           </div>
@@ -507,7 +507,7 @@ export default function WhatsappControls() {
                               }
                             }}
                           >
-                            <Upload className="h-4 w-4 mr-1 rtl:mr-0 rtl:ml-1" /> {language === "ar" ? "تصدير الأعضاء إكسيل" : "Export Members"}
+                            <Upload className="h-4 w-4 me-1" /> {language === "ar" ? "تصدير الأعضاء إكسيل" : "Export Members"}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -574,7 +574,7 @@ export default function WhatsappControls() {
                           XLSX.writeFile(wb, "whatsapp_contacts_extract.xlsx");
                         }}
                       >
-                        <Upload className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" /> {language === "ar" ? "تصدير إلى إكسيل" : "Export to Excel"}
+                        <Upload className="h-4 w-4 me-2" /> {language === "ar" ? "تصدير إلى إكسيل" : "Export to Excel"}
                       </Button>
                     </div>
                   </div>

@@ -166,7 +166,7 @@ export default function Chat() {
     <div className="flex h-[calc(100vh-8rem)] bg-card border border-border rounded-xl shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-500">
       
       {/* Contacts Sidebar */}
-      <div className={`w-full md:w-80 flex-shrink-0 border-r rtl:border-r-0 rtl:border-l border-border bg-muted/20 flex flex-col ${selectedPhone ? "hidden md:flex" : "flex"}`}>
+      <div className={`w-full md:w-80 flex-shrink-0 border-e border-border bg-muted/20 flex flex-col ${selectedPhone ? "hidden md:flex" : "flex"}`}>
         <div className="p-4 border-b border-border bg-background text-start">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -236,7 +236,7 @@ export default function Chat() {
                         {format(new Date(contact.lastMessageAt), "h:mm a")}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground truncate pr-2 rtl:pr-0 rtl:pl-2">
+                    <p className="text-xs text-muted-foreground truncate pe-2">
                       {contact.messageBody}
                     </p>
                   </div>
@@ -286,8 +286,8 @@ export default function Chat() {
                   const isAudio = msg.messageType === "audio";
                   
                   return (
-                    <div key={msg.id} className={`flex flex-col ${isMe ? "items-end rtl:items-start ml-auto" : "items-start rtl:items-end mr-auto"} max-w-[85%] md:max-w-[80%]`}>
-                      <div className={`px-4 py-2 rounded-2xl ${isMe ? "bg-primary text-primary-foreground rounded-tr-sm rtl:rounded-tr-2xl rtl:rounded-tl-sm" : "bg-muted text-foreground rounded-tl-sm rtl:rounded-tl-2xl rtl:rounded-tr-sm border border-border"}`}>
+                    <div key={msg.id} className={`flex flex-col ${isMe ? "items-end ms-auto" : "items-start me-auto"} max-w-[85%] md:max-w-[80%]`}>
+                      <div className={`px-4 py-2 rounded-2xl ${isMe ? "bg-primary text-primary-foreground rounded-se-sm" : "bg-muted text-foreground rounded-ss-sm border border-border"}`}>
                         {isAudio ? (
                           <audio src={msg.messageBody} controls className="max-w-full" />
                         ) : (

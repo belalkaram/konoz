@@ -37,8 +37,10 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (!this.state.hasError) return this.props.children;
 
+    const isAr = typeof window !== "undefined" && (localStorage.getItem("app-lang") === "ar" || document.documentElement.lang === "ar");
+
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-[#f8fafc] dark:bg-background">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#f8fafc] dark:bg-background" dir={isAr ? "rtl" : "ltr"}>
         <div className="max-w-md w-full bg-white dark:bg-card rounded-2xl shadow-2xl p-8 border border-blue-100 dark:border-border text-center relative overflow-hidden">
           {/* Background decoration */}
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-blue-400 to-emerald-500" />
@@ -56,17 +58,25 @@ export class ErrorBoundary extends Component<Props, State> {
           </div>
 
           <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground mb-2">
-            {this.state.isNetworkError ? "Connection Issue" : "Application Error"}
+            {isAr
+              ? (this.state.isNetworkError ? "مشكلة في الاتصال" : "خطأ في التطبيق")
+              : (this.state.isNetworkError ? "Connection Issue" : "Application Error")}
           </h1>
           
           <p className="text-gray-600 dark:text-muted-foreground mb-6 leading-relaxed">
-            {this.state.isNetworkError 
-               ? "We're having trouble connecting to the system. This is usually caused by an unstable internet connection."
-              : "An unexpected error occurred while processing your request. Our system logs have been updated."}
+            {isAr
+              ? (this.state.isNetworkError 
+                 ? "نواجه مشكلة في الاتصال بالنظام. يحدث هذا عادةً بسبب عدم استقرار اتصال الإنترنت الخاص بك."
+                 : "حدث خطأ غير متوقع أثناء معالجة طلبك. تم تحديث سجلات أخطاء النظام لدينا.")
+              : (this.state.isNetworkError 
+                 ? "We're having trouble connecting to the system. This is usually caused by an unstable internet connection."
+                 : "An unexpected error occurred while processing your request. Our system logs have been updated.")}
           </p>
 
-          <div className="rounded-xl p-4 mb-8 text-left text-xs font-mono bg-gray-50 dark:bg-muted border border-gray-100 dark:border-border text-gray-500 dark:text-muted-foreground break-all">
-            <div className="font-bold text-gray-400 dark:text-muted-foreground/60 uppercase mb-1 tracking-tighter">Error Details:</div>
+          <div className="rounded-xl p-4 mb-8 text-start text-xs font-mono bg-gray-50 dark:bg-muted border border-gray-100 dark:border-border text-gray-500 dark:text-muted-foreground break-all">
+            <div className="font-bold text-gray-400 dark:text-muted-foreground/60 uppercase mb-1 tracking-tighter">
+              {isAr ? "تفاصيل الخطأ:" : "Error Details:"}
+            </div>
             {this.state.message}
           </div>
 
@@ -75,8 +85,10 @@ export class ErrorBoundary extends Component<Props, State> {
               onClick={this.handleReset}
               className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-base font-semibold transition-all active:scale-[0.98]"
             >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              {this.state.isNetworkError ? "Retry Connection" : "Attempt Recovery"}
+              <RefreshCw className="w-4 h-4 me-2" />
+              {isAr
+                ? (this.state.isNetworkError ? "إعادة محاولة الاتصال" : "محاولة الاستعادة")
+                : (this.state.isNetworkError ? "Retry Connection" : "Attempt Recovery")}
             </Button>
             
             <Button
@@ -87,13 +99,13 @@ export class ErrorBoundary extends Component<Props, State> {
               }}
               className="w-full border-blue-100 dark:border-border text-blue-600 dark:text-foreground hover:bg-blue-50 dark:hover:bg-muted"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Return to Dashboard
+              <ArrowLeft className="w-4 h-4 me-2 rtl:rotate-180" />
+              {isAr ? "العودة إلى لوحة التحكم" : "Return to Dashboard"}
             </Button>
           </div>
           
           <div className="mt-8 pt-6 border-t border-gray-50 dark:border-border text-[10px] text-gray-400 uppercase tracking-widest font-bold">
-            Konoz System Reliability System
+            {isAr ? "نظام حماية نظام كنوز" : "Konoz System Reliability System"}
           </div>
         </div>
       </div>

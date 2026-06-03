@@ -85,7 +85,7 @@ export default function OrderDetail() {
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive">
-                <XCircle className="w-4 h-4 mr-2 rtl:mr-0 rtl:ml-2" />
+                <XCircle className="w-4 h-4 me-2" />
                 {language === "ar" ? "إلغاء الحجز" : "Cancel Booking"}
               </Button>
             </AlertDialogTrigger>

@@ -340,7 +340,7 @@ function EmployeeFormSheet({ open, editing, onClose, onSuccess, allPossibleSuper
                    setForm({ ...EMPTY_FORM, supervisorId: editing.id.toString(), role: "Employee" });
                 }}
               >
-                <Plus className="h-3 w-3 mr-1 rtl:mr-0 rtl:ml-1" /> {t("employees.addToTeam")}
+                <Plus className="h-3 w-3 me-1" /> {t("employees.addToTeam")}
               </Button>
             </div>
             <div className="space-y-2">
@@ -675,7 +675,7 @@ export default function EmployeesPage() {
                         </div>
                         <div className="text-xs text-muted-foreground">{session.role}</div>
                       </div>
-                      <div className="text-right rtl:text-left text-xs text-muted-foreground flex-shrink-0 hidden sm:block">
+                      <div className="text-end text-xs text-muted-foreground flex-shrink-0 hidden sm:block">
                         <div>{t("employees.loggedIn")}: {loginTime.toLocaleString()}</div>
                         <div>{t("employees.expires")}: {expiresTime.toLocaleString()}</div>
                       </div>

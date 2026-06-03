@@ -113,7 +113,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 }
                 title={isCollapsed ? item.label : undefined}
               >
-                <item.icon className={cn("h-4 w-4 flex-shrink-0", !isCollapsed && (isRtl ? "ml-3" : "mr-3"))} />
+                <item.icon className={cn("h-4 w-4 flex-shrink-0", !isCollapsed && "me-3")} />
                 {!isCollapsed && <span className="animate-in fade-in duration-300">{item.label}</span>}
               </Link>
             );
@@ -153,7 +153,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden bg-[#f8fafc] dark:bg-background">
       {/* Desktop Sidebar */}
       <aside className={cn(
-        "hidden md:flex flex-col flex-shrink-0 transition-all duration-300 border-r rtl:border-r-0 rtl:border-l border-slate-700/10 dark:border-border/30",
+        "hidden md:flex flex-col flex-shrink-0 transition-all duration-300 border-e border-slate-700/10 dark:border-border/30",
         collapsed ? "w-20" : "w-64"
       )}
         style={{ background: sidebarBackground }}>
@@ -172,7 +172,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile Drawer */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 rtl:left-auto rtl:right-0 z-50 w-64 flex flex-col transform transition-transform duration-300 md:hidden border-r rtl:border-r-0 rtl:border-l border-slate-700/10 dark:border-border/30",
+          "fixed inset-y-0 start-0 z-50 w-64 flex flex-col transform transition-transform duration-300 md:hidden border-e border-slate-700/10 dark:border-border/30",
           mobileOpen 
             ? "translate-x-0" 
             : (isRtl ? "translate-x-full" : "-translate-x-full")
@@ -181,7 +181,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       >
         <button
           onClick={() => setMobileOpen(false)}
-          className="absolute top-4 right-4 rtl:right-auto rtl:left-4 p-1.5 rounded-full transition-colors"
+          className="absolute top-4 end-4 p-1.5 rounded-full transition-colors"
           style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
         >
           <X className="h-4 w-4" />
@@ -207,7 +207,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {/* Desktop Sidebar Toggle */}
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="hidden md:flex p-2 rounded-full transition-all hover:bg-blue-50 dark:hover:bg-muted text-primary dark:text-muted-foreground mr-2 rtl:mr-0 rtl:ml-2"
+              className="hidden md:flex p-2 rounded-full transition-all hover:bg-blue-50 dark:hover:bg-muted text-primary dark:text-muted-foreground me-2"
               title={collapsed ? t("common.expandSidebar") : t("common.collapseSidebar")}
             >
               {collapsed ? (

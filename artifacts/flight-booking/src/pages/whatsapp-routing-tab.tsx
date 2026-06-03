@@ -134,7 +134,7 @@ export default function WhatsappRoutingTab() {
               onClick={() => addAgentMutation.mutate()} 
               disabled={!employeeId || !agentPhone || addAgentMutation.isPending}
             >
-              {addAgentMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />}
+              {addAgentMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 me-2" />}
               {language === "ar" ? "إضافة موظف" : "Add Agent"}
             </Button>
           </div>
@@ -169,7 +169,7 @@ export default function WhatsappRoutingTab() {
                           size="sm" 
                           onClick={() => toggleAgentMutation.mutate({ id: agent.id, isActive: !agent.isActive })}
                         >
-                          {agent.isActive ? <Power className="h-4 w-4 mr-1" /> : <PowerOff className="h-4 w-4 mr-1 text-muted-foreground" />}
+                          {agent.isActive ? <Power className="h-4 w-4 me-1" /> : <PowerOff className="h-4 w-4 me-1 text-muted-foreground" />}
                           {agent.isActive ? (language === "ar" ? "نشط" : "Active") : (language === "ar" ? "متوقف" : "Paused")}
                         </Button>
                       </TableCell>

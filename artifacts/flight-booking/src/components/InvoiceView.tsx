@@ -926,7 +926,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
               </p>
             </div>
 
-            <div className="text-left md:text-right space-y-1 invoice-title-box">
+            <div className="text-start md:text-end space-y-1 invoice-title-box">
               <h2
                 className="text-xl font-bold invoice-title"
                 style={{ color: "#1e293b" }}
@@ -988,7 +988,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
               </div>
             </div>
 
-            <div className="space-y-4 text-right md:text-left">
+            <div className="space-y-4 text-start md:text-end">
               <h3
                 className="text-sm font-semibold uppercase flex items-center gap-2 md:justify-end section-label"
                 style={{ color: "#94a3b8" }}
@@ -1035,7 +1035,7 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
             >
               <div className="col-span-2">{t("ticketDetail.invoice.description") || (isRtl ? "الوصف (تفاصيل الرحلة)" : "Description")}</div>
               <div className="text-center">{t("common.airline") || (isRtl ? "شركة الطيران" : "Airline")}</div>
-              <div className={isRtl ? "text-left" : "text-right"}>{t("ticketDetail.invoice.amount") || (isRtl ? "المبلغ" : "Amount")}</div>
+              <div className="text-end">{t("ticketDetail.invoice.amount") || (isRtl ? "المبلغ" : "Amount")}</div>
             </div>
 
             <div className="p-6 grid grid-cols-4 gap-4 items-center border-b border-slate-100 flight-table-row">
@@ -1064,13 +1064,13 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({
                 {ticket.airline}
               </div>
 
-              <div className={cn(isRtl ? "text-left" : "text-right", "font-bold")} style={{ color: "#0f172a" }}>
+              <div className="text-end font-bold" style={{ color: "#0f172a" }}>
                 {invoice.totalAmount} KWD
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end rtl:justify-start mb-10 totals-box">
+          <div className="flex justify-end mb-10 totals-box">
             <div className="w-full md:w-64 space-y-3 totals-inner">
               <div
                 className="flex justify-between total-row"

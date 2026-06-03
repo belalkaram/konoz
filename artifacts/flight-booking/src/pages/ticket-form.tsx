@@ -295,7 +295,7 @@ export default function TicketForm() {
                             }}
                           >
                             <Check
-                              className={cn("mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4", form.customerId === String(c.id) ? "opacity-100" : "opacity-0")}
+                              className={cn("me-2 h-4 w-4", form.customerId === String(c.id) ? "opacity-100" : "opacity-0")}
                             />
                             <div>
                               <div className="font-medium">{c.fullName}</div>

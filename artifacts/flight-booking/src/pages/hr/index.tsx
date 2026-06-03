@@ -277,7 +277,7 @@ function AttendanceTab({ employees, attendance }: { employees: Employee[]; atten
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={openAddDialog} className="bg-primary hover:bg-primary/90 text-white rounded-full px-6">
-              <Plus className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+              <Plus className="h-4 w-4 me-2" />
               {language === "ar" ? "إضافة سجل" : "Add Record"}
             </Button>
           </DialogTrigger>
@@ -349,12 +349,12 @@ function AttendanceTab({ employees, attendance }: { employees: Employee[]; atten
       <CardContent>
         <div className="flex items-center gap-4 mb-6">
           <div className="relative flex-1">
-            <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={language === "ar" ? "ابحث بالاسم أو التاريخ..." : "Search by name or date..."}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 rtl:pl-3 rtl:pr-9 rounded-full bg-muted/50 border-none"
+              className="ps-9 pe-3 rounded-full bg-muted/50 border-none"
             />
           </div>
         </div>
@@ -483,7 +483,7 @@ function LeavesTab({ employees, leaves }: { employees: Employee[]; leaves: Leave
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-primary hover:bg-primary/90 text-white rounded-full px-6">
-              <Plus className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+              <Plus className="h-4 w-4 me-2" />
               {t("hr.newLeaveRequest")}
             </Button>
           </DialogTrigger>
@@ -550,12 +550,12 @@ function LeavesTab({ employees, leaves }: { employees: Employee[]; leaves: Leave
       <CardContent>
         <div className="flex items-center gap-4 mb-6">
           <div className="relative flex-1">
-            <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={language === "ar" ? "ابحث بالموظف أو النوع..." : "Search by employee or type..."}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 rtl:pl-3 rtl:pr-9 rounded-full bg-muted/50 border-none"
+              className="ps-9 pe-3 rounded-full bg-muted/50 border-none"
             />
           </div>
         </div>
@@ -793,7 +793,7 @@ function ReportsTab({ employees, attendance, leaves }: { employees: Employee[]; 
           </div>
           <Separator />
           <Button className="w-full bg-primary text-white rounded-full" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+            <Printer className="h-4 w-4 me-2" />
             {language === "ar" ? "تصدير وطباعة" : "Export & Print"}
           </Button>
         </CardContent>

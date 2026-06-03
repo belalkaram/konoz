@@ -111,9 +111,9 @@ export function AirportCombobox({ id, label, value, onChange, placeholder }: Air
           onFocus={handleFocus}
           placeholder={placeholder ?? (language === "ar" ? "مثال: CAI أو القاهرة" : "e.g. LHR or London")}
           autoComplete="off"
-          className="pr-8 rtl:pr-3 rtl:pl-8 text-start"
+          className="pe-8 ps-3 text-start"
         />
-        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground rtl:right-auto rtl:left-2.5">
+        <div className="absolute end-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
           {isFetching ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (

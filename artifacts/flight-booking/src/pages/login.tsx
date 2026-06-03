@@ -54,7 +54,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center relative" style={{ background: SIDEBAR_GRADIENT }}>
       {/* Floating Language Switcher */}
-      <div className="absolute top-4 right-4 rtl:right-auto rtl:left-4">
+      <div className="absolute top-4 end-4">
         <button
           onClick={() => setLanguage(language === "ar" ? "en" : "ar")}
           className="px-3 py-1.5 rounded-full border border-white/10 transition-all text-xs font-bold flex items-center justify-center bg-white/5 hover:bg-white/10 text-white gap-1"
@@ -89,7 +89,7 @@ export default function Login() {
                 {t("login.username")}
               </Label>
               <div className="relative">
-                <User className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "rgba(255,255,255,0.4)" }} />
+                <User className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "rgba(255,255,255,0.4)" }} />
                 <Input
                   type="text"
                   value={username}
@@ -97,7 +97,7 @@ export default function Login() {
                   placeholder={language === "ar" ? "مثال: belal" : "e.g. Belal"}
                   autoComplete="username"
                   autoFocus
-                  className="pl-9 rtl:pl-3 rtl:pr-9 border-0 text-white placeholder:text-white/30"
+                  className="ps-9 pe-3 border-0 text-white placeholder:text-white/30"
                   style={{ background: "rgba(255,255,255,0.08)" }}
                   disabled={loading}
                 />
@@ -109,14 +109,14 @@ export default function Login() {
                 {t("login.pin")}
               </Label>
               <div className="relative">
-                <Lock className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "rgba(255,255,255,0.4)" }} />
+                <Lock className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "rgba(255,255,255,0.4)" }} />
                 <Input
                   type="password"
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
                   placeholder={language === "ar" ? "أدخل الرمز السري" : "Enter your PIN"}
                   autoComplete="current-password"
-                  className="pl-9 rtl:pl-3 rtl:pr-9 border-0 text-white placeholder:text-white/30"
+                  className="ps-9 pe-3 border-0 text-white placeholder:text-white/30"
                   style={{ background: "rgba(255,255,255,0.08)" }}
                   disabled={loading}
                   maxLength={8}

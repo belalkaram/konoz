@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getAirlineWebsite } from "@/lib/airlines";
 import { authFetch, BASE } from "@/lib/api";
 import { useLanguage } from "@/contexts/language-context";
+import { cn } from "@/lib/utils";
 
 async function fetchOffer(offerId: string) {
   const res = await authFetch(`${BASE}/api/offers/${offerId}`);
@@ -105,7 +106,7 @@ export default function OfferDetail() {
         </Alert>
         <div className="flex gap-3">
           <Button variant="outline" className="gap-1.5" onClick={() => setLocation("/search")}>
-            {isRtl ? "العودة للبحث ←" : "← Back to Search"}
+            {isRtl ? "العودة للبحث →" : "← Back to Search"}
           </Button>
           {isAirlineError && (
             <Button className="gap-1.5" onClick={() => refetch()}>
@@ -137,7 +138,7 @@ export default function OfferDetail() {
             <Button
               variant="link"
               size="sm"
-              className="ml-2 rtl:ml-0 rtl:mr-2 h-auto p-0 text-amber-800 underline"
+              className="ms-2 h-auto p-0 text-amber-800 underline"
               onClick={() => refetch()}
             >
               {language === "ar" ? "حاول التحديث" : "Try refreshing"}
@@ -182,7 +183,7 @@ export default function OfferDetail() {
             </div>
           </div>
         </div>
-        <div className="text-right rtl:text-left">
+        <div className="text-end">
           <div className="text-3xl font-bold text-primary">
             {formatCurrency(offer.totalAmount, offer.totalCurrency, displayCurrency)}
           </div>

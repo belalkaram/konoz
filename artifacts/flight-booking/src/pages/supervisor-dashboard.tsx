@@ -124,7 +124,7 @@ function KPICard({ title, value, icon, gradient, sub }: {
   return (
     <Card className="relative overflow-hidden group hover:shadow-xl hover:scale-[1.02] transition-all duration-300 border-0" id={`kpi-${title.toLowerCase().replace(/\s+/g, '-')}`}>
       <div className="absolute inset-0 opacity-[0.06] group-hover:opacity-[0.12] transition-opacity duration-500" style={{ background: gradient }} />
-      <div className="absolute top-0 right-0 w-20 h-20 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity duration-500 rounded-bl-full" style={{ background: gradient }} />
+      <div className="absolute top-0 end-0 w-20 h-20 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity duration-500 rounded-es-full" style={{ background: gradient }} />
       <CardContent className="p-5 relative">
         <div className="flex items-center justify-between mb-3">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</span>
@@ -700,7 +700,7 @@ export default function SupervisorDashboard() {
                               {emp.initials}
                             </div>
                             {i < 3 && (
-                              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold bg-white shadow-sm border" style={{ color: i === 0 ? "#1d4ed8" : i === 1 ? "#3b82f6" : "#10b981" }}>
+                              <span className="absolute -top-1 -end-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold bg-white shadow-sm border" style={{ color: i === 0 ? "#1d4ed8" : i === 1 ? "#3b82f6" : "#10b981" }}>
                                 {i + 1}
                               </span>
                             )}
@@ -731,12 +731,12 @@ export default function SupervisorDashboard() {
                           <TableRow>
                             <TableHead>Employee</TableHead>
                             <TableHead>Role</TableHead>
-                            <TableHead className="text-right">Tickets</TableHead>
-                            <TableHead className="text-right">Revenue</TableHead>
-                            <TableHead className="text-right">Profit</TableHead>
-                            <TableHead className="text-right">Customers</TableHead>
-                            <TableHead className="text-right">Confirmed</TableHead>
-                            <TableHead className="text-right">Cancelled</TableHead>
+                            <TableHead className="text-end">Tickets</TableHead>
+                            <TableHead className="text-end">Revenue</TableHead>
+                            <TableHead className="text-end">Profit</TableHead>
+                            <TableHead className="text-end">Customers</TableHead>
+                            <TableHead className="text-end">Confirmed</TableHead>
+                            <TableHead className="text-end">Cancelled</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -756,12 +756,12 @@ export default function SupervisorDashboard() {
                                 </div>
                               </TableCell>
                               <TableCell className="text-xs text-muted-foreground">{emp.role}</TableCell>
-                              <TableCell className="text-right text-sm font-medium">{emp.tickets}</TableCell>
-                              <TableCell className="text-right text-sm font-medium">{formatCurrency(emp.revenue, "KWD")}</TableCell>
-                              <TableCell className="text-right text-sm font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(emp.profit, "KWD")}</TableCell>
-                              <TableCell className="text-right text-sm">{emp.customers}</TableCell>
-                              <TableCell className="text-right text-sm text-emerald-600">{emp.confirmedTickets}</TableCell>
-                              <TableCell className="text-right text-sm text-red-500">{emp.cancelledTickets}</TableCell>
+                              <TableCell className="text-end text-sm font-medium">{emp.tickets}</TableCell>
+                              <TableCell className="text-end text-sm font-medium">{formatCurrency(emp.revenue, "KWD")}</TableCell>
+                              <TableCell className="text-end text-sm font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(emp.profit, "KWD")}</TableCell>
+                              <TableCell className="text-end text-sm">{emp.customers}</TableCell>
+                              <TableCell className="text-end text-sm text-emerald-600">{emp.confirmedTickets}</TableCell>
+                              <TableCell className="text-end text-sm text-red-500">{emp.cancelledTickets}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -860,10 +860,10 @@ export default function SupervisorDashboard() {
                         <TableHead className="whitespace-nowrap cursor-pointer hover:text-foreground" onClick={() => toggleSort("travelDate")}>
                           <span className="flex items-center gap-1">{t("supervisor.bookingsTable.travelDate")} <ArrowUpDown className="h-3 w-3" /></span>
                         </TableHead>
-                        <TableHead className={cn("text-right whitespace-nowrap cursor-pointer hover:text-foreground", isRtl && "text-left")} onClick={() => toggleSort("price")}>
-                          <span className={cn("flex items-center gap-1 justify-end", isRtl && "justify-start")}>{t("supervisor.bookingsTable.sellingPrice")} <ArrowUpDown className="h-3 w-3" /></span>
+                        <TableHead className="text-end whitespace-nowrap cursor-pointer hover:text-foreground" onClick={() => toggleSort("price")}>
+                          <span className="flex items-center gap-1 justify-end">{t("supervisor.bookingsTable.sellingPrice")} <ArrowUpDown className="h-3 w-3" /></span>
                         </TableHead>
-                        <TableHead className={cn("text-right whitespace-nowrap", isRtl && "text-left")}>{t("supervisor.bookingsTable.netProfit")}</TableHead>
+                        <TableHead className="text-end whitespace-nowrap">{t("supervisor.bookingsTable.netProfit")}</TableHead>
                         <TableHead className="whitespace-nowrap">{t("supervisor.bookingsTable.status")}</TableHead>
                         <TableHead className="whitespace-nowrap">{t("supervisor.bookingsTable.payment")}</TableHead>
                         <TableHead className="whitespace-nowrap cursor-pointer hover:text-foreground" onClick={() => toggleSort("employee")}>
@@ -889,8 +889,8 @@ export default function SupervisorDashboard() {
                           </TableCell>
                           <TableCell className="text-sm whitespace-nowrap">{formatDate(b.bookingDate || b.createdAt)}</TableCell>
                           <TableCell className="text-sm whitespace-nowrap">{b.departureDatetime ? formatDateTime(b.departureDatetime) : "—"}</TableCell>
-                          <TableCell className={cn("text-right text-sm font-medium", isRtl && "text-left")}>{formatCurrency(b.price, b.currency || "KWD")}</TableCell>
-                          <TableCell className={cn("text-right text-sm font-medium text-emerald-600 dark:text-emerald-400", isRtl && "text-left")}>
+                          <TableCell className="text-end text-sm font-medium">{formatCurrency(b.price, b.currency || "KWD")}</TableCell>
+                          <TableCell className="text-end text-sm font-medium text-emerald-600 dark:text-emerald-400">
                             {formatCurrency(b.invoiceProfit, "KWD")}
                           </TableCell>
                           <TableCell>
@@ -982,7 +982,7 @@ export default function SupervisorDashboard() {
                     onClick={() => setExportType(item.value)}
                     className={cn(
                       "w-full p-3 rounded-xl border transition-all duration-200 flex items-start gap-3",
-                      isRtl ? "text-right" : "text-left",
+                      "text-start",
                       exportType === item.value
                         ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 shadow-sm"
                         : "hover:border-muted-foreground/30 hover:bg-muted/50"
@@ -1024,7 +1024,7 @@ export default function SupervisorDashboard() {
                       onClick={() => setExportFormat(item.value)}
                       className={cn(
                         "w-full p-3 rounded-xl border transition-all duration-200 flex items-center gap-3",
-                        isRtl ? "text-right" : "text-left",
+                        "text-start",
                         exportFormat === item.value
                           ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 shadow-sm"
                           : "hover:border-muted-foreground/30 hover:bg-muted/50"

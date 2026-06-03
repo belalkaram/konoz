@@ -67,13 +67,13 @@ export function EmployeeSettingsDialog({ employee }: Props) {
         </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit} className={isRtl ? "text-right" : "text-left"}>
-          <DialogHeader className={isRtl ? "text-right" : "text-left"}>
+        <form onSubmit={handleSubmit} className="text-start">
+          <DialogHeader className="text-start">
             <DialogTitle className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
               <Settings className="h-5 w-5" />
               {isRtl ? "إعدادات الإشعارات" : "Notification Settings"}
             </DialogTitle>
-            <DialogDescription className={isRtl ? "text-right" : "text-left"}>
+            <DialogDescription className="text-start">
               {isRtl
                 ? "قم بتحديث بريدك الإلكتروني لتلقي إشعارات المسافرين وتذكيرات الرحلات."
                 : "Update your email address to receive traveler notifications and trip reminders."}
@@ -92,7 +92,7 @@ export function EmployeeSettingsDialog({ employee }: Props) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={mutation.isPending}
-                className={isRtl ? "text-right dir-ltr" : "text-left"}
+                className="text-start dir-ltr"
               />
               <p className="text-[0.8rem] text-muted-foreground">
                 {isRtl

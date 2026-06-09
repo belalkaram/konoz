@@ -4,10 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, QrCode, LogOut, CheckCircle2, RefreshCw, BrainCircuit, Key, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { Loader2, QrCode, LogOut, CheckCircle2, RefreshCw, BrainCircuit, Key, Eye, EyeOff, ShieldCheck, Target, Bell } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
 import { useEmployee } from "@/contexts/employee-context";
 import { authFetch, BASE } from "@/lib/api";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const QR_LIFETIME_SECONDS = 55; // Refresh just before 60s expiry
 
@@ -16,7 +18,7 @@ export default function WhatsappSettings() {
   const { t, language } = useLanguage();
   const queryClient = useQueryClient();
   const { currentEmployee } = useEmployee();
-  const isAdmin = currentEmployee?.role === "admin";
+  const isAdmin = currentEmployee?.role === "Administrator";
 
   // Gemini key state
   const [geminiKey, setGeminiKey] = useState("");
@@ -47,6 +49,86 @@ export default function WhatsappSettings() {
       return res.json() as Promise<{ hasKey: boolean }>;
     },
     enabled: isAdmin,
+  });
+
+  // ── Fetch Target Progress (All Roles) ──────────────────────────────────────
+  const { data: targetProgress } = useQuery({
+    queryKey: ["target-progress"],
+    queryFn: async () => {
+      const res = await authFetch(`${BASE}/api/settings/target-progress`);
+      if (!res.ok) throw new Error("Failed to fetch target progress");
+      return res.json() as Promise<{
+        monthlyTarget: number;
+        totalAchieved: number;
+        percentage: number;
+        remaining: number;
+      }>;
+    },
+  });
+
+  // ── Notification Settings states (Admin only) ──────────────────────────────
+  const [enabledCustomer, setEnabledCustomer] = useState(false);
+  const [enabledTicket, setEnabledTicket] = useState(false);
+  const [recipientType, setRecipientType] = useState<"main" | "custom">("main");
+  const [customNumber, setCustomNumber] = useState("");
+  const [monthlyTarget, setMonthlyTarget] = useState(0);
+
+  // ── Fetch Notification Settings (Admin only) ────────────────────────────────
+  const { data: notifSettings, isLoading: notifLoading } = useQuery({
+    queryKey: ["whatsapp-notifications-settings"],
+    queryFn: async () => {
+      const res = await authFetch(`${BASE}/api/settings/whatsapp-notifications`);
+      if (!res.ok) throw new Error("Failed to fetch notification settings");
+      return res.json() as Promise<{
+        enabledCustomer: boolean;
+        enabledTicket: boolean;
+        recipientType: "main" | "custom";
+        customNumber: string;
+        monthlyTarget: number;
+      }>;
+    },
+    enabled: isAdmin,
+  });
+
+  // Sync settings states when fetched
+  useEffect(() => {
+    if (notifSettings) {
+      setEnabledCustomer(notifSettings.enabledCustomer);
+      setEnabledTicket(notifSettings.enabledTicket);
+      setRecipientType(notifSettings.recipientType);
+      setCustomNumber(notifSettings.customNumber);
+      setMonthlyTarget(notifSettings.monthlyTarget);
+    }
+  }, [notifSettings]);
+
+  // Save Settings Mutation
+  const saveNotifSettingsMutation = useMutation({
+    mutationFn: async (settings: {
+      enabledCustomer: boolean;
+      enabledTicket: boolean;
+      recipientType: "main" | "custom";
+      customNumber: string;
+      monthlyTarget: number;
+    }) => {
+      const res = await authFetch(`${BASE}/api/settings/whatsapp-notifications`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error((errData as any).message || "Failed to save settings");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: language === "ar" ? "✅ تم حفظ إعدادات الإشعارات بنجاح" : "✅ Notification settings saved!" });
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-notifications-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["target-progress"] });
+    },
+    onError: (err: any) => {
+      toast({ title: language === "ar" ? "خطأ في حفظ الإعدادات" : "Save Error", description: err.message, variant: "destructive" });
+    },
   });
 
   // ── Stop polling once connected ───────────────────────────────────────────
@@ -196,6 +278,73 @@ export default function WhatsappSettings() {
 
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-6 animate-in fade-in zoom-in-95 duration-500">
+      {/* ── Monthly Target Progress Card (All Roles) ── */}
+      {targetProgress && targetProgress.monthlyTarget > 0 && (
+        <Card className="bg-card border-border shadow-md overflow-hidden text-start relative bg-gradient-to-br from-indigo-500/5 via-transparent to-emerald-500/5">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full filter blur-2xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500/10 rounded-full filter blur-2xl pointer-events-none" />
+          
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-xl text-foreground">
+              <Target className="h-5 w-5 text-emerald-500 animate-pulse" />
+              {language === "ar" ? "مؤشر التارجت الشهري للمركز" : "Monthly Revenue Target"}
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              {language === "ar"
+                ? "متابعة أرباح المبيعات المحققة والنسبة المتبقية لتحقيق التارجت المستهدف خلال الشهر الجاري."
+                : "Track current monthly sales profit against target objectives."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Achieved vs Target */}
+            <div className="flex justify-between items-baseline flex-wrap gap-2">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  {language === "ar" ? "إجمالي الأرباح المحققة" : "Total Profit Achieved"}
+                </p>
+                <h3 className="text-3xl font-extrabold text-foreground mt-1 flex items-baseline gap-1">
+                  {targetProgress.totalAchieved.toLocaleString("ar-KW", { minimumFractionDigits: 2 })}
+                  <span className="text-sm font-normal text-muted-foreground">د.ك</span>
+                </h3>
+              </div>
+              <div className="text-end">
+                <p className="text-sm font-medium text-muted-foreground">
+                  {language === "ar" ? "التارجت المستهدف" : "Target Goal"}
+                </p>
+                <h4 className="text-xl font-bold text-muted-foreground mt-1">
+                  {targetProgress.monthlyTarget.toLocaleString("ar-KW")} د.ك
+                </h4>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="space-y-1.5">
+              <div className="relative w-full h-3.5 bg-muted rounded-full overflow-hidden border border-border/50">
+                <div
+                  className="h-full rounded-full transition-all duration-1000 bg-gradient-to-r from-emerald-500 to-teal-400"
+                  style={{ width: `${Math.min(100, targetProgress.percentage)}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground font-medium">
+                <span>{targetProgress.percentage}% {language === "ar" ? "مكتمل" : "completed"}</span>
+                {targetProgress.remaining > 0 ? (
+                  <span>
+                    {language === "ar" ? "متبقي" : "remaining"}{" "}
+                    <span className="font-semibold text-foreground">
+                      {targetProgress.remaining.toLocaleString("ar-KW", { minimumFractionDigits: 2 })} د.ك
+                    </span>
+                  </span>
+                ) : (
+                  <span className="text-emerald-500 font-bold">
+                    🎉 {language === "ar" ? "تم تحقيق التارجت بنجاح!" : "Target achieved!"}
+                  </span>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="bg-card border-border shadow-sm text-start">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-2xl text-foreground">
@@ -425,6 +574,148 @@ export default function WhatsappSettings() {
               </p>
             </div>
 
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── WhatsApp Notifications & Monthly Target (Admin only) ── */}
+      {isAdmin && (
+        <Card className="bg-card border-border shadow-sm text-start">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl text-foreground">
+              <Bell className="h-5 w-5 text-primary" />
+              {language === "ar" ? "إعدادات الإشعارات والتارجت الشهري" : "Notification & Target Settings"}
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              {language === "ar"
+                ? "تخصيص مستلم الرسائل التلقائية عند إضافة العملاء أو التذاكر وتعديل التارجت المالي."
+                : "Configure automated notification triggers and center financial objectives."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {notifLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : (
+              <>
+                {/* 1. Toggle Customer & Ticket Notifications */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/10">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-semibold text-foreground">
+                        {language === "ar" ? "إشعارات العملاء الجدد" : "New Customer Alerts"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {language === "ar" ? "إرسال رسالة عند إضافة عميل" : "Notify on new customer"}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={enabledCustomer}
+                      onCheckedChange={setEnabledCustomer}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/10">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-semibold text-foreground">
+                        {language === "ar" ? "إشعارات التذاكر الجديدة" : "New Ticket Alerts"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {language === "ar" ? "إرسال رسالة عند إضافة تذكرة" : "Notify on new ticket"}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={enabledTicket}
+                      onCheckedChange={setEnabledTicket}
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Recipient Type */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    {language === "ar" ? "مستقبل إشعارات الواتساب" : "WhatsApp Recipient"}
+                  </label>
+                  <Select
+                    value={recipientType}
+                    onValueChange={(val: "main" | "custom") => setRecipientType(val)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="main">
+                        {language === "ar" ? "الرقم المرتبط حالياً بالنظام (الرقم الرئيسي)" : "System Linked Number (Main)"}
+                      </SelectItem>
+                      <SelectItem value="custom">
+                        {language === "ar" ? "رقم واتساب مخصص آخر" : "Custom WhatsApp Number"}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* 3. Custom Number Input */}
+                {recipientType === "custom" && (
+                  <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <label className="text-sm font-medium text-foreground">
+                      {language === "ar" ? "رقم الهاتف المستلم (رمز الدولة + الرقم)" : "Recipient Phone Number (with Country Code)"}
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="e.g. 96590000000"
+                      value={customNumber}
+                      onChange={(e) => setCustomNumber(e.target.value.replace(/[^0-9]/g, ""))}
+                      className="font-mono text-sm"
+                      dir="ltr"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {language === "ar" ? "اكتب الرقم كاملاً بدون أصفار في البداية أو علامة (+)." : "Enter full number without leading zeros or (+)."}
+                    </p>
+                  </div>
+                )}
+
+                {/* 4. Target Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    {language === "ar" ? "التارجت المالي الشهري للمركز (دينار كويتي)" : "Monthly Target Profit (KWD)"}
+                  </label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="150"
+                      value={monthlyTarget || ""}
+                      onChange={(e) => setMonthlyTarget(Math.max(0, parseFloat(e.target.value) || 0))}
+                      className="pe-12 font-medium"
+                    />
+                    <span className="absolute inset-y-0 end-0 flex items-center px-3 text-sm font-bold text-muted-foreground bg-muted/50 border-s rounded-e-md">
+                      د.ك
+                    </span>
+                  </div>
+                </div>
+
+                {/* Save button */}
+                <div className="flex justify-end pt-2">
+                  <Button
+                    onClick={() => saveNotifSettingsMutation.mutate({
+                      enabledCustomer,
+                      enabledTicket,
+                      recipientType,
+                      customNumber,
+                      monthlyTarget,
+                    })}
+                    disabled={saveNotifSettingsMutation.isPending}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[120px]"
+                  >
+                    {saveNotifSettingsMutation.isPending && (
+                      <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                    )}
+                    {language === "ar" ? "حفظ إعدادات الإشعارات" : "Save Notifications"}
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       )}

@@ -22,6 +22,7 @@ import whatsappRouter from "./whatsapp";
 import whatsappCampaignsRouter from "./whatsapp-campaigns";
 import supervisorRouter from "./supervisor";
 import accountingRouter from "./accounting";
+import whatsappRoutingRouter from "./whatsapp_routing.js";
 
 const router: IRouter = Router();
 
@@ -46,7 +47,6 @@ router.use(reportsRouter);
 router.use(whatsappRouter);
 router.use(whatsappCampaignsRouter);
 router.use(supervisorRouter);
-import whatsappRoutingRouter from "./whatsapp_routing.js";
 router.use(whatsappRoutingRouter);
 router.use(accountingRouter);
 

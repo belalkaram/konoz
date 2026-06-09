@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc, asc, and } from "drizzle-orm";
+import { eq, desc, asc, and, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   db,
@@ -7,6 +7,9 @@ import {
   expenseCategoriesTable,
   payrollsTable,
   employeesTable,
+  ticketsTable,
+  paymentsTable,
+  customersTable,
 } from "@workspace/db";
 import { requireSupervisorOrAdmin, getSessionFromRequest } from "../middlewares/auth.js";
 
@@ -256,5 +259,239 @@ router.post("/accounting/payrolls", requireSupervisorOrAdmin, async (req, res) =
     res.status(500).json({ error: "server_error", message: "Failed to process payroll" });
   }
 });
+
+router.get("/accounting/report", requireSupervisorOrAdmin, async (req, res) => {
+  try {
+    const session = req.employee!;
+    const { startDate: qStart, endDate: qEnd } = req.query as Record<string, string | undefined>;
+
+    const now = new Date();
+    const startDate = qStart ? new Date(qStart) : new Date(now.getTime() - 30 * 86400000);
+    const endDate = qEnd ? new Date(qEnd) : now;
+
+    const companyId = session.companyId;
+
+    // 1. Fetch Expenses
+    const expenseConditions: any[] = [
+      gte(expensesTable.date, startDate),
+      lte(expensesTable.date, endDate),
+    ];
+    if (companyId) {
+      expenseConditions.push(eq(expensesTable.companyId, companyId));
+    }
+    const expenses = await db
+      .select({
+        id: expensesTable.id,
+        amount: expensesTable.amount,
+        currency: expensesTable.currency,
+        date: expensesTable.date,
+        description: expensesTable.description,
+        categoryId: expensesTable.categoryId,
+        categoryName: expenseCategoriesTable.name,
+      })
+      .from(expensesTable)
+      .leftJoin(expenseCategoriesTable, eq(expensesTable.categoryId, expenseCategoriesTable.id))
+      .where(and(...expenseConditions))
+      .orderBy(desc(expensesTable.date));
+
+    // 2. Fetch Payrolls
+    const payrollConditions: any[] = [];
+    if (companyId) {
+      payrollConditions.push(eq(payrollsTable.companyId, companyId));
+    }
+    payrollConditions.push(
+      sql`(
+        (${payrollsTable.paymentDate} IS NOT NULL AND ${payrollsTable.paymentDate} >= ${startDate} AND ${payrollsTable.paymentDate} <= ${endDate})
+        OR
+        (${payrollsTable.paymentDate} IS NULL AND ${payrollsTable.createdAt} >= ${startDate} AND ${payrollsTable.createdAt} <= ${endDate})
+      )`
+    );
+    const payrolls = await db
+      .select({
+        id: payrollsTable.id,
+        employeeName: employeesTable.name,
+        month: payrollsTable.month,
+        year: payrollsTable.year,
+        baseSalary: payrollsTable.baseSalary,
+        commissionEarned: payrollsTable.commissionEarned,
+        deductions: payrollsTable.deductions,
+        netSalary: payrollsTable.netSalary,
+        status: payrollsTable.status,
+        currency: payrollsTable.currency,
+        paymentDate: payrollsTable.paymentDate,
+      })
+      .from(payrollsTable)
+      .innerJoin(employeesTable, eq(payrollsTable.employeeId, employeesTable.id))
+      .where(and(...payrollConditions))
+      .orderBy(desc(payrollsTable.year), desc(payrollsTable.month));
+
+    // 3. Fetch Tickets
+    const ticketConditions: any[] = [
+      gte(ticketsTable.createdAt, startDate),
+      lte(ticketsTable.createdAt, endDate),
+    ];
+
+    if (companyId) {
+      const tickets = await db
+        .select({
+          id: ticketsTable.id,
+          customerName: customersTable.fullName,
+          employeeName: employeesTable.name,
+          flightRoute: ticketsTable.flightRoute,
+          price: ticketsTable.price,
+          costPrice: ticketsTable.costPrice,
+          currency: ticketsTable.currency,
+          ticketStatus: ticketsTable.ticketStatus,
+          createdAt: ticketsTable.createdAt,
+        })
+        .from(ticketsTable)
+        .leftJoin(customersTable, eq(ticketsTable.customerId, customersTable.id))
+        .innerJoin(employeesTable, and(
+          eq(ticketsTable.employeeId, employeesTable.id),
+          eq(employeesTable.companyId, companyId)
+        ))
+        .where(and(...ticketConditions))
+        .orderBy(desc(ticketsTable.createdAt));
+
+      const paymentConditions: any[] = [
+        gte(paymentsTable.paymentDate, startDate),
+        lte(paymentsTable.paymentDate, endDate),
+      ];
+      const payments = await db
+        .select({
+          id: paymentsTable.id,
+          amount: paymentsTable.amount,
+          currency: paymentsTable.currency,
+          paymentMethod: paymentsTable.paymentMethod,
+          paymentDate: paymentsTable.paymentDate,
+          customerName: customersTable.fullName,
+          flightRoute: ticketsTable.flightRoute,
+        })
+        .from(paymentsTable)
+        .leftJoin(ticketsTable, eq(paymentsTable.ticketId, ticketsTable.id))
+        .leftJoin(customersTable, eq(paymentsTable.customerId, customersTable.id))
+        .innerJoin(employeesTable, and(
+          eq(ticketsTable.employeeId, employeesTable.id),
+          eq(employeesTable.companyId, companyId)
+        ))
+        .where(and(...paymentConditions))
+        .orderBy(desc(paymentsTable.paymentDate));
+
+      return res.json(buildReport(startDate, endDate, expenses, payrolls, tickets, payments));
+    }
+
+    const tickets = await db
+      .select({
+        id: ticketsTable.id,
+        customerName: customersTable.fullName,
+        employeeName: employeesTable.name,
+        flightRoute: ticketsTable.flightRoute,
+        price: ticketsTable.price,
+        costPrice: ticketsTable.costPrice,
+        currency: ticketsTable.currency,
+        ticketStatus: ticketsTable.ticketStatus,
+        createdAt: ticketsTable.createdAt,
+      })
+      .from(ticketsTable)
+      .leftJoin(customersTable, eq(ticketsTable.customerId, customersTable.id))
+      .leftJoin(employeesTable, eq(ticketsTable.employeeId, employeesTable.id))
+      .where(and(...ticketConditions))
+      .orderBy(desc(ticketsTable.createdAt));
+
+    const paymentConditions: any[] = [
+      gte(paymentsTable.paymentDate, startDate),
+      lte(paymentsTable.paymentDate, endDate),
+    ];
+    const payments = await db
+      .select({
+        id: paymentsTable.id,
+        amount: paymentsTable.amount,
+        currency: paymentsTable.currency,
+        paymentMethod: paymentsTable.paymentMethod,
+        paymentDate: paymentsTable.paymentDate,
+        customerName: customersTable.fullName,
+        flightRoute: ticketsTable.flightRoute,
+      })
+      .from(paymentsTable)
+      .leftJoin(ticketsTable, eq(paymentsTable.ticketId, ticketsTable.id))
+      .leftJoin(customersTable, eq(paymentsTable.customerId, customersTable.id))
+      .leftJoin(employeesTable, eq(ticketsTable.employeeId, employeesTable.id))
+      .where(and(...paymentConditions))
+      .orderBy(desc(paymentsTable.paymentDate));
+
+    return res.json(buildReport(startDate, endDate, expenses, payrolls, tickets, payments));
+  } catch (err) {
+    req.log.error({ err }, "Error generating accounting report");
+    return res.status(500).json({ error: "server_error", message: "Failed to generate accounting report" });
+  }
+});
+
+function buildReport(
+  startDate: Date,
+  endDate: Date,
+  expenses: any[],
+  payrolls: any[],
+  tickets: any[],
+  payments: any[]
+) {
+  let totalRevenue = 0;
+  let totalCost = 0;
+  let totalExpenses = 0;
+  let rentExpenses = 0;
+  let generalExpenses = 0;
+  let totalSalaries = 0;
+  let totalPayments = 0;
+
+  tickets.forEach((t) => {
+    const price = parseFloat(String(t.price ?? "0")) || 0;
+    const cost = parseFloat(String(t.costPrice ?? "0")) || 0;
+    if (["confirmed", "paid", "issued"].includes(t.ticketStatus)) {
+      totalRevenue += price;
+      totalCost += cost;
+    }
+  });
+
+  expenses.forEach((e) => {
+    const amt = parseFloat(String(e.amount ?? "0")) || 0;
+    totalExpenses += amt;
+    const catName = (e.categoryName || "").toLowerCase();
+    if (catName.includes("rent") || catName.includes("إيجار") || catName.includes("ايجار")) {
+      rentExpenses += amt;
+    } else {
+      generalExpenses += amt;
+    }
+  });
+
+  payrolls.forEach((p) => {
+    const sal = parseFloat(String(p.netSalary ?? "0")) || 0;
+    totalSalaries += sal;
+  });
+
+  payments.forEach((p) => {
+    const amt = parseFloat(String(p.amount ?? "0")) || 0;
+    totalPayments += amt;
+  });
+
+  // Net profit = revenue minus ticket cost, general expenses, and salaries
+  const netProfit = totalRevenue - totalCost - totalExpenses - totalSalaries;
+
+  return {
+    dateRange: { start: startDate.toISOString(), end: endDate.toISOString() },
+    expenses,
+    payrolls,
+    tickets,
+    payments,
+    stats: {
+      totalRevenue,
+      totalCost,
+      netProfit,
+      totalExpenses,
+      rentExpenses,
+      generalExpenses,
+      totalSalaries,
+      totalPayments,
+    },
+  };
+}
 
 export default router;

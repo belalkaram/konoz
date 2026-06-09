@@ -50,3 +50,7 @@ Thumbs.db
 
 # Environment
 .env
+.env.production
+.env.vercel
+*.env.local
+db_url.txt

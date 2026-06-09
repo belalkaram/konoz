@@ -217,6 +217,19 @@ export const WhatsappService = {
       logger.error("Error fetching WhatsApp chats:", error?.response?.data || error.message);
       throw error;
     }
+  },
+
+  /**
+   * Fetch all instances from Evolution API
+   */
+  async getInstances() {
+    try {
+      const response = await apiClient.get(`/instance/fetchInstances`);
+      return response.data;
+    } catch (error: any) {
+      logger.error("Error fetching WhatsApp instances:", error?.response?.data || error.message);
+      throw error;
+    }
   }
 };
 

@@ -3,6 +3,7 @@ import { eq, desc, and, sum, inArray } from "drizzle-orm";
 import { db, ticketsTable, ticketStatusHistoryTable, paymentsTable, customersTable, invoicesTable, insertTicketSchema, updateTicketSchema, insertPaymentSchema } from "@workspace/db";
 
 import { requireAuth, requireAdmin, getTeamEmployeeIds } from "../middlewares/auth.js";
+import { sendWhatsAppNotification } from "../lib/whatsapp-notifications.js";
 
 const router = Router();
 
@@ -102,6 +103,18 @@ router.post("/tickets", requireAuth, async (req, res) => {
 
     req.log.info({ event: "security:ticket_created", actorId: req.employee?.employeeId, targetId: ticket?.id, ip: req.ip }, "Ticket created");
     res.status(201).json({ ticket });
+
+    // Send WhatsApp notification asynchronously
+    (async () => {
+      try {
+        await sendWhatsAppNotification("ticket", {
+          ticketId: ticket!.id,
+          rawTicket: ticket,
+        });
+      } catch (err) {
+        req.log.error({ err }, "Error sending new ticket WhatsApp notification");
+      }
+    })();
   } catch (err) {
     req.log.error({ err }, "Error creating ticket");
     res.status(500).json({ error: "server_error", message: "Failed to create ticket" });

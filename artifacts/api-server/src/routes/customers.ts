@@ -2,6 +2,7 @@ import { Router } from "express";
 import { eq, ilike, or, sql, and, desc, inArray } from "drizzle-orm";
 import { db, customersTable, ticketsTable, employeesTable, insertCustomerSchema, insertTicketSchema, updateCustomerSchema } from "@workspace/db";
 import { requireAuth, requireAdmin, getSessionFromRequest, getTeamEmployeeIds } from "../middlewares/auth.js";
+import { sendWhatsAppNotification } from "../lib/whatsapp-notifications.js";
 
 const router = Router();
 
@@ -161,6 +162,28 @@ router.post("/customers", requireAuth, async (req, res) => {
     });
 
     res.status(201).json({ customer });
+
+    // Send WhatsApp notification asynchronously
+    (async () => {
+      try {
+        const [ticket] = await db
+          .select()
+          .from(ticketsTable)
+          .where(eq(ticketsTable.customerId, customer.id))
+          .orderBy(desc(ticketsTable.createdAt))
+          .limit(1);
+
+        await sendWhatsAppNotification("customer", {
+          customerId: customer.id,
+          ticketId: ticket?.id,
+          rawCustomer: customer,
+          rawTicket: ticket,
+          rawBody: body,
+        });
+      } catch (err) {
+        req.log.error({ err }, "Error sending new customer WhatsApp notification");
+      }
+    })();
 
     // Send email notification asynchronously
     (async () => {

@@ -1,11 +1,194 @@
 import { Router } from "express";
 import { eq, and, desc, sql } from "drizzle-orm";
-import { db, whatsappCampaignsTable, whatsappCampaignRecipientsTable, whatsappInstancesTable } from "@workspace/db";
+import { db, whatsappCampaignsTable, whatsappCampaignRecipientsTable, whatsappInstancesTable, systemSettingsTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth.js";
 import { WhatsappService } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
 
 const router = Router();
+
+// ── Constants ────────────────────────────────────────────────────────────────
+const MAX_RECIPIENTS = 150;
+const AI_DAILY_LIMIT = 2;
+
+// Arabic spam keywords that WhatsApp/SMS policies flag as potential spam
+const SPAM_KEYWORDS = [
+  "ربح مضمون", "عرض لن يتكرر", "اربح الآن", "مجاني تماماً",
+  "مجاني تمامًا", "اضغط الآن", "فرصة ذهبية", "مضمون 100%",
+  "كسب سريع", "دخل إضافي مضمون"
+];
+const OPT_OUT_PHRASES = ["للإلغاء", "لإيقاف الرسائل", "لإلغاء الاشتراك", "رد بـ إيقاف"];
+const OPT_OUT_SUFFIX = "\n\nللإلغاء أرسل كلمة (إيقاف)";
+
+function sanitizeVariant(text: string): { ok: boolean; cleaned: string; reason?: string } {
+  const lowerText = text.toLowerCase();
+  for (const kw of SPAM_KEYWORDS) {
+    if (text.includes(kw)) {
+      return { ok: false, cleaned: text, reason: `يحتوي على كلمة ممنوعة: "${kw}"` };
+    }
+  }
+  const hasOptOut = OPT_OUT_PHRASES.some(p => text.includes(p));
+  return { ok: true, cleaned: hasOptOut ? text : text + OPT_OUT_SUFFIX };
+}
+
+// Per-employee AI rate-limit: stored in system_settings as JSON
+async function checkAndIncrementAiUsage(employeeId: number): Promise<{ allowed: boolean; remaining: number }> {
+  const settingKey = `gemini_usage_${employeeId}`;
+  const now = Date.now();
+  const windowMs = 24 * 60 * 60 * 1000;
+
+  const [row] = await db
+    .select()
+    .from(systemSettingsTable)
+    .where(eq(systemSettingsTable.key, settingKey));
+
+  let usage: { count: number; resetAt: number } = { count: 0, resetAt: now + windowMs };
+  if (row) {
+    try { usage = JSON.parse(row.value); } catch { /* corrupt, reset */ }
+    if (now > usage.resetAt) {
+      usage = { count: 0, resetAt: now + windowMs };
+    }
+  }
+
+  if (usage.count >= AI_DAILY_LIMIT) {
+    return { allowed: false, remaining: 0 };
+  }
+
+  usage.count += 1;
+  await db
+    .insert(systemSettingsTable)
+    .values({ key: settingKey, value: JSON.stringify(usage), updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: systemSettingsTable.key,
+      set: { value: JSON.stringify(usage), updatedAt: new Date() },
+    });
+
+  return { allowed: true, remaining: AI_DAILY_LIMIT - usage.count };
+}
+
+// ── AI Message Generation ────────────────────────────────────────────────────
+router.post("/whatsapp/generate-messages", requireAuth, async (req, res) => {
+  const employeeId = req.employee!.employeeId;
+  const { prompt, count } = req.body as { prompt?: string; count?: number };
+
+  if (!prompt || typeof prompt !== "string" || prompt.trim().length < 5) {
+    return res.status(400).json({ error: "validation_error", message: "يجب إدخال برومبت أو فكرة الرسالة" });
+  }
+  const variantCount = Math.min(Math.max(parseInt(String(count ?? 5)), 5), 50);
+
+  // Rate limit check
+  const { allowed, remaining } = await checkAndIncrementAiUsage(employeeId);
+  if (!allowed) {
+    return res.status(429).json({
+      error: "rate_limit",
+      message: `لقد تجاوزت الحد اليومي (${AI_DAILY_LIMIT} طلبات/24 ساعة). يرجى المحاولة لاحقاً.`
+    });
+  }
+
+  // Get Gemini API key — DB first, then env fallback
+  const [keyRow] = await db
+    .select()
+    .from(systemSettingsTable)
+    .where(eq(systemSettingsTable.key, "gemini_api_key"));
+
+  const geminiApiKey = keyRow?.value || process.env.GEMINI_API_KEY || "";
+
+  if (!geminiApiKey) {
+    return res.status(400).json({
+      error: "no_api_key",
+      message: "لم يتم إعداد مفتاح Gemini API. يرجى إضافته من إعدادات النظام أو ملف .env (GEMINI_API_KEY)."
+    });
+  }
+
+  try {
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+
+    const systemPrompt = `أنت مساعد تسويق متخصص في كتابة رسائل WhatsApp الاحترافية باللغة العربية.
+اكتب بالضبط ${variantCount} صيغة مختلفة لرسالة WhatsApp بناءً على الفكرة التالية.
+قواعد مهمة:
+- كل رسالة يجب أن تكون طبيعية وصادقة ومناسبة للإرسال عبر واتساب
+- لا تستخدم أبداً عبارات مبالغة مثل: "ربح مضمون"، "عرض لن يتكرر"، "اضغط الآن"، "مجاني تماماً"
+- يجب أن تكون كل رسالة مختلفة في الأسلوب والتركيب
+- الطول المناسب: 2-5 جمل لكل رسالة
+- استجب بـ JSON array فقط من النصوص، مثال: ["رسالة 1", "رسالة 2"]
+
+الفكرة: ${prompt.trim()}`;
+
+    const response = await fetch(geminiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: systemPrompt }] }],
+        generationConfig: { temperature: 0.9, maxOutputTokens: 4096 }
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      req.log.error({ status: response.status, errText }, "Gemini API error");
+
+      // Return specific Arabic error messages based on status code
+      if (response.status === 429) {
+        return res.status(502).json({
+          error: "gemini_quota_exceeded",
+          message: "⚠️ تجاوزت الحد المسموح به في مفتاح Gemini API المجاني. يرجى الانتظار أو الحصول على مفتاح جديد من aistudio.google.com"
+        });
+      } else if (response.status === 401 || response.status === 403) {
+        return res.status(502).json({
+          error: "gemini_invalid_key",
+          message: "❌ مفتاح Gemini API غير صالح أو منتهي الصلاحية. يرجى تحديثه من إعدادات الواتساب."
+        });
+      } else if (response.status === 404) {
+        return res.status(502).json({
+          error: "gemini_model_not_found",
+          message: "❌ موديل Gemini غير متاح مع هذا المفتاح. يرجى التأكد من أن المفتاح مفعّل على Google AI Studio."
+        });
+      }
+      return res.status(502).json({
+        error: "gemini_error",
+        message: `❌ فشل الاتصال بـ Gemini API (${response.status}). تحقق من صحة المفتاح في aistudio.google.com`
+      });
+    }
+
+    const geminiData = await response.json() as any;
+    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+    // Try to parse JSON array from the response
+    let variants: string[] = [];
+    try {
+      const jsonMatch = rawText.match(/\[.*\]/s);
+      if (jsonMatch) {
+        variants = JSON.parse(jsonMatch[0]);
+      }
+    } catch {
+      // Fallback: split by numbered list
+      variants = rawText
+        .split(/\n(?=\d+[.\-])/)  
+        .map((s: string) => s.replace(/^\d+[.\-\s]+/, "").trim())
+        .filter((s: string) => s.length > 10);
+    }
+
+    // Sanitize variants
+    const sanitized = variants
+      .slice(0, variantCount)
+      .map(v => sanitizeVariant(v))
+      .filter(r => r.ok)
+      .map(r => r.cleaned);
+
+    if (sanitized.length === 0) {
+      return res.status(422).json({
+        error: "no_valid_variants",
+        message: "لم يتم توليد صيغ صالحة. يرجى تعديل البرومبت وإعادة المحاولة."
+      });
+    }
+
+    return res.json({ variants: sanitized, usageLeft: remaining });
+  } catch (err) {
+    req.log.error({ err }, "Error calling Gemini API");
+    return res.status(500).json({ error: "server_error", message: "حدث خطأ أثناء الاتصال بـ Gemini. يرجى المحاولة لاحقاً." });
+  }
+});
+
 
 const getInstanceName = (employeeId: number) => `emp_${employeeId}`;
 
@@ -27,6 +210,11 @@ router.post("/whatsapp/campaigns", requireAuth, async (req, res) => {
     if (state?.instance?.state !== "open") {
       return res.status(400).json({ error: "not_connected", message: "WhatsApp instance is not connected" });
     }
+
+    // ── 150-recipient hard cap ──────────────────────────────────────────────
+    const originalCount = numbers.length;
+    const cappedNumbers: string[] = numbers.slice(0, MAX_RECIPIENTS);
+    const wasTruncated = originalCount > MAX_RECIPIENTS;
 
     let initialStatus = "running";
     let parsedDate: Date | null = null;
@@ -52,8 +240,8 @@ router.post("/whatsapp/campaigns", requireAuth, async (req, res) => {
       scheduledAt: parsedDate,
     }).returning();
 
-    // 2. Create Recipients
-    const recipientsData = numbers.map((phone: string) => ({
+    // 2. Create Recipients (capped)
+    const recipientsData = cappedNumbers.map((phone: string) => ({
       campaignId: campaign.id,
       phoneNumber: phone,
       status: "pending",
@@ -66,7 +254,7 @@ router.post("/whatsapp/campaigns", requireAuth, async (req, res) => {
       triggerCampaign(campaign.id, employeeId);
     }
 
-    return res.json({ campaign });
+    return res.json({ campaign, truncated: wasTruncated, originalCount, acceptedCount: cappedNumbers.length });
   } catch (err) {
     req.log.error({ err }, "Error creating campaign");
     return res.status(500).json({ error: "server_error", message: "Failed to create campaign" });

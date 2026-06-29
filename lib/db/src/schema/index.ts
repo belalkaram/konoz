@@ -27,3 +27,4 @@ export * from "./tiktok_accounts";
 export * from "./tiktok_messages";
 export * from "./tiktok_comments";
 export * from "./tiktok_automations";
+export * from "./notifications";

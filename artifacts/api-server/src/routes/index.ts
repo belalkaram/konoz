@@ -28,6 +28,7 @@ import whatsappQuickRepliesRouter from "./whatsapp-quick-replies.js";
 import whatsappAutomationsRouter from "./whatsapp-automations.js";
 import tiktokRouter from "./tiktok.js";
 import tiktokAutomationsRouter from "./tiktok-automations.js";
+import notificationsRouter from "./notifications.js";
 
 const router: IRouter = Router();
 
@@ -59,5 +60,7 @@ router.use(whatsappQuickRepliesRouter);
 router.use(whatsappAutomationsRouter);
 router.use(tiktokRouter);
 router.use(tiktokAutomationsRouter);
+router.use(notificationsRouter);
 
 export default router;
+

@@ -30,6 +30,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     return false;
   });
 
+  const [activeNotification, setActiveNotification] = useState<any>(null);
+
   useEffect(() => {
     localStorage.setItem("sidebar-collapsed", String(collapsed));
   }, [collapsed]);
@@ -37,6 +39,49 @@ export function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!currentEmployee) return;
+
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    const eventSource = new EventSource(`${base}/api/notifications/stream`, {
+      withCredentials: true,
+    });
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "notification") {
+          setActiveNotification(data.payload);
+        }
+      } catch (err) {
+        console.error("Error parsing SSE message:", err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error("EventSource error:", err);
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [currentEmployee]);
+
+  const handleResponse = async (buttonLabel: string) => {
+    if (!activeNotification) return;
+    try {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      await fetch(`${base}/api/notifications/${activeNotification.id}/respond`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ buttonClicked: buttonLabel }),
+      });
+    } catch (err) {
+      console.error("Error sending response:", err);
+    }
+    setActiveNotification(null);
+  };
 
   const sidebarBackground = mounted && theme === "dark"
     ? "linear-gradient(180deg, #020617 0%, #090d16 50%, #0f172a 100%)"
@@ -62,6 +107,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     ...(isSupervisorOrAdmin ? [{ href: "/employees", label: t("common.employees"), icon: UserCog }] : []),
     ...(isSupervisorOrAdmin ? [{ href: "/accounting", label: language === "ar" ? "الحسابات" : "Accounting", icon: Wallet }] : []),
     ...(isAdmin ? [{ href: "/whatsapp-admin", label: language === "ar" ? "سيرفرات الواتساب" : "WhatsApp Admin", icon: Server }] : []),
+    ...(isAdmin ? [{ href: "/instant-notifications", label: language === "ar" ? "التنبيهات اللحظية" : "Instant Alerts", icon: Bell }] : []),
     ...(isAdmin ? [{ href: "/companies", label: t("common.companies"), icon: Building2 }] : []),
   ];
 
@@ -278,6 +324,48 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
+
+      {/* Real-time Notification Modal */}
+      {activeNotification && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden p-6 relative animate-in fade-in zoom-in-95 duration-200 text-left">
+            <button 
+              onClick={() => handleResponse("dismissed")}
+              className="absolute top-4 end-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center mb-4 text-blue-500 animate-bounce">
+                <Bell className="h-6 w-6" />
+              </div>
+              <span className="text-xs font-bold uppercase tracking-widest text-emerald-500 mb-1">
+                {language === "ar" ? "تنبيه إداري عاجل" : "Urgent Admin Alert"}
+              </span>
+              <span className="text-xs text-slate-400 mb-4">
+                {language === "ar" ? `مرسل من: ${activeNotification.senderName}` : `From: ${activeNotification.senderName}`}
+              </span>
+              <p className="text-slate-800 dark:text-slate-100 text-base font-medium mb-6 whitespace-pre-line leading-relaxed">
+                {activeNotification.message}
+              </p>
+              <div className="grid grid-cols-2 gap-3 w-full">
+                <button
+                  onClick={() => handleResponse(activeNotification.button1Label)}
+                  className="px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-all shadow-sm shadow-blue-500/20 active:scale-95 cursor-pointer"
+                >
+                  {activeNotification.button1Label}
+                </button>
+                <button
+                  onClick={() => handleResponse(activeNotification.button2Label)}
+                  className="px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-sm transition-all active:scale-95 cursor-pointer"
+                >
+                  {activeNotification.button2Label}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

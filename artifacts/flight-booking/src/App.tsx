@@ -32,6 +32,8 @@ import Chat from "@/pages/chat";
 import WhatsappControls from "@/pages/whatsapp-controls";
 import WhatsappAdmin from "@/pages/whatsapp-admin";
 import TiktokControls from "@/pages/tiktok-controls";
+import InstantNotifications from "@/pages/instant-notifications";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -116,6 +118,7 @@ function Router() {
         <Route path="/tiktok-controls" component={TiktokControls} />
         <Route path="/tiktok-controls/:tab" component={TiktokControls} />
         <Route path="/whatsapp-admin" component={() => <SupervisorOrAdminRoute component={WhatsappAdmin} />} />
+        <Route path="/instant-notifications" component={() => <AdminRoute component={InstantNotifications} />} />
         <Route path="/chat" component={Chat} />
         <Route component={NotFound} />
       </Switch>

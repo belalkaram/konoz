@@ -43,7 +43,7 @@ router.post("/tiktok/auth/session", requireAuth, async (req, res) => {
     const cookieString = sessionId.includes("sessionid=") ? sessionId : `sessionid=${sessionId}`;
     
     // Validate the session ID by making a quick request to TikTok
-    const tiktokRes = await fetch("https://www.tiktok.com/passport/web/account/info/", {
+    const tiktokRes: any = await fetch("https://www.tiktok.com/passport/web/account/info/", {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         "Cookie": cookieString,
@@ -269,7 +269,7 @@ router.get("/tiktok/videos", requireAuth, async (req, res) => {
       "Referer": "https://www.tiktok.com/",
     };
     
-    const videosRes = await fetch(
+    const videosRes: any = await fetch(
       `https://www.tiktok.com/api/post/item_list/?aid=1988&count=20&secUid=${encodeURIComponent(secUid)}&cursor=0`,
       { headers: tiktokHeaders }
     );
@@ -326,7 +326,7 @@ router.get("/tiktok/comments", requireAuth, async (req, res) => {
     };
     
     // 1. Fetch user's videos
-    const videosRes = await fetch(
+    const videosRes: any = await fetch(
       `https://www.tiktok.com/api/post/item_list/?aid=1988&count=10&secUid=${encodeURIComponent(secUid)}&cursor=0`,
       { headers: tiktokHeaders }
     );
@@ -342,7 +342,7 @@ router.get("/tiktok/comments", requireAuth, async (req, res) => {
       if ((video.stats?.commentCount ?? 0) === 0) continue;
       
       try {
-        const commRes = await fetch(
+        const commRes: any = await fetch(
           `https://www.tiktok.com/api/comment/list/?aid=1988&aweme_id=${video.id}&count=20&cursor=0&app_name=tiktok_web`,
           { headers: tiktokHeaders }
         );

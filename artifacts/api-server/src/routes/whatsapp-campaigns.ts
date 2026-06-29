@@ -114,7 +114,7 @@ router.post("/whatsapp/generate-messages", requireAuth, async (req, res) => {
 
 الفكرة: ${prompt.trim()}`;
 
-    const response = await fetch(geminiUrl, {
+    const response: any = await fetch(geminiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

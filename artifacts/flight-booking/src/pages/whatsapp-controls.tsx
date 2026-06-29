@@ -129,8 +129,8 @@ export default function WhatsappControls() {
     onSuccess: (data: any) => {
       if (data?.truncated) {
         toast({
-          title: language === "ar" 
-            ? `✅ تم إنشاء الحملة — تم الإرسال لـ ${data.acceptedCount} رقم فقط` 
+          title: language === "ar"
+            ? `✅ تم إنشاء الحملة — تم الإرسال لـ ${data.acceptedCount} رقم فقط`
             : `✅ Campaign created — Sending to ${data.acceptedCount} numbers only`,
           description: language === "ar"
             ? `تم تجاهل ${data.originalCount - data.acceptedCount} رقم تجاوزت الحد المسموح`
@@ -203,13 +203,13 @@ export default function WhatsappControls() {
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
-        
+
         const parsedNumbers = data
           .map(row => row[0])
           .filter(Boolean)
           .map(n => String(n).trim().replace(/[^0-9]/g, ''))
           .filter(n => n.length >= 8);
-          
+
         handleNumbersChange(parsedNumbers);
         toast({ title: language === "ar" ? `✅ تم تحميل ${parsedNumbers.length} رقم بنجاح` : `✅ Loaded ${parsedNumbers.length} numbers successfully` });
       } catch (err) {
@@ -234,14 +234,14 @@ export default function WhatsappControls() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ numbers: targets })
       });
-      
+
       if (!res.ok) throw new Error("Failed to check numbers");
       const data = await res.json();
-      
+
       const validNumbers = data
         .filter((item: any) => item.exists)
         .map((item: any) => item.jid.split('@')[0]);
-        
+
       setFilteredNumbers(validNumbers);
       toast({ title: language === "ar" ? `🔍 تمت التصفية. الصالحة: ${validNumbers.length} من أصل ${targets.length}` : `🔍 Numbers filtered. Valid: ${validNumbers.length} out of ${targets.length}` });
     } catch (err: any) {
@@ -266,7 +266,7 @@ export default function WhatsappControls() {
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/\n/g, "<br />");
-    
+
     // Bold *text*
     html = html.replace(/\*(.*?)\*/g, "<strong>$1</strong>");
     // Italic _text_
@@ -275,7 +275,7 @@ export default function WhatsappControls() {
     html = html.replace(/~(.*?)~/g, "<span class='line-through'>$1</span>");
     // Monospace `text`
     html = html.replace(/`(.*?)`/g, "<code class='bg-muted px-1.5 py-0.5 rounded font-mono text-xs text-foreground/90 border border-border/50'>$1</code>");
-    
+
     return html;
   };
 
@@ -375,7 +375,7 @@ export default function WhatsappControls() {
 
       {/* Modern responsive layout container */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        
+
         {/* Navigation Sidebar Panel (Visible on large screens) */}
         <aside className="hidden lg:block lg:col-span-1 space-y-3 sticky top-6">
           <Card className="bg-card border-border shadow-sm overflow-hidden p-3 space-y-2">
@@ -392,11 +392,10 @@ export default function WhatsappControls() {
                   <button
                     key={item.value}
                     onClick={() => setLocation(`/whatsapp-controls/${item.value}`)}
-                    className={`w-full flex items-start gap-3 p-3 rounded-lg text-start transition-all duration-200 border ${
-                      isActive 
-                        ? "bg-primary/5 border-primary/20 text-primary shadow-sm" 
+                    className={`w-full flex items-start gap-3 p-3 rounded-lg text-start transition-all duration-200 border ${isActive
+                        ? "bg-primary/5 border-primary/20 text-primary shadow-sm"
                         : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }`}
+                      }`}
                   >
                     <div className={`p-2 rounded-md shrink-0 transition-colors ${isActive ? item.activeColor : item.color}`}>
                       <Icon className="h-4 w-4" />
@@ -425,11 +424,10 @@ export default function WhatsappControls() {
               <button
                 key={item.value}
                 onClick={() => setLocation(`/whatsapp-controls/${item.value}`)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-semibold whitespace-nowrap border shrink-0 transition-all snap-start ${
-                  isActive 
-                    ? "bg-primary border-primary text-primary-foreground shadow-md" 
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-semibold whitespace-nowrap border shrink-0 transition-all snap-start ${isActive
+                    ? "bg-primary border-primary text-primary-foreground shadow-md"
                     : "bg-card border-border text-muted-foreground hover:bg-muted/50"
-                }`}
+                  }`}
               >
                 <Icon className="h-3.5 w-3.5" />
                 <span>{language === "ar" ? item.labelAr : item.labelEn}</span>
@@ -445,7 +443,7 @@ export default function WhatsappControls() {
           {currentTab === "campaigns" && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 items-start text-start">
-                
+
                 {/* Campaign Form Panel */}
                 <div className="xl:col-span-3 space-y-6">
                   <Card className="bg-card border-border shadow-sm">
@@ -459,12 +457,12 @@ export default function WhatsappControls() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-6 space-y-6">
-                      
+
                       {/* Campaign Name */}
                       <div className="space-y-2">
                         <label className="text-sm font-semibold text-foreground/80">{language === "ar" ? "اسم الحملة" : "Campaign Name"}</label>
-                        <Input 
-                          placeholder={language === "ar" ? "مثال: عرض الصيف السياحي 🌴" : "e.g. Summer Travel Offer"} 
+                        <Input
+                          placeholder={language === "ar" ? "مثال: عرض الصيف السياحي 🌴" : "e.g. Summer Travel Offer"}
                           value={campaignName}
                           onChange={(e) => setCampaignName(e.target.value)}
                           className="w-full"
@@ -474,7 +472,7 @@ export default function WhatsappControls() {
                       {/* Phone Numbers Input Options */}
                       <div className="space-y-4">
                         <h4 className="text-sm font-semibold text-foreground/80">{language === "ar" ? "أرقام المستلمين" : "Recipient Phone Numbers"}</h4>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {/* Option 1: Excel Upload */}
                           <div className="p-4 rounded-xl border border-border bg-muted/10 space-y-3">
@@ -482,11 +480,11 @@ export default function WhatsappControls() {
                               {language === "ar" ? "الخيار الأول: ملف إكسيل" : "Option 1: Excel Upload"}
                             </span>
                             <div className="flex items-center gap-2">
-                              <Input 
-                                type="file" 
-                                accept=".xlsx, .xls" 
-                                onChange={handleFileUpload} 
-                                className="cursor-pointer bg-card" 
+                              <Input
+                                type="file"
+                                accept=".xlsx, .xls"
+                                onChange={handleFileUpload}
+                                className="cursor-pointer bg-card"
                               />
                               <Button variant="outline" size="icon" className="shrink-0" title={language === "ar" ? "ملف إكسيل" : "Excel File"}>
                                 <Upload className="h-4 w-4" />
@@ -546,8 +544,8 @@ export default function WhatsappControls() {
                                 </Button>
                               )}
 
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 size="sm"
                                 onClick={handleFilterNumbers}
                                 disabled={finalNumbersList.length === 0 || checkingNumbers}
@@ -563,7 +561,7 @@ export default function WhatsappControls() {
                           {filteredNumbers.length > 0 && (
                             <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex justify-between items-center">
                               <span>
-                                {language === "ar" 
+                                {language === "ar"
                                   ? `🔍 تمت التصفية: ${filteredNumbers.length} رقم نشط بالواتساب جاهز للإرسال.`
                                   : `🔍 Checked: ${filteredNumbers.length} active numbers ready.`}
                               </span>
@@ -719,7 +717,7 @@ export default function WhatsappControls() {
                           <label className="text-xs font-semibold text-foreground/80">
                             {language === "ar" ? "الحد الأقصى للإرسال (1-150)" : "Max Send Limit (1-150)"}
                           </label>
-                          <Input 
+                          <Input
                             type="number"
                             min={1}
                             max={150}
@@ -736,18 +734,18 @@ export default function WhatsappControls() {
                             {language === "ar" ? "الفارق الزمني (ثواني)" : "Time Gap (Seconds)"}
                           </label>
                           <div className="flex items-center gap-2">
-                            <Input 
-                              type="number" 
-                              placeholder="Min" 
-                              value={timeGapMin} 
-                              onChange={(e) => setTimeGapMin(Math.max(1, parseInt(e.target.value) || 5))} 
+                            <Input
+                              type="number"
+                              placeholder="Min"
+                              value={timeGapMin}
+                              onChange={(e) => setTimeGapMin(Math.max(1, parseInt(e.target.value) || 5))}
                             />
                             <span className="text-xs font-bold text-muted-foreground">{language === "ar" ? "إلى" : "to"}</span>
-                            <Input 
-                              type="number" 
-                              placeholder="Max" 
-                              value={timeGapMax} 
-                              onChange={(e) => setTimeGapMax(Math.max(timeGapMin, parseInt(e.target.value) || 10))} 
+                            <Input
+                              type="number"
+                              placeholder="Max"
+                              value={timeGapMax}
+                              onChange={(e) => setTimeGapMax(Math.max(timeGapMin, parseInt(e.target.value) || 10))}
                             />
                           </div>
                         </div>
@@ -758,10 +756,10 @@ export default function WhatsappControls() {
                             <Layers className="h-3.5 w-3.5" />
                             {language === "ar" ? "حجم الدفعة" : "Batch Size"}
                           </label>
-                          <Input 
-                            type="number" 
-                            value={batchSize} 
-                            onChange={(e) => setBatchSize(Math.max(1, parseInt(e.target.value) || 10))} 
+                          <Input
+                            type="number"
+                            value={batchSize}
+                            onChange={(e) => setBatchSize(Math.max(1, parseInt(e.target.value) || 10))}
                           />
                         </div>
                       </div>
@@ -772,8 +770,8 @@ export default function WhatsappControls() {
                           <Clock className="h-4 w-4 text-muted-foreground" />
                           {language === "ar" ? "جدولة وقت البدء (اختياري)" : "Schedule Launch Time (Optional)"}
                         </label>
-                        <Input 
-                          type="datetime-local" 
+                        <Input
+                          type="datetime-local"
                           value={scheduledAt}
                           onChange={(e) => setScheduledAt(e.target.value)}
                           className="w-full sm:max-w-xs"
@@ -781,13 +779,13 @@ export default function WhatsappControls() {
                       </div>
 
                       {/* Submit campaign */}
-                      <Button 
+                      <Button
                         className="w-full bg-primary hover:bg-primary/95 text-primary-foreground font-bold py-6 text-base rounded-xl transition-all shadow-md"
                         onClick={() => createCampaignMutation.mutate()}
                         disabled={
-                          createCampaignMutation.isPending || 
-                          finalNumbersList.length === 0 || 
-                          messageTemplates.some(t => !t.trim()) || 
+                          createCampaignMutation.isPending ||
+                          finalNumbersList.length === 0 ||
+                          messageTemplates.some(t => !t.trim()) ||
                           !campaignName
                         }
                       >
@@ -801,7 +799,7 @@ export default function WhatsappControls() {
 
                 {/* WhatsApp Chat Preview & Instructions Panel */}
                 <div className="xl:col-span-2 space-y-6">
-                  
+
                   {/* WhatsApp Device Mock Preview */}
                   <Card className="bg-slate-950 border-slate-800 shadow-2xl overflow-hidden text-start rounded-3xl relative p-3">
                     {/* Speaker notch */}
@@ -811,7 +809,7 @@ export default function WhatsappControls() {
                     </div>
 
                     <div className="bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 min-h-[440px] flex flex-col relative pt-4">
-                      
+
                       {/* WhatsApp Chat Header */}
                       <div className="bg-[#0b141a] px-3 py-3 border-b border-slate-800 flex items-center justify-between text-white">
                         <div className="flex items-center gap-2">
@@ -853,19 +851,19 @@ export default function WhatsappControls() {
 
                       {/* Message Chat Body */}
                       <div className="flex-1 bg-[#0b141a] p-4 flex flex-col justify-end space-y-4 overflow-y-auto" style={{ backgroundImage: "radial-gradient(#111b21 0.75px, transparent 0.75px)", backgroundSize: "16px 16px" }}>
-                        
+
                         {/* Interactive Message Bubble */}
                         <div className="max-w-[85%] self-end bg-[#005c4b] text-[#e9edef] rounded-lg p-3 text-xs leading-relaxed relative shadow shadow-black/40">
                           {/* Triangle tail */}
                           <div className="absolute top-0 -end-1.5 w-0 h-0 border-t-[8px] border-t-[#005c4b] border-e-[8px] border-e-transparent" />
-                          
-                          <div 
+
+                          <div
                             className="whitespace-pre-wrap break-words"
-                            dangerouslySetInnerHTML={{ 
-                              __html: formatWhatsAppText(messageTemplates[previewVariantIdx] || messageTemplates[0] || (language === "ar" ? "*معاينة الرسالة تظهر هنا...*" : "*Message preview here...*")) 
+                            dangerouslySetInnerHTML={{
+                              __html: formatWhatsAppText(messageTemplates[previewVariantIdx] || messageTemplates[0] || (language === "ar" ? "*معاينة الرسالة تظهر هنا...*" : "*Message preview here...*"))
                             }}
                           />
-                          
+
                           <div className="flex justify-end items-center gap-1 mt-1.5 text-[9px] text-[#8696a0] font-mono">
                             <span>12:00 PM</span>
                             <span className="text-emerald-400">✓✓</span>
@@ -946,16 +944,15 @@ export default function WhatsappControls() {
                           <TableRow key={camp.id} className="hover:bg-muted/10">
                             <TableCell className="font-semibold">{camp.name}</TableCell>
                             <TableCell>
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                                camp.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                                camp.status === 'running' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' :
-                                'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                              }`}>
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${camp.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                                  camp.status === 'running' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' :
+                                    'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                                }`}>
                                 {camp.status === 'completed' && <CheckCircle2 className="w-3.5 h-3.5" />}
                                 {camp.status === 'running' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                                 {camp.status === 'paused' && <Pause className="w-3.5 h-3.5" />}
                                 {camp.status === 'completed' ? (language === "ar" ? "مكتملة" : "Completed") :
-                                 camp.status === 'running' ? (language === "ar" ? "جارية" : "Running") : (language === "ar" ? "متوقفة مؤقتاً" : "Paused")}
+                                  camp.status === 'running' ? (language === "ar" ? "جارية" : "Running") : (language === "ar" ? "متوقفة مؤقتاً" : "Paused")}
                               </span>
                             </TableCell>
                             <TableCell className="font-mono text-sm">{camp.total}</TableCell>
@@ -966,8 +963,8 @@ export default function WhatsappControls() {
                             <TableCell className="text-end">
                               <div className="flex justify-end items-center gap-2">
                                 {camp.status === 'paused' && (
-                                  <Button 
-                                    variant="outline" 
+                                  <Button
+                                    variant="outline"
                                     size="sm"
                                     className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 border-emerald-500/20 h-8"
                                     onClick={() => resumeCampaignMutation.mutate(camp.id)}
@@ -977,8 +974,8 @@ export default function WhatsappControls() {
                                   </Button>
                                 )}
                                 {camp.status === 'running' && (
-                                  <Button 
-                                    variant="outline" 
+                                  <Button
+                                    variant="outline"
                                     size="sm"
                                     className="text-amber-600 hover:text-amber-700 hover:bg-amber-500/10 border-amber-500/20 h-8"
                                     onClick={() => pauseCampaignMutation.mutate(camp.id)}
@@ -1044,8 +1041,8 @@ export default function WhatsappControls() {
                             <TableCell className="font-semibold">{group.subject}</TableCell>
                             <TableCell className="font-mono text-xs text-muted-foreground">{group.id}</TableCell>
                             <TableCell className="text-end">
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 size="sm"
                                 className="h-8 border-primary/20 text-primary hover:bg-primary/5"
                                 onClick={async () => {
@@ -1054,7 +1051,7 @@ export default function WhatsappControls() {
                                     const res = await authFetch(`${BASE}/api/whatsapp/groups/${group.id}/members/export`);
                                     if (!res.ok) throw new Error("Failed to export members");
                                     const data = await res.json();
-                                    
+
                                     if (!data.members || data.members.length === 0) {
                                       toast({ title: language === "ar" ? "⚠️ لم يتم العثور على أعضاء" : "⚠️ No members found", description: language === "ar" ? "لا توجد أرقام هواتف صالحة في هذه المجموعة." : "No valid phone numbers could be extracted from this group." });
                                       return;
@@ -1121,14 +1118,14 @@ export default function WhatsappControls() {
                         <p className="text-xs text-muted-foreground mt-0.5">{language === "ar" ? "جهات الاتصال الفريدة التي تم استخراجها من الدردشات وقائمة الأسماء." : "Unique contacts found in your chats and contacts list."}</p>
                       </div>
                       <div className="flex gap-2">
-                        <Button 
+                        <Button
                           variant="secondary"
                           onClick={() => refetchContacts()}
                           className="h-9 text-xs font-semibold"
                         >
                           {language === "ar" ? "تحديث السحب" : "Refresh Extract"}
                         </Button>
-                        <Button 
+                        <Button
                           variant="outline"
                           className="h-9 text-xs font-semibold border-primary/20 text-primary hover:bg-primary/5"
                           onClick={() => {
@@ -1215,4 +1212,7 @@ export default function WhatsappControls() {
       </div>
     </div>
   );
+
 }
+
+

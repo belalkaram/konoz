@@ -11,6 +11,8 @@ export const employeesTable = pgTable("employees", {
   pinHash: text("pin_hash").notNull(),
   email: text("email"),
   isActive: boolean("is_active").notNull().default(true),
+  isOnline: boolean("is_online").notNull().default(false),
+  lastSeenAt: timestamp("last_seen_at"),
   supervisorId: integer("supervisor_id").references((): AnyPgColumn => employeesTable.id),
   companyId: integer("company_id"),
   branchId: integer("branch_id"),

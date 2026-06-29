@@ -1,4 +1,6 @@
 import type { Response } from "express";
+import { db, employeesTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 interface ActiveConnection {
   employeeId: number;
@@ -7,7 +9,11 @@ interface ActiveConnection {
 
 const activeConnections = new Set<ActiveConnection>();
 
-export function registerNotificationConnection(employeeId: number, res: Response) {
+export function getOnlineEmployeeIds(): number[] {
+  return [...new Set([...activeConnections].map(c => c.employeeId))];
+}
+
+export async function registerNotificationConnection(employeeId: number, res: Response) {
   const connection = { employeeId, res };
   activeConnections.add(connection);
 
@@ -17,17 +23,44 @@ export function registerNotificationConnection(employeeId: number, res: Response
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
+  // Mark employee as online in DB
+  await db.update(employeesTable).set({
+    isOnline: true,
+    lastSeenAt: new Date(),
+    updatedAt: new Date(),
+  }).where(eq(employeesTable.id, employeeId));
+
   // Send an initial handshake/ok event
   res.write(`data: ${JSON.stringify({ type: "connected" })}\n\n`);
 
-  // Heartbeat to keep connection alive
-  const interval = setInterval(() => {
-    res.write(":\n\n");
-  }, 20000);
+  // Heartbeat to keep connection alive and update lastSeenAt every 30s
+  const interval = setInterval(async () => {
+    try {
+      res.write(":\n\n");
+      // Update lastSeenAt as a heartbeat
+      await db.update(employeesTable).set({ lastSeenAt: new Date() }).where(eq(employeesTable.id, employeeId));
+    } catch {
+      // connection may be closed
+    }
+  }, 30000);
 
-  res.on("close", () => {
+  res.on("close", async () => {
     clearInterval(interval);
     activeConnections.delete(connection);
+
+    // If no more connections for this employee, mark offline
+    const remaining = [...activeConnections].filter(c => c.employeeId === employeeId);
+    if (remaining.length === 0) {
+      try {
+        await db.update(employeesTable).set({
+          isOnline: false,
+          lastSeenAt: new Date(),
+          updatedAt: new Date(),
+        }).where(eq(employeesTable.id, employeeId));
+      } catch {
+        // best effort
+      }
+    }
   });
 }
 

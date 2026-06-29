@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/page-header";
-import { Bell, Send, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { Bell, Send, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Users, Wifi, WifiOff } from "lucide-react";
 import { formatDateTime } from "@/lib/formatters";
 
 interface NotificationHistoryItem {
@@ -30,6 +30,14 @@ interface NotificationHistoryItem {
   receiverName: string;
 }
 
+interface EmployeeOnlineStatus {
+  id: number;
+  name: string;
+  role: string;
+  isOnline: boolean;
+  lastSeenAt: string | null;
+}
+
 export default function InstantNotifications() {
   const { employees } = useEmployee();
   const { language } = useLanguage();
@@ -40,6 +48,18 @@ export default function InstantNotifications() {
   const [message, setMessage] = useState<string>("");
   const [button1Label, setButton1Label] = useState<string>(language === "ar" ? "موافق" : "Accept");
   const [button2Label, setButton2Label] = useState<string>(language === "ar" ? "مرفوض" : "Decline");
+
+  // Fetch online status with 5-second polling
+  const { data: onlineStatuses = [] } = useQuery<EmployeeOnlineStatus[]>({
+    queryKey: ["notifications-online-status"],
+    queryFn: async () => {
+      const res = await authFetch(`${BASE}/api/notifications/online-status`);
+      if (!res.ok) throw new Error("Failed to fetch online status");
+      const data = await res.json();
+      return data.employees;
+    },
+    refetchInterval: 5000,
+  });
 
   // Fetch history with 3 seconds polling interval to see responses in real-time
   const { data: history = [], isLoading, refetch, isFetching } = useQuery<NotificationHistoryItem[]>({
@@ -52,6 +72,8 @@ export default function InstantNotifications() {
     },
     refetchInterval: 3000,
   });
+
+  const onlineCount = onlineStatuses.filter(e => e.isOnline).length;
 
   const sendMutation = useMutation({
     mutationFn: async () => {
@@ -76,8 +98,8 @@ export default function InstantNotifications() {
           : (language === "ar" ? "الموظف غير متصل حالياً، سيظهر له التنبيه عند فتح السيستم" : "Employee is offline, they will see it when they open the system"),
       });
       setMessage("");
-      // Keep button labels or reset to defaults
       queryClient.invalidateQueries({ queryKey: ["notifications-history"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications-online-status"] });
     },
     onError: (err: Error) => {
       toast({
@@ -137,6 +159,14 @@ export default function InstantNotifications() {
     }
   };
 
+  const getLastSeenText = (lastSeenAt: string | null) => {
+    if (!lastSeenAt) return language === "ar" ? "لم يتصل من قبل" : "Never connected";
+    const diff = Math.floor((Date.now() - new Date(lastSeenAt).getTime()) / 1000);
+    if (diff < 60) return language === "ar" ? "منذ ثوان" : "Just now";
+    if (diff < 3600) return language === "ar" ? `منذ ${Math.floor(diff / 60)} دقيقة` : `${Math.floor(diff / 60)}m ago`;
+    return formatDateTime(lastSeenAt);
+  };
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -161,6 +191,64 @@ export default function InstantNotifications() {
         }
       />
 
+      {/* Online Status Panel */}
+      <Card className="shadow-sm border-slate-100 dark:border-slate-800/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Users className="h-4 w-4 text-blue-500" />
+            {language === "ar" ? "حالة الموظفين الآن" : "Live Employee Status"}
+            <span className="ms-auto text-xs font-normal text-muted-foreground">
+              {language === "ar"
+                ? `${onlineCount} متصل من ${onlineStatuses.length}`
+                : `${onlineCount} of ${onlineStatuses.length} online`}
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {onlineStatuses.map((emp) => (
+              <div
+                key={emp.id}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all ${
+                  emp.isOnline
+                    ? "border-emerald-200 bg-emerald-50 dark:border-emerald-800/40 dark:bg-emerald-950/20"
+                    : "border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/20"
+                }`}
+              >
+                {/* Online indicator dot */}
+                <div className="relative flex-shrink-0">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                    emp.isOnline ? "bg-emerald-500" : "bg-slate-400 dark:bg-slate-600"
+                  }`}>
+                    {emp.name.substring(0, 2).toUpperCase()}
+                  </div>
+                  {emp.isOnline && (
+                    <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-white dark:border-slate-900 rounded-full animate-pulse" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate leading-tight">{emp.name}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">
+                    {emp.isOnline
+                      ? (language === "ar" ? "متصل الآن" : "Online now")
+                      : getLastSeenText(emp.lastSeenAt)}
+                  </p>
+                </div>
+                {emp.isOnline
+                  ? <Wifi className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                  : <WifiOff className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                }
+              </div>
+            ))}
+            {onlineStatuses.length === 0 && (
+              <p className="col-span-full text-sm text-muted-foreground text-center py-4">
+                {language === "ar" ? "جاري تحميل حالة الموظفين..." : "Loading employee statuses..."}
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Send Notification Form */}
         <Card className="lg:col-span-1 shadow-sm border-slate-100 dark:border-slate-800/50">
@@ -179,13 +267,30 @@ export default function InstantNotifications() {
                     <SelectValue placeholder={language === "ar" ? "اختر موظف..." : "Select employee..."} />
                   </SelectTrigger>
                   <SelectContent>
-                    {employees.map((emp) => (
-                      <SelectItem key={emp.id} value={emp.id.toString()}>
-                        {emp.name} ({emp.role})
-                      </SelectItem>
-                    ))}
+                    {employees.map((emp) => {
+                      const status = onlineStatuses.find(s => s.id === emp.id);
+                      return (
+                        <SelectItem key={emp.id} value={emp.id.toString()}>
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status?.isOnline ? "bg-emerald-500" : "bg-slate-300"}`} />
+                            {emp.name} ({emp.role})
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
+                {receiverId && (() => {
+                  const status = onlineStatuses.find(s => s.id === Number(receiverId));
+                  return status ? (
+                    <p className={`text-xs flex items-center gap-1.5 mt-1 ${status.isOnline ? "text-emerald-600" : "text-slate-400"}`}>
+                      {status.isOnline
+                        ? <><Wifi className="h-3 w-3" />{language === "ar" ? "متصل الآن - التنبيه سيظهر فوراً" : "Online now — alert will appear instantly"}</>
+                        : <><WifiOff className="h-3 w-3" />{language === "ar" ? "غير متصل - سيظهر عند دخوله" : "Offline — will appear when they log in"}</>
+                      }
+                    </p>
+                  ) : null;
+                })()}
               </div>
 
               <div className="space-y-1.5">
@@ -277,7 +382,15 @@ export default function InstantNotifications() {
                     {history.map((item) => (
                       <TableRow key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
                         <TableCell className="font-semibold text-sm whitespace-nowrap">
-                          {item.receiverName}
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const empStatus = onlineStatuses.find(s => s.id === item.receiverId);
+                              return empStatus ? (
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${empStatus.isOnline ? "bg-emerald-500" : "bg-slate-300"}`} />
+                              ) : null;
+                            })()}
+                            {item.receiverName}
+                          </div>
                         </TableCell>
                         <TableCell className="text-sm max-w-[200px] truncate" title={item.message}>
                           {item.message}
@@ -310,7 +423,7 @@ export default function InstantNotifications() {
                           <div>{formatDateTime(item.createdAt)}</div>
                           {item.respondedAt && (
                             <div className="text-[10px] text-emerald-500 dark:text-emerald-400 font-medium">
-                              {language === "ar" ? "تم الرد خلال دقيقة" : "Responded"}
+                              {language === "ar" ? "تم الرد" : "Responded"}
                             </div>
                           )}
                         </TableCell>

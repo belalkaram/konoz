@@ -1,15 +1,15 @@
 import { Router } from "express";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, asc } from "drizzle-orm";
 import { db, notificationsTable, employeesTable } from "@workspace/db";
 import { requireAuth, requireAdmin } from "../middlewares/auth.js";
-import { registerNotificationConnection, sendRealTimeNotification } from "../lib/notifications.js";
+import { registerNotificationConnection, sendRealTimeNotification, getOnlineEmployeeIds } from "../lib/notifications.js";
 
 const router = Router();
 
 // SSE Stream for the logged-in employee
-router.get("/notifications/stream", requireAuth, (req, res) => {
+router.get("/notifications/stream", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
-  registerNotificationConnection(employeeId, res);
+  await registerNotificationConnection(employeeId, res);
 });
 
 // Send a notification (Admin only)
@@ -142,6 +142,35 @@ router.get("/notifications/history", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Error fetching notification history");
     res.status(500).json({ error: "server_error", message: "Failed to fetch notification history" });
+  }
+});
+
+// Get online/offline status for all employees (Admin only)
+router.get("/notifications/online-status", requireAdmin, async (req, res) => {
+  try {
+    const employees = await db
+      .select({
+        id: employeesTable.id,
+        name: employeesTable.name,
+        role: employeesTable.role,
+        isOnline: employeesTable.isOnline,
+        lastSeenAt: employeesTable.lastSeenAt,
+      })
+      .from(employeesTable)
+      .where(eq(employeesTable.isActive, true))
+      .orderBy(asc(employeesTable.name));
+
+    // Cross-check with live in-memory SSE connections for real-time accuracy
+    const liveIds = new Set(getOnlineEmployeeIds());
+    const enriched = employees.map(emp => ({
+      ...emp,
+      isOnline: liveIds.has(emp.id) || emp.isOnline,
+    }));
+
+    res.json({ success: true, employees: enriched });
+  } catch (err) {
+    req.log.error({ err }, "Error fetching online status");
+    res.status(500).json({ error: "server_error", message: "Failed to fetch online status" });
   }
 });
 

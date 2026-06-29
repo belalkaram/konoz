@@ -74,7 +74,7 @@ const loginLimiter = rateLimit({
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 2000,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
@@ -85,7 +85,7 @@ const generalLimiter = rateLimit({
 
 const writeLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
@@ -153,7 +153,7 @@ app.use(async (req, res, next) => {
 });
 
 app.use((req, res, next) => {
-  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method) && req.path !== "/api/auth/login") {
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method) && req.path !== "/api/auth/login" && req.path !== "/api/whatsapp/webhook") {
     writeLimiter(req, res, next);
   } else {
     next();

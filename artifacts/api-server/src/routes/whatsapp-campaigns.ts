@@ -197,7 +197,7 @@ const getInstanceName = (employeeId: number) => `emp_${employeeId}`;
  */
 router.post("/whatsapp/campaigns", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
-  const { name, messageTemplate, numbers, timeGapMin, timeGapMax, batchSize, scheduledAt } = req.body;
+  const { name, messageTemplate, numbers, timeGapMin, timeGapMax, batchSize, scheduledAt, maxMessages } = req.body;
 
   if (!name || !messageTemplate || !numbers || !Array.isArray(numbers)) {
     return res.status(400).json({ error: "validation_error", message: "Name, template, and numbers array are required" });
@@ -211,10 +211,13 @@ router.post("/whatsapp/campaigns", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "not_connected", message: "WhatsApp instance is not connected" });
     }
 
-    // ── 150-recipient hard cap ──────────────────────────────────────────────
+    // ── Custom recipient cap (max MAX_RECIPIENTS) ───────────────────────────
+    const targetLimit = maxMessages && typeof maxMessages === "number" && maxMessages > 0
+      ? Math.min(maxMessages, MAX_RECIPIENTS)
+      : MAX_RECIPIENTS;
     const originalCount = numbers.length;
-    const cappedNumbers: string[] = numbers.slice(0, MAX_RECIPIENTS);
-    const wasTruncated = originalCount > MAX_RECIPIENTS;
+    const cappedNumbers: string[] = numbers.slice(0, targetLimit);
+    const wasTruncated = originalCount > targetLimit;
 
     let initialStatus = "running";
     let parsedDate: Date | null = null;
@@ -228,11 +231,15 @@ router.post("/whatsapp/campaigns", requireAuth, async (req, res) => {
       }
     }
 
+    const templateDbValue = Array.isArray(messageTemplate)
+      ? JSON.stringify(messageTemplate)
+      : String(messageTemplate);
+
     // 1. Create Campaign
     const [campaign] = await db.insert(whatsappCampaignsTable).values({
       employeeId,
       name,
-      messageTemplate,
+      messageTemplate: templateDbValue,
       timeGapMin: timeGapMin || 5,
       timeGapMax: timeGapMax || 10,
       batchSize: batchSize || 10,
@@ -276,6 +283,8 @@ router.get("/whatsapp/campaigns", requireAuth, async (req, res) => {
         createdAt: whatsappCampaignsTable.createdAt,
         total: sql<number>`count(${whatsappCampaignRecipientsTable.id})`,
         sent: sql<number>`count(case when ${whatsappCampaignRecipientsTable.status} = 'sent' then 1 end)`,
+        delivered: sql<number>`count(case when ${whatsappCampaignRecipientsTable.status} = 'delivered' then 1 end)`,
+        read: sql<number>`count(case when ${whatsappCampaignRecipientsTable.status} = 'read' then 1 end)`,
         failed: sql<number>`count(case when ${whatsappCampaignRecipientsTable.status} = 'failed' then 1 end)`,
       })
       .from(whatsappCampaignsTable)
@@ -319,7 +328,7 @@ router.post("/whatsapp/campaigns/:id/resume", requireAuth, async (req, res) => {
 
     await db.update(whatsappCampaignsTable)
       .set({ status: "running" })
-      .where(eq(whatsappCampaignsTable.id, campaignId));
+      .where(and(eq(whatsappCampaignsTable.id, campaignId), eq(whatsappCampaignsTable.employeeId, employeeId)));
 
     triggerCampaign(campaignId, employeeId);
 
@@ -358,7 +367,7 @@ router.post("/whatsapp/campaigns/:id/pause", requireAuth, async (req, res) => {
 
     await db.update(whatsappCampaignsTable)
       .set({ status: "paused" })
-      .where(eq(whatsappCampaignsTable.id, campaignId));
+      .where(and(eq(whatsappCampaignsTable.id, campaignId), eq(whatsappCampaignsTable.employeeId, employeeId)));
 
     return res.json({ success: true, message: "Campaign paused" });
   } catch (err) {
@@ -366,6 +375,78 @@ router.post("/whatsapp/campaigns/:id/pause", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "server_error", message: "Failed to pause campaign" });
   }
 });
+
+/**
+ * Stop a campaign
+ */
+router.post("/whatsapp/campaigns/:id/stop", requireAuth, async (req, res) => {
+  const employeeId = req.employee!.employeeId;
+  const campaignId = parseInt(req.params.id as string);
+
+  try {
+    const [campaign] = await db
+      .select()
+      .from(whatsappCampaignsTable)
+      .where(
+        and(
+          eq(whatsappCampaignsTable.id, campaignId),
+          eq(whatsappCampaignsTable.employeeId, employeeId)
+        )
+      );
+
+    if (!campaign) {
+      return res.status(404).json({ error: "not_found", message: "Campaign not found" });
+    }
+
+    if (campaign.status === "completed") {
+      return res.status(400).json({ error: "bad_request", message: "Campaign already completed" });
+    }
+
+    await db.update(whatsappCampaignsTable)
+      .set({ status: "stopped", completedAt: new Date() })
+      .where(and(eq(whatsappCampaignsTable.id, campaignId), eq(whatsappCampaignsTable.employeeId, employeeId)));
+
+    return res.json({ success: true, message: "Campaign stopped" });
+  } catch (err) {
+    req.log.error({ err }, "Error stopping campaign");
+    return res.status(500).json({ error: "server_error", message: "Failed to stop campaign" });
+  }
+});
+
+/**
+ * Get recipients for a specific campaign
+ */
+router.get("/whatsapp/campaigns/:id/recipients", requireAuth, async (req, res) => {
+  const employeeId = req.employee!.employeeId;
+  const campaignId = parseInt(req.params.id as string);
+
+  try {
+    const [campaign] = await db
+      .select()
+      .from(whatsappCampaignsTable)
+      .where(
+        and(
+          eq(whatsappCampaignsTable.id, campaignId),
+          eq(whatsappCampaignsTable.employeeId, employeeId)
+        )
+      );
+
+    if (!campaign) {
+      return res.status(404).json({ error: "not_found", message: "Campaign not found" });
+    }
+
+    const recipients = await db
+      .select()
+      .from(whatsappCampaignRecipientsTable)
+      .where(eq(whatsappCampaignRecipientsTable.campaignId, campaignId));
+
+    return res.json({ recipients });
+  } catch (err) {
+    req.log.error({ err }, "Error getting campaign recipients");
+    return res.status(500).json({ error: "server_error", message: "Failed to get recipients" });
+  }
+});
+
 
 /**
  * Check if numbers are on WhatsApp
@@ -427,7 +508,7 @@ export async function triggerCampaign(campaignId: number, employeeId: number) {
     const [campaign] = await db
       .select()
       .from(whatsappCampaignsTable)
-      .where(eq(whatsappCampaignsTable.id, campaignId));
+      .where(and(eq(whatsappCampaignsTable.id, campaignId), eq(whatsappCampaignsTable.employeeId, employeeId)));
       
     if (!campaign || campaign.status !== "running") return;
 
@@ -448,27 +529,71 @@ export async function triggerCampaign(campaignId: number, employeeId: number) {
       const [currentCampaign] = await db
         .select()
         .from(whatsappCampaignsTable)
-        .where(eq(whatsappCampaignsTable.id, campaignId));
+        .where(and(eq(whatsappCampaignsTable.id, campaignId), eq(whatsappCampaignsTable.employeeId, employeeId)));
         
       if (!currentCampaign || currentCampaign.status !== "running") {
         logger.info(`Campaign ${campaignId} stopped or paused.`);
         break;
       }
 
+      // Mark startedAt on first iteration
+      if (i === 0 && !currentCampaign.startedAt) {
+        await db.update(whatsappCampaignsTable)
+          .set({ startedAt: new Date() })
+          .where(and(eq(whatsappCampaignsTable.id, campaignId), eq(whatsappCampaignsTable.employeeId, employeeId)));
+      }
+
       const recipient = recipients[i];
       
       try {
-        await WhatsappService.sendTextMessage(instanceName, recipient.phoneNumber, campaign.messageTemplate);
+        let messageToSend = campaign.messageTemplate;
+        try {
+          if (campaign.messageTemplate.startsWith("[") && campaign.messageTemplate.endsWith("]")) {
+            const parsed = JSON.parse(campaign.messageTemplate);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              // Rotate round-robin based on recipient index i
+              const msgIdx = i % parsed.length;
+              messageToSend = parsed[msgIdx];
+            }
+          }
+        } catch (e) {
+          messageToSend = campaign.messageTemplate;
+        }
+
+        await WhatsappService.sendTextMessage(instanceName, recipient.phoneNumber, messageToSend);
         
         await db.update(whatsappCampaignRecipientsTable)
           .set({ status: "sent", sentAt: new Date() })
           .where(eq(whatsappCampaignRecipientsTable.id, recipient.id));
           
       } catch (error: any) {
-        logger.error(`Failed to send to ${recipient.phoneNumber}:`, error.message);
+        const errMsg = error?.response?.data?.response?.message || error.message || "";
+        logger.error(`Failed to send to ${recipient.phoneNumber}:`, errMsg);
+        
         await db.update(whatsappCampaignRecipientsTable)
-          .set({ status: "failed", errorMessage: error.message })
+          .set({ status: "failed", errorMessage: errMsg })
           .where(eq(whatsappCampaignRecipientsTable.id, recipient.id));
+
+        // Append to errorLog
+        await db.update(whatsappCampaignsTable)
+          .set({ errorLog: sql`COALESCE(${whatsappCampaignsTable.errorLog}, '') || ${`\nFailed ${recipient.phoneNumber}: ${errMsg}`}` })
+          .where(and(eq(whatsappCampaignsTable.id, campaignId), eq(whatsappCampaignsTable.employeeId, employeeId)));
+
+        if (errMsg.includes("Connection Closed") || errMsg.includes("not_connected")) {
+          logger.warn(`WhatsApp connection closed during campaign ${campaignId}. Pausing campaign and resetting instance status.`);
+          
+          // Pause the campaign
+          await db.update(whatsappCampaignsTable)
+            .set({ status: "paused" })
+            .where(and(eq(whatsappCampaignsTable.id, campaignId), eq(whatsappCampaignsTable.employeeId, employeeId)));
+            
+          // Reset instance connection status in DB
+          await db.update(whatsappInstancesTable)
+            .set({ connectionStatus: "disconnected", qrCode: null })
+            .where(eq(whatsappInstancesTable.employeeId, employeeId));
+            
+          break; // Stop the loop immediately!
+        }
       }
 
       // Time gap
@@ -495,8 +620,8 @@ export async function triggerCampaign(campaignId: number, employeeId: number) {
 
     if (pendingCount[0].count === 0) {
       await db.update(whatsappCampaignsTable)
-        .set({ status: "completed" })
-        .where(eq(whatsappCampaignsTable.id, campaignId));
+        .set({ status: "completed", completedAt: new Date() })
+        .where(and(eq(whatsappCampaignsTable.id, campaignId), eq(whatsappCampaignsTable.employeeId, employeeId)));
       logger.info(`Campaign ${campaignId} completed.`);
     }
 

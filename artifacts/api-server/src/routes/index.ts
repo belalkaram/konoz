@@ -23,6 +23,11 @@ import whatsappCampaignsRouter from "./whatsapp-campaigns";
 import supervisorRouter from "./supervisor";
 import accountingRouter from "./accounting";
 import whatsappRoutingRouter from "./whatsapp_routing.js";
+import whatsappAdminRouter from "./whatsapp-admin.js";
+import whatsappQuickRepliesRouter from "./whatsapp-quick-replies.js";
+import whatsappAutomationsRouter from "./whatsapp-automations.js";
+import tiktokRouter from "./tiktok.js";
+import tiktokAutomationsRouter from "./tiktok-automations.js";
 
 const router: IRouter = Router();
 
@@ -47,8 +52,12 @@ router.use(reportsRouter);
 router.use(whatsappRouter);
 router.use(whatsappCampaignsRouter);
 router.use(supervisorRouter);
-router.use(whatsappRoutingRouter);
 router.use(accountingRouter);
-
+router.use(whatsappRoutingRouter);
+router.use(whatsappAdminRouter);
+router.use(whatsappQuickRepliesRouter);
+router.use(whatsappAutomationsRouter);
+router.use(tiktokRouter);
+router.use(tiktokAutomationsRouter);
 
 export default router;

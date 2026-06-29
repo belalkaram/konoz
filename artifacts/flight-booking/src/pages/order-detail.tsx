@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatDateTime } from "@/lib/formatters";
 import { FileText, XCircle, AlertTriangle } from "lucide-react";
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -70,8 +70,8 @@ export default function OrderDetail() {
             </h1>
             <Badge variant={
               order.status === 'CONFIRMED' ? 'default' :
-              order.status === 'CANCELLED' ? 'destructive' :
-              'secondary'
+                order.status === 'CANCELLED' ? 'destructive' :
+                  'secondary'
             } className="text-sm">
               {language === "ar" ? t("statuses." + order.status.toLowerCase()) : order.status}
             </Badge>
@@ -80,7 +80,7 @@ export default function OrderDetail() {
             {language === "ar" ? `تم الحجز في ${formatDateTime(order.createdAt)}` : `Booked on ${formatDateTime(order.createdAt)}`}
           </p>
         </div>
-        
+
         {order.status !== 'CANCELLED' && (
           <AlertDialog>
             <AlertDialogTrigger asChild>

@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, QrCode, LogOut, CheckCircle2, RefreshCw, BrainCircuit, Key, Eye, EyeOff, ShieldCheck, Target, Bell } from "lucide-react";
+import { Loader2, QrCode, LogOut, CheckCircle2, RefreshCw, BrainCircuit, Key, Eye, EyeOff, ShieldCheck, Target, Bell, Users, UserPlus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
 import { useEmployee } from "@/contexts/employee-context";
 import { authFetch, BASE } from "@/lib/api";
@@ -48,7 +48,6 @@ export default function WhatsappSettings() {
       if (!res.ok) throw new Error("Failed to fetch Gemini settings");
       return res.json() as Promise<{ hasKey: boolean }>;
     },
-    enabled: isAdmin,
   });
 
   // ── Fetch Target Progress (All Roles) ──────────────────────────────────────
@@ -87,7 +86,6 @@ export default function WhatsappSettings() {
         monthlyTarget: number;
       }>;
     },
-    enabled: isAdmin,
   });
 
   // Sync settings states when fetched
@@ -100,6 +98,79 @@ export default function WhatsappSettings() {
       setMonthlyTarget(notifSettings.monthlyTarget);
     }
   }, [notifSettings]);
+
+  // ── Routing Agents (Targets) State & Queries ──────────────────────────────
+  const [newAgentEmployeeId, setNewAgentEmployeeId] = useState("");
+  const [newAgentPhone, setNewAgentPhone] = useState("");
+
+  const { data: routingAgents, isLoading: agentsLoading } = useQuery({
+    queryKey: ["whatsapp-routing-agents"],
+    queryFn: async () => {
+      const res = await authFetch(`${BASE}/api/whatsapp/routing/agents`);
+      if (!res.ok) throw new Error("Failed to fetch routing agents");
+      return res.json() as Promise<{ agents: any[] }>;
+    },
+  });
+
+  const { data: employeesData } = useQuery({
+    queryKey: ["employees"],
+    queryFn: async () => {
+      const res = await authFetch(`${BASE}/api/employees`);
+      if (!res.ok) throw new Error("Failed to fetch employees");
+      return res.json() as Promise<{ employees: any[] }>;
+    },
+  });
+
+  const addAgentMutation = useMutation({
+    mutationFn: async () => {
+      const res = await authFetch(`${BASE}/api/whatsapp/routing/agents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employeeId: parseInt(newAgentEmployeeId), agentPhone: newAgentPhone }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error((errData as any).message || "Failed to add agent");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: language === "ar" ? "✅ تم إضافة الموظف للتوزيع بنجاح" : "✅ Routing agent added!" });
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-routing-agents"] });
+      setNewAgentEmployeeId("");
+      setNewAgentPhone("");
+    },
+    onError: (err: any) => {
+      toast({ title: language === "ar" ? "خطأ في الإضافة" : "Add Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const toggleAgentMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: number, isActive: boolean }) => {
+      const res = await authFetch(`${BASE}/api/whatsapp/routing/agents/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive }),
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-routing-agents"] });
+    },
+  });
+
+  const deleteAgentMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await authFetch(`${BASE}/api/whatsapp/routing/agents/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: language === "ar" ? "🗑 تم الحذف بنجاح" : "🗑 Agent removed" });
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-routing-agents"] });
+    },
+  });
 
   // Save Settings Mutation
   const saveNotifSettingsMutation = useMutation({
@@ -463,7 +534,7 @@ export default function WhatsappSettings() {
           )}
 
           {/* Logout */}
-          {isConnected && (
+          {data?.status && data.status !== "disconnected" && (
             <div className="flex justify-end mt-6">
               <Button
                 variant="destructive"
@@ -479,7 +550,7 @@ export default function WhatsappSettings() {
       </Card>
 
       {/* ── Gemini AI Settings (Admin only) ──────────────────────────────── */}
-      {isAdmin && (
+      {(
         <Card className="bg-card border-border shadow-sm text-start">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl text-foreground">
@@ -579,7 +650,7 @@ export default function WhatsappSettings() {
       )}
 
       {/* ── WhatsApp Notifications & Monthly Target (Admin only) ── */}
-      {isAdmin && (
+      {(
         <Card className="bg-card border-border shadow-sm text-start">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl text-foreground">
@@ -716,6 +787,116 @@ export default function WhatsappSettings() {
                 </div>
               </>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── WhatsApp Routing Agents (Targets) ──────────────────────────────── */}
+      {isAdmin && (
+        <Card className="bg-card border-border shadow-sm text-start">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl text-foreground">
+              <Users className="h-5 w-5 text-primary" />
+              {language === "ar" ? "مستلمو توزيع العملاء (Targets)" : "Lead Routing Targets"}
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              {language === "ar"
+                ? "إدارة الموظفين الذين يستقبلون العملاء الجدد عبر نظام التوزيع العادل (Round Robin) من الرقم الرئيسي."
+                : "Manage employees who receive new leads via round-robin distribution from the main number."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            
+            {/* Add new agent */}
+            <div className="flex flex-col sm:flex-row gap-3 items-end p-4 rounded-lg border border-border bg-muted/10">
+              <div className="w-full sm:flex-1 space-y-1.5">
+                <label className="text-sm font-medium">{language === "ar" ? "الموظف" : "Employee"}</label>
+                <Select value={newAgentEmployeeId} onValueChange={setNewAgentEmployeeId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={language === "ar" ? "اختر الموظف" : "Select employee"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employeesData?.employees?.map(emp => (
+                      <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-full sm:flex-1 space-y-1.5">
+                <label className="text-sm font-medium">{language === "ar" ? "رقم استقبال الواتساب" : "WhatsApp Number"}</label>
+                <Input
+                  type="text"
+                  placeholder="e.g. 96590000000"
+                  value={newAgentPhone}
+                  onChange={(e) => setNewAgentPhone(e.target.value.replace(/[^0-9]/g, ""))}
+                  dir="ltr"
+                />
+              </div>
+              <Button
+                onClick={() => addAgentMutation.mutate()}
+                disabled={!newAgentEmployeeId || !newAgentPhone || addAgentMutation.isPending}
+                className="w-full sm:w-auto"
+              >
+                {addAgentMutation.isPending ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <UserPlus className="me-2 h-4 w-4" />}
+                {language === "ar" ? "إضافة للقائمة" : "Add Target"}
+              </Button>
+            </div>
+
+            {/* List of agents */}
+            <div className="space-y-3">
+              {agentsLoading ? (
+                <div className="flex justify-center p-4"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+              ) : routingAgents?.agents?.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  {language === "ar" ? "لا يوجد موظفين في قائمة التوزيع." : "No routing targets configured."}
+                </p>
+              ) : (
+                routingAgents?.agents?.map(agent => (
+                  <div key={agent.id} className="flex items-center justify-between p-3 rounded-md border border-border bg-card">
+                    <div>
+                      <p className="font-semibold text-sm flex items-center gap-2">
+                        {agent.employeeName}
+                        {!agent.isActive && (
+                          <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded uppercase">
+                            {language === "ar" ? "متوقف" : "Paused"}
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-mono mt-0.5" dir="ltr">{agent.agentPhone}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {language === "ar" ? `تم استلام ${agent.totalAssigned} عميل` : `Received ${agent.totalAssigned} leads`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {agent.isActive ? (language === "ar" ? "نشط" : "Active") : (language === "ar" ? "إيقاف" : "Inactive")}
+                        </span>
+                        <Switch
+                          checked={agent.isActive}
+                          onCheckedChange={(val) => toggleAgentMutation.mutate({ id: agent.id, isActive: val })}
+                          disabled={toggleAgentMutation.isPending}
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => {
+                          if (confirm(language === "ar" ? "هل أنت متأكد من حذف الموظف من قائمة التوزيع؟" : "Are you sure you want to remove this target?")) {
+                            deleteAgentMutation.mutate(agent.id);
+                          }
+                        }}
+                        disabled={deleteAgentMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
           </CardContent>
         </Card>
       )}

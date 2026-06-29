@@ -31,8 +31,7 @@ export default function WhatsappRoutingTab() {
     queryFn: async () => {
       const res = await authFetch(`${BASE}/api/employees`);
       if (!res.ok) throw new Error("Failed to fetch employees");
-      const data = await res.json();
-      return data.employees as { id: number; name: string; username: string }[];
+      return res.json() as Promise<{ employees: any[] }>;
     }
   });
 
@@ -114,7 +113,7 @@ export default function WhatsappRoutingTab() {
                   <SelectValue placeholder={language === "ar" ? "اختر الموظف" : "Select an employee"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {employeesData?.map((emp) => (
+                  {employeesData?.employees?.map((emp) => (
                     <SelectItem key={emp.id} value={emp.id.toString()}>
                       {emp.name} ({emp.username})
                     </SelectItem>

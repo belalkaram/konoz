@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, pgEnum, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { customersTable } from "./customers";
@@ -20,6 +20,8 @@ export const remindersTable = pgTable("reminders", {
   status: reminderStatusEnum("status").default("pending").notNull(),
   title: text("title").notNull(),
   description: text("description"),
+  isAutoFollowup: boolean("is_auto_followup").default(false),
+  activeFollowupId: integer("active_followup_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

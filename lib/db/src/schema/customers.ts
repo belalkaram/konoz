@@ -17,6 +17,11 @@ export const customerStatusEnum = pgEnum("customer_status", [
   "booked",
   "cancelled",
   "lost",
+  "replied",
+  "no_response",
+  "not_interested",
+  "converted",
+  "closed"
 ]);
 
 export const customersTable = pgTable("customers", {

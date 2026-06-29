@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Plane, Search, ListFilter, LayoutDashboard, Menu, X, Users, Tag, Bell, LogOut, UserCog, Building2, ShieldCheck, FileText, BarChart3, MessageSquare, QrCode, Layers, Sun, Moon, ChevronLeft, ChevronRight, Wallet } from "lucide-react";
+import { Plane, Search, ListFilter, LayoutDashboard, Menu, X, Users, Tag, Bell, LogOut, UserCog, Building2, ShieldCheck, FileText, BarChart3, MessageSquare, QrCode, Layers, Sun, Moon, ChevronLeft, ChevronRight, Wallet, Server, Play } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { Link } from "wouter";
@@ -56,10 +56,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/orders", label: t("common.orders"), icon: ListFilter },
     { href: "/chat", label: t("common.whatsappChat"), icon: MessageSquare },
     { href: "/whatsapp-controls", label: t("common.whatsappControls"), icon: Layers },
+    { href: "/tiktok-controls", label: language === "ar" ? "تيك توك" : "TikTok Controls", icon: Play },
     ...(!isHR ? [{ href: "/reports", label: t("common.reports"), icon: BarChart3 }] : []),
     ...(isHR ? [{ href: "/hr", label: t("common.hrManagement"), icon: ShieldCheck }] : []),
     ...(isSupervisorOrAdmin ? [{ href: "/employees", label: t("common.employees"), icon: UserCog }] : []),
     ...(isSupervisorOrAdmin ? [{ href: "/accounting", label: language === "ar" ? "الحسابات" : "Accounting", icon: Wallet }] : []),
+    ...(isAdmin ? [{ href: "/whatsapp-admin", label: language === "ar" ? "سيرفرات الواتساب" : "WhatsApp Admin", icon: Server }] : []),
     ...(isAdmin ? [{ href: "/companies", label: t("common.companies"), icon: Building2 }] : []),
   ];
 
@@ -92,7 +94,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 overflow-y-auto p-4 space-y-1 sidebar-scroll">
           {navItems.map((item) => {
             const active = isActive(item.href);
             return (

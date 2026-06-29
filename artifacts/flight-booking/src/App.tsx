@@ -30,6 +30,8 @@ import AccountingLayout from "@/pages/accounting/accounting-layout";
 import NotAuthorized from "@/pages/not-authorized";
 import Chat from "@/pages/chat";
 import WhatsappControls from "@/pages/whatsapp-controls";
+import WhatsappAdmin from "@/pages/whatsapp-admin";
+import TiktokControls from "@/pages/tiktok-controls";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -111,6 +113,9 @@ function Router() {
         <Route path="/accounting">{() => <SupervisorOrAdminRoute component={AccountingLayout} />}</Route>
         <Route path="/whatsapp-controls" component={WhatsappControls} />
         <Route path="/whatsapp-controls/:tab" component={WhatsappControls} />
+        <Route path="/tiktok-controls" component={TiktokControls} />
+        <Route path="/tiktok-controls/:tab" component={TiktokControls} />
+        <Route path="/whatsapp-admin" component={() => <SupervisorOrAdminRoute component={WhatsappAdmin} />} />
         <Route path="/chat" component={Chat} />
         <Route component={NotFound} />
       </Switch>

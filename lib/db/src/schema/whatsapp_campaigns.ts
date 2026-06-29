@@ -13,8 +13,11 @@ export const whatsappCampaignsTable = pgTable("whatsapp_campaigns", {
   timeGapMin: integer("time_gap_min").notNull().default(5),
   timeGapMax: integer("time_gap_max").notNull().default(10),
   batchSize: integer("batch_size").notNull().default(10),
-  status: text("status").notNull().default("pending"), // pending, running, paused, completed, scheduled
+  status: text("status").notNull().default("pending"), // pending, scheduled, running, paused, completed, stopped, failed
   scheduledAt: timestamp("scheduled_at"),
+  startedAt: timestamp("started_at"),       // Actual send start time
+  completedAt: timestamp("completed_at"),   // Actual completion time
+  errorLog: text("error_log"),              // Accumulated error log
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -27,3 +30,4 @@ export const insertWhatsappCampaignSchema = (createInsertSchema(whatsappCampaign
 
 export type WhatsappCampaign = typeof whatsappCampaignsTable.$inferSelect;
 export type InsertWhatsappCampaign = z.infer<typeof insertWhatsappCampaignSchema>;
+

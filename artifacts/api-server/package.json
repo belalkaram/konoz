@@ -24,9 +24,16 @@
     "express": "^5",
     "express-rate-limit": "^8.4.1",
     "helmet": "^8.1.0",
+    "is-plain-object": "^5.0.0",
+    "kind-of": "^6.0.3",
+    "lazy-cache": "^2.0.2",
     "nodemailer": "^8.0.7",
     "pino": "^9",
     "pino-http": "^10",
+    "playwright": "^1.61.0",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "shallow-clone": "^3.0.1",
     "zod": "catalog:"
   },
   "devDependencies": {

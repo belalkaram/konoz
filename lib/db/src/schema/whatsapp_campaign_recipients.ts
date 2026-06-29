@@ -9,9 +9,11 @@ export const whatsappCampaignRecipientsTable = pgTable("whatsapp_campaign_recipi
     .references(() => whatsappCampaignsTable.id)
     .notNull(),
   phoneNumber: text("phone_number").notNull(),
-  status: text("status").notNull().default("pending"), // pending, sent, failed
+  status: text("status").notNull().default("pending"), // pending, sent, delivered, read, failed
   errorMessage: text("error_message"),
   sentAt: timestamp("sent_at"),
+  deliveredAt: timestamp("delivered_at"),    // When message was delivered
+  readAt: timestamp("read_at"),              // When message was read
 });
 
 export const insertWhatsappCampaignRecipientSchema = (createInsertSchema(whatsappCampaignRecipientsTable) as any).omit({
@@ -20,3 +22,4 @@ export const insertWhatsappCampaignRecipientSchema = (createInsertSchema(whatsap
 
 export type WhatsappCampaignRecipient = typeof whatsappCampaignRecipientsTable.$inferSelect;
 export type InsertWhatsappCampaignRecipient = z.infer<typeof insertWhatsappCampaignRecipientSchema>;
+

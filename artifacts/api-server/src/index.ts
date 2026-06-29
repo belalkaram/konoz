@@ -6,6 +6,7 @@ import whatsappRoutingRouter from "./routes/whatsapp_routing.js";
 import { seedEmployees } from "./lib/seed-employees.js";
 import { startReminderCron } from "./lib/reminder-job.js";
 import { startCampaignCron } from "./lib/campaign-job.js";
+import { startAutomationCron } from "./lib/automation-job.js";
 
 const rawPort = process.env.API_PORT || process.env.PORT || "3000";
 
@@ -15,6 +16,7 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
+// Error handlers
 if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) {
   (app as any).listen(port, async (err: any) => {
     if (err) {
@@ -26,6 +28,7 @@ if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) {
     await seedEmployees();
     startReminderCron();
     startCampaignCron();
+    startAutomationCron();
   });
 }
 

@@ -61,7 +61,7 @@ router.post("/whatsapp/routing/agents", requireAuth, async (req, res) => {
 
 // Toggle agent status or delete
 router.patch("/whatsapp/routing/agents/:id", requireAuth, async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   const { isActive } = req.body;
 
   try {
@@ -79,7 +79,7 @@ router.patch("/whatsapp/routing/agents/:id", requireAuth, async (req, res) => {
 });
 
 router.delete("/whatsapp/routing/agents/:id", requireAuth, async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   try {
     await db.delete(whatsappRoutingAgentsTable).where(eq(whatsappRoutingAgentsTable.id, id));
     return res.json({ success: true });

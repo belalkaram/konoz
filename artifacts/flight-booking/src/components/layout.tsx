@@ -9,6 +9,7 @@ import { useEmployee } from "@/contexts/employee-context";
 import { EmployeeSettingsDialog } from "./employee-settings-dialog";
 import { ConnectivityBanner } from "./connectivity-banner";
 import { useLanguage } from "@/contexts/language-context";
+import { authFetch, BASE } from "@/lib/api";
 
 const SIDEBAR_GRADIENT = "linear-gradient(180deg, #070f2e 0%, #0f172a 50%, #1e293b 100%)";
 const BRAND_GRADIENT = "linear-gradient(135deg, #1e40af 0%, #3b82f6 75%, #10b981 100%)";
@@ -40,41 +41,58 @@ export function Layout({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, []);
 
+  // Track notifications already shown so we don't pop the same one twice
+  const shownNotificationIds = useState<Set<number>>(() => new Set())[0];
+
   useEffect(() => {
     if (!currentEmployee) return;
 
-    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-    const eventSource = new EventSource(`${base}/api/notifications/stream`, {
-      withCredentials: true,
-    });
-
-    eventSource.onmessage = (event) => {
+    const pollNotifications = async () => {
       try {
-        const data = JSON.parse(event.data);
-        if (data.type === "notification") {
-          setActiveNotification(data.payload);
+        // Heartbeat: tell server this employee is online
+        authFetch(`${BASE}/api/notifications/heartbeat`, { method: "POST" }).catch(() => {});
+
+        const res = await authFetch(`${BASE}/api/notifications/history`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const history: any[] = data.history || [];
+
+        // Find any pending notification addressed to this employee that hasn't been shown yet
+        const pending = history.find(
+          (n) => n.status === "pending"
+            && n.receiverId === currentEmployee.id
+            && !shownNotificationIds.has(n.id)
+        );
+        if (pending) {
+          shownNotificationIds.add(pending.id);
+          setActiveNotification(pending);
         }
-      } catch (err) {
-        console.error("Error parsing SSE message:", err);
+      } catch {
+        // network errors are ok, just wait for next poll
       }
     };
 
-    eventSource.onerror = (err) => {
-      console.error("EventSource error:", err);
+    // Send offline signal on page close/refresh
+    const handleOffline = () => {
+      authFetch(`${BASE}/api/notifications/offline`, { method: "POST", keepalive: true }).catch(() => {});
     };
+    window.addEventListener("beforeunload", handleOffline);
 
+    // Poll immediately then every 3 seconds
+    pollNotifications();
+    const interval = setInterval(pollNotifications, 3000);
     return () => {
-      eventSource.close();
+      clearInterval(interval);
+      window.removeEventListener("beforeunload", handleOffline);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentEmployee]);
 
   const handleResponse = async (buttonLabel: string) => {
     if (!activeNotification) return;
     try {
-      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-      await fetch(`${base}/api/notifications/${activeNotification.id}/respond`, {
+      await authFetch(`${BASE}/api/notifications/${activeNotification.id}/respond`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ buttonClicked: buttonLabel }),
       });
     } catch (err) {

@@ -53,6 +53,21 @@ export default defineConfig({
     host: "0.0.0.0",
     allowedHosts: true,
     proxy: {
+      "/api/notifications/stream": {
+        target: `http://localhost:${process.env.API_PORT || env.API_PORT || "3000"}`,
+        changeOrigin: true,
+        // SSE requires no buffering and persistent connections
+        configure: (proxy) => {
+          proxy.on("proxyReq", (proxyReq) => {
+            // Ensure the proxy doesn't buffer or timeout the SSE stream
+            proxyReq.setHeader("Accept", "text/event-stream");
+          });
+          proxy.on("proxyRes", (proxyRes) => {
+            proxyRes.headers["cache-control"] = "no-cache";
+            proxyRes.headers["x-accel-buffering"] = "no";
+          });
+        },
+      },
       "/api": {
         target: `http://localhost:${process.env.API_PORT || env.API_PORT || "3000"}`,
         changeOrigin: true,

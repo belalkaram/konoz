@@ -6,10 +6,32 @@ import { registerNotificationConnection, sendRealTimeNotification, getOnlineEmpl
 
 const router = Router();
 
-// SSE Stream for the logged-in employee
+// SSE Stream for the logged-in employee (kept for future use / real-time if proxy supports it)
 router.get("/notifications/stream", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
   await registerNotificationConnection(employeeId, res);
+});
+
+// Heartbeat: employee calls this to signal they are online (called by frontend polling)
+router.post("/notifications/heartbeat", requireAuth, async (req, res) => {
+  const employeeId = req.employee!.employeeId;
+  await db.update(employeesTable).set({
+    isOnline: true,
+    lastSeenAt: new Date(),
+    updatedAt: new Date(),
+  }).where(eq(employeesTable.id, employeeId));
+  res.json({ ok: true });
+});
+
+// Offline: employee calls this when they log out or close the system
+router.post("/notifications/offline", requireAuth, async (req, res) => {
+  const employeeId = req.employee!.employeeId;
+  await db.update(employeesTable).set({
+    isOnline: false,
+    lastSeenAt: new Date(),
+    updatedAt: new Date(),
+  }).where(eq(employeesTable.id, employeeId));
+  res.json({ ok: true });
 });
 
 // Send a notification (Admin only)
@@ -37,9 +59,9 @@ router.post("/notifications", requireAdmin, async (req, res) => {
       })
       .returning();
 
-    // 2. Fetch names
+    // 2. Fetch receiver info including online status
     const [receiver] = await db
-      .select({ name: employeesTable.name })
+      .select({ name: employeesTable.name, isOnline: employeesTable.isOnline, lastSeenAt: employeesTable.lastSeenAt })
       .from(employeesTable)
       .where(eq(employeesTable.id, Number(receiverId)));
 
@@ -49,8 +71,11 @@ router.post("/notifications", requireAdmin, async (req, res) => {
       senderName: req.employee!.name,
     };
 
-    // 3. Trigger SSE real-time send
-    const isOnline = sendRealTimeNotification(Number(receiverId), notificationWithNames);
+    // 3. Also try SSE real-time send if connection exists (best-effort)
+    sendRealTimeNotification(Number(receiverId), notificationWithNames);
+
+    // Use DB isOnline as the source of truth (updated when employee opens/closes the system)
+    const isOnline = receiver?.isOnline ?? false;
 
     res.status(201).json({ success: true, notification: notificationWithNames, isOnline });
   } catch (err) {

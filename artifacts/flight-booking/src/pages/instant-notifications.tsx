@@ -179,13 +179,11 @@ export default function InstantNotifications() {
                     <SelectValue placeholder={language === "ar" ? "اختر موظف..." : "Select employee..."} />
                   </SelectTrigger>
                   <SelectContent>
-                    {employees
-                      .filter((emp) => emp.isActive)
-                      .map((emp) => (
-                        <SelectItem key={emp.id} value={emp.id.toString()}>
-                          {emp.name} ({emp.role})
-                        </SelectItem>
-                      ))}
+                    {employees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id.toString()}>
+                        {emp.name} ({emp.role})
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

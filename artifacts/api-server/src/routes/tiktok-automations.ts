@@ -42,7 +42,10 @@ router.post("/tiktok/automations", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
   const parsed = AutomationSchema.safeParse(req.body);
   
-  if (!parsed.success) return res.status(400).json({ error: "validation_error", message: parsed.error.message });
+  if (!parsed.success) {
+    res.status(400).json({ error: "validation_error", message: parsed.error.message });
+    return;
+  }
   
   try {
     const [automation] = await db.insert(tiktokAutomationsTable).values({
@@ -65,12 +68,18 @@ router.post("/tiktok/automations", requireAuth, async (req, res) => {
  * Updates an existing TikTok automation.
  */
 router.patch("/tiktok/automations/:id", requireAuth, async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   const employeeId = req.employee!.employeeId;
   const parsed = AutomationSchema.partial().safeParse(req.body);
   
-  if (isNaN(id)) return res.status(400).json({ error: "validation_error", message: "Invalid ID" });
-  if (!parsed.success) return res.status(400).json({ error: "validation_error", message: parsed.error.message });
+  if (isNaN(id)) {
+    res.status(400).json({ error: "validation_error", message: "Invalid ID" });
+    return;
+  }
+  if (!parsed.success) {
+    res.status(400).json({ error: "validation_error", message: parsed.error.message });
+    return;
+  }
   
   try {
     const [automation] = await db.update(tiktokAutomationsTable)
@@ -84,7 +93,10 @@ router.patch("/tiktok/automations/:id", requireAuth, async (req, res) => {
       ))
       .returning();
       
-    if (!automation) return res.status(404).json({ error: "not_found", message: "Automation not found" });
+    if (!automation) {
+      res.status(404).json({ error: "not_found", message: "Automation not found" });
+      return;
+    }
     
     res.json(automation);
   } catch (err) {
@@ -98,10 +110,13 @@ router.patch("/tiktok/automations/:id", requireAuth, async (req, res) => {
  * Deletes a TikTok automation.
  */
 router.delete("/tiktok/automations/:id", requireAuth, async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   const employeeId = req.employee!.employeeId;
   
-  if (isNaN(id)) return res.status(400).json({ error: "validation_error", message: "Invalid ID" });
+  if (isNaN(id)) {
+    res.status(400).json({ error: "validation_error", message: "Invalid ID" });
+    return;
+  }
   
   try {
     await db.delete(tiktokAutomationsTable).where(and(

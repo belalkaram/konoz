@@ -76,7 +76,7 @@ export async function startTiktokQRSession(employeeId: number): Promise<{ sessio
       
       // Extract the QR code as base64 data URL
       const qrDataUrl = await page.evaluate((selector) => {
-        const canvas = document.querySelector(selector) as HTMLCanvasElement;
+        const canvas = (globalThis as any).document.querySelector(selector) as any;
         return canvas ? canvas.toDataURL() : null;
       }, qrCanvasSelector);
       

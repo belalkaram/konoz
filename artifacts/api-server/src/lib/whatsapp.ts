@@ -232,7 +232,7 @@ export const WhatsappService = {
    * Send a media message (image, video, document, etc.)
    */
   async sendMedia(instanceName: string, number: string, mediaData: {
-    mediatype: "image" | "video" | "document";
+    mediatype: "image" | "video" | "document" | "audio";
     media: string; // base64 or URL
     caption?: string;
     fileName?: string;

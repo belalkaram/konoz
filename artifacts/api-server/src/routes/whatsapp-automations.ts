@@ -56,7 +56,10 @@ router.post("/whatsapp/automations/sequences", requireAuth, async (req, res) => 
   const employeeId = req.employee!.employeeId;
   const parsed = SequenceSchema.safeParse(req.body);
   
-  if (!parsed.success) return res.status(400).json({ error: "validation_error", message: parsed.error.message });
+  if (!parsed.success) {
+    res.status(400).json({ error: "validation_error", message: parsed.error.message });
+    return;
+  }
   
   try {
     const [sequence] = await db.insert(whatsappFollowupSequencesTable).values({
@@ -76,11 +79,17 @@ router.post("/whatsapp/automations/sequences", requireAuth, async (req, res) => 
  * POST /api/whatsapp/automations/sequences/:id/steps
  */
 router.post("/whatsapp/automations/sequences/:id/steps", requireAuth, async (req, res) => {
-  const sequenceId = parseInt(req.params.id);
+  const sequenceId = parseInt(req.params.id as string);
   const parsed = StepSchema.safeParse(req.body);
   
-  if (isNaN(sequenceId)) return res.status(400).json({ error: "validation_error", message: "Invalid ID" });
-  if (!parsed.success) return res.status(400).json({ error: "validation_error", message: parsed.error.message });
+  if (isNaN(sequenceId)) {
+    res.status(400).json({ error: "validation_error", message: "Invalid ID" });
+    return;
+  }
+  if (!parsed.success) {
+    res.status(400).json({ error: "validation_error", message: parsed.error.message });
+    return;
+  }
   
   try {
     const [step] = await db.insert(whatsappFollowupStepsTable).values({
@@ -103,10 +112,13 @@ router.post("/whatsapp/automations/sequences/:id/steps", requireAuth, async (req
  * DELETE /api/whatsapp/automations/sequences/:id
  */
 router.delete("/whatsapp/automations/sequences/:id", requireAuth, async (req, res) => {
-  const sequenceId = parseInt(req.params.id);
+  const sequenceId = parseInt(req.params.id as string);
   const employeeId = req.employee!.employeeId;
   
-  if (isNaN(sequenceId)) return res.status(400).json({ error: "validation_error", message: "Invalid ID" });
+  if (isNaN(sequenceId)) {
+    res.status(400).json({ error: "validation_error", message: "Invalid ID" });
+    return;
+  }
   
   try {
     await db.delete(whatsappFollowupSequencesTable).where(and(
@@ -124,9 +136,12 @@ router.delete("/whatsapp/automations/sequences/:id", requireAuth, async (req, re
  * DELETE /api/whatsapp/automations/steps/:id
  */
 router.delete("/whatsapp/automations/steps/:id", requireAuth, async (req, res) => {
-  const stepId = parseInt(req.params.id);
+  const stepId = parseInt(req.params.id as string);
   
-  if (isNaN(stepId)) return res.status(400).json({ error: "validation_error", message: "Invalid ID" });
+  if (isNaN(stepId)) {
+    res.status(400).json({ error: "validation_error", message: "Invalid ID" });
+    return;
+  }
   
   try {
     await db.delete(whatsappFollowupStepsTable).where(eq(whatsappFollowupStepsTable.id, stepId));

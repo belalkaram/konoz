@@ -40,7 +40,7 @@ async function checkAndIncrementAiUsage(employeeId: number): Promise<{ allowed: 
   const [row] = await db
     .select()
     .from(systemSettingsTable)
-    .where(eq(systemSettingsTable.key, settingKey));
+    .where(and(eq(systemSettingsTable.key, settingKey), eq(systemSettingsTable.employeeId, employeeId)));
 
   let usage: { count: number; resetAt: number } = { count: 0, resetAt: now + windowMs };
   if (row) {
@@ -57,9 +57,9 @@ async function checkAndIncrementAiUsage(employeeId: number): Promise<{ allowed: 
   usage.count += 1;
   await db
     .insert(systemSettingsTable)
-    .values({ key: settingKey, value: JSON.stringify(usage), updatedAt: new Date() })
+    .values({ key: settingKey, employeeId, value: JSON.stringify(usage), updatedAt: new Date() })
     .onConflictDoUpdate({
-      target: systemSettingsTable.key,
+      target: [systemSettingsTable.key, systemSettingsTable.employeeId],
       set: { value: JSON.stringify(usage), updatedAt: new Date() },
     });
 

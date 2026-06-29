@@ -46,7 +46,8 @@ router.post("/whatsapp/quick-replies", requireAuth, async (req, res) => {
   const parsed = QuickReplySchema.safeParse(req.body);
   
   if (!parsed.success) {
-    return res.status(400).json({ error: "validation_error", message: parsed.error.message });
+    res.status(400).json({ error: "validation_error", message: parsed.error.message });
+    return;
   }
   
   try {
@@ -74,11 +75,17 @@ router.post("/whatsapp/quick-replies", requireAuth, async (req, res) => {
  */
 router.put("/whatsapp/quick-replies/:id", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
-  const replyId = parseInt(req.params.id);
+  const replyId = parseInt(req.params.id as string);
   const parsed = QuickReplySchema.safeParse(req.body);
   
-  if (isNaN(replyId)) return res.status(400).json({ error: "validation_error", message: "Invalid ID" });
-  if (!parsed.success) return res.status(400).json({ error: "validation_error", message: parsed.error.message });
+  if (isNaN(replyId)) {
+    res.status(400).json({ error: "validation_error", message: "Invalid ID" });
+    return;
+  }
+  if (!parsed.success) {
+    res.status(400).json({ error: "validation_error", message: parsed.error.message });
+    return;
+  }
   
   try {
     const [reply] = await db.update(whatsappQuickRepliesTable).set({
@@ -97,7 +104,10 @@ router.put("/whatsapp/quick-replies/:id", requireAuth, async (req, res) => {
     ))
     .returning();
     
-    if (!reply) return res.status(404).json({ error: "not_found", message: "Quick reply not found" });
+    if (!reply) {
+      res.status(404).json({ error: "not_found", message: "Quick reply not found" });
+      return;
+    }
     
     res.json(reply);
   } catch (err) {
@@ -112,9 +122,12 @@ router.put("/whatsapp/quick-replies/:id", requireAuth, async (req, res) => {
  */
 router.delete("/whatsapp/quick-replies/:id", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
-  const replyId = parseInt(req.params.id);
+  const replyId = parseInt(req.params.id as string);
   
-  if (isNaN(replyId)) return res.status(400).json({ error: "validation_error", message: "Invalid ID" });
+  if (isNaN(replyId)) {
+    res.status(400).json({ error: "validation_error", message: "Invalid ID" });
+    return;
+  }
   
   try {
     await db.delete(whatsappQuickRepliesTable).where(and(

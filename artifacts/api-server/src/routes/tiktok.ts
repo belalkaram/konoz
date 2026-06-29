@@ -30,7 +30,7 @@ router.post("/tiktok/auth/qr/start", requireAuth, async (req, res) => {
  * POST /api/tiktok/auth/session
  * Manually connect using a session ID cookie value.
  */
-router.post("/tiktok/auth/session", requireAuth, async (req, res): Promise<void> => {
+router.post("/tiktok/auth/session", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
   const { sessionId } = req.body;
   
@@ -97,10 +97,10 @@ router.post("/tiktok/auth/session", requireAuth, async (req, res): Promise<void>
       }
     });
     
-    res.status(200).json({ success: true, username });
+    return res.status(200).json({ success: true, username });
   } catch (err) {
     req.log.error({ err }, "Error saving manual TikTok session");
-    res.status(500).json({ error: "server_error", message: "Failed to save session ID" });
+    return res.status(500).json({ error: "server_error", message: "Failed to save session ID" });
   }
 });
 
@@ -108,7 +108,7 @@ router.post("/tiktok/auth/session", requireAuth, async (req, res): Promise<void>
  * GET /api/tiktok/auth/qr/status
  * Poll this endpoint to check if the QR has been scanned successfully.
  */
-router.get("/tiktok/auth/qr/status", requireAuth, (req, res): void => {
+router.get("/tiktok/auth/qr/status", requireAuth, (req, res) => {
   const sessionId = req.query.sessionId as string;
   
   if (!sessionId) {
@@ -121,7 +121,7 @@ router.get("/tiktok/auth/qr/status", requireAuth, (req, res): void => {
     return res.status(404).json({ error: "not_found", message: "Session expired or not found" });
   }
   
-  res.json({
+  return res.json({
     sessionId: session.sessionId,
     status: session.status,
     username: session.username,
@@ -132,7 +132,7 @@ router.get("/tiktok/auth/qr/status", requireAuth, (req, res): void => {
  * GET /api/tiktok/status
  * Gets the current TikTok account status.
  */
-router.get("/tiktok/status", requireAuth, async (req, res): Promise<void> => {
+router.get("/tiktok/status", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
   
   try {
@@ -145,10 +145,10 @@ router.get("/tiktok/status", requireAuth, async (req, res): Promise<void> => {
       return res.json({ connectionStatus: "disconnected" });
     }
     
-    res.json(account);
+    return res.json(account);
   } catch (err) {
     req.log.error({ err }, "Error getting TikTok status");
-    res.status(500).json({ error: "server_error", message: "Failed to get TikTok status" });
+    return res.status(500).json({ error: "server_error", message: "Failed to get TikTok status" });
   }
 });
 
@@ -176,7 +176,7 @@ router.post("/tiktok/auth/unlink", requireAuth, async (req, res) => {
  * GET /api/tiktok/messages
  * Retrieves DM conversations.
  */
-router.get("/tiktok/messages", requireAuth, async (req, res): Promise<void> => {
+router.get("/tiktok/messages", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
   
   try {
@@ -196,10 +196,10 @@ router.get("/tiktok/messages", requireAuth, async (req, res): Promise<void> => {
       .orderBy(desc(tiktokMessagesTable.timestamp))
       .limit(100);
       
-    res.json(messages);
+    return res.json(messages);
   } catch (err) {
     req.log.error({ err }, "Error fetching TikTok messages");
-    res.status(500).json({ error: "server_error", message: "Failed to fetch TikTok messages" });
+    return res.status(500).json({ error: "server_error", message: "Failed to fetch TikTok messages" });
   }
 });
 
@@ -207,7 +207,7 @@ router.get("/tiktok/messages", requireAuth, async (req, res): Promise<void> => {
  * POST /api/tiktok/messages
  * Sends a DM.
  */
-router.post("/tiktok/messages", requireAuth, async (req, res): Promise<void> => {
+router.post("/tiktok/messages", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
   const { receiverId, content } = req.body;
   
@@ -232,10 +232,10 @@ router.post("/tiktok/messages", requireAuth, async (req, res): Promise<void> => 
       status: "sent",
     }).returning();
     
-    res.json(message);
+    return res.json(message);
   } catch (err) {
     req.log.error({ err }, "Error sending TikTok message");
-    res.status(500).json({ error: "server_error", message: "Failed to send TikTok message" });
+    return res.status(500).json({ error: "server_error", message: "Failed to send TikTok message" });
   }
 });
 
@@ -247,7 +247,7 @@ router.post("/tiktok/messages", requireAuth, async (req, res): Promise<void> => 
  * GET /api/tiktok/videos
  * Fetches user's videos directly from TikTok.
  */
-router.get("/tiktok/videos", requireAuth, async (req, res): Promise<void> => {
+router.get("/tiktok/videos", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
   
   try {
@@ -273,9 +273,9 @@ router.get("/tiktok/videos", requireAuth, async (req, res): Promise<void> => {
       `https://www.tiktok.com/api/post/item_list/?aid=1988&count=20&secUid=${encodeURIComponent(secUid)}&cursor=0`,
       { headers: tiktokHeaders }
     );
-    const videosData = await videosRes.json();
+    const videosData = (await videosRes.json()) as any;
     
-    if (!videosData.itemList || videosData.itemList.length === 0) {
+    if (!videosData || !videosData.itemList || videosData.itemList.length === 0) {
       return res.json([]);
     }
     
@@ -288,10 +288,10 @@ router.get("/tiktok/videos", requireAuth, async (req, res): Promise<void> => {
       author: v.author?.uniqueId || account.username,
     }));
     
-    res.json(videos);
+    return res.json(videos);
   } catch (err) {
     req.log.error({ err }, "Error fetching TikTok videos");
-    res.status(500).json({ error: "server_error", message: "Failed to fetch TikTok videos" });
+    return res.status(500).json({ error: "server_error", message: "Failed to fetch TikTok videos" });
   }
 });
 
@@ -303,7 +303,7 @@ router.get("/tiktok/videos", requireAuth, async (req, res): Promise<void> => {
  * GET /api/tiktok/comments
  * Retrieves comments.
  */
-router.get("/tiktok/comments", requireAuth, async (req, res): Promise<void> => {
+router.get("/tiktok/comments", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
   
   try {
@@ -330,9 +330,9 @@ router.get("/tiktok/comments", requireAuth, async (req, res): Promise<void> => {
       `https://www.tiktok.com/api/post/item_list/?aid=1988&count=10&secUid=${encodeURIComponent(secUid)}&cursor=0`,
       { headers: tiktokHeaders }
     );
-    const videosData = await videosRes.json();
+    const videosData = (await videosRes.json()) as any;
     
-    if (!videosData.itemList || videosData.itemList.length === 0) {
+    if (!videosData || !videosData.itemList || videosData.itemList.length === 0) {
       return res.json([]);
     }
     
@@ -346,9 +346,9 @@ router.get("/tiktok/comments", requireAuth, async (req, res): Promise<void> => {
           `https://www.tiktok.com/api/comment/list/?aid=1988&aweme_id=${video.id}&count=20&cursor=0&app_name=tiktok_web`,
           { headers: tiktokHeaders }
         );
-        const commData = await commRes.json();
+        const commData = (await commRes.json()) as any;
         
-        if (commData.comments && commData.comments.length > 0) {
+        if (commData && commData.comments && commData.comments.length > 0) {
           for (const c of commData.comments) {
             allComments.push({
               id: c.cid,
@@ -369,10 +369,10 @@ router.get("/tiktok/comments", requireAuth, async (req, res): Promise<void> => {
       }
     }
     
-    res.json(allComments);
+    return res.json(allComments);
   } catch (err) {
     req.log.error({ err }, "Error fetching TikTok comments");
-    res.status(500).json({ error: "server_error", message: "Failed to fetch TikTok comments" });
+    return res.status(500).json({ error: "server_error", message: "Failed to fetch TikTok comments" });
   }
 });
 
@@ -380,7 +380,7 @@ router.get("/tiktok/comments", requireAuth, async (req, res): Promise<void> => {
  * POST /api/tiktok/comments/reply
  * Sends a reply to a comment.
  */
-router.post("/tiktok/comments/reply", requireAuth, async (req, res): Promise<void> => {
+router.post("/tiktok/comments/reply", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
   const { videoId, repliedToCommentId, content } = req.body;
   
@@ -408,10 +408,10 @@ router.post("/tiktok/comments/reply", requireAuth, async (req, res): Promise<voi
       isFromMe: true,
     }).returning();
     
-    res.json(reply);
+    return res.json(reply);
   } catch (err) {
     req.log.error({ err }, "Error replying to TikTok comment");
-    res.status(500).json({ error: "server_error", message: "Failed to reply to TikTok comment" });
+    return res.status(500).json({ error: "server_error", message: "Failed to reply to TikTok comment" });
   }
 });
 

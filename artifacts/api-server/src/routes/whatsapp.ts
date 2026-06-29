@@ -184,16 +184,15 @@ import { normalizeWhatsAppNumber } from "../lib/whatsapp-utils";
 /**
  * Get unique contacts (customers) the employee has chatted with
  */
-// Set current instance as Main Instance
 router.post("/whatsapp/instance/set-main", requireAuth, async (req, res) => {
   const employeeId = req.employee!.employeeId;
   const instance = getInstanceName(employeeId);
   try {
     await db
       .insert(systemSettingsTable)
-      .values({ key: "MAIN_WHATSAPP_INSTANCE_NAME", value: instance, updatedAt: new Date() })
+      .values({ key: "MAIN_WHATSAPP_INSTANCE_NAME", employeeId, value: instance, updatedAt: new Date() })
       .onConflictDoUpdate({
-        target: systemSettingsTable.key,
+        target: [systemSettingsTable.key, systemSettingsTable.employeeId],
         set: { value: instance, updatedAt: new Date() },
       });
     return res.json({ success: true, instance });
@@ -908,7 +907,7 @@ router.post("/whatsapp/contacts/sync", requireAuth, async (req, res) => {
 router.get("/whatsapp/customers/:phone", requireAuth, async (req, res) => {
   try {
     const { phone } = req.params;
-    const [customer] = await db.select().from(customersTable).where(or(eq(customersTable.phone, phone), eq(customersTable.whatsapp, phone)));
+    const [customer] = await db.select().from(customersTable).where(or(eq(customersTable.phone, phone as string), eq(customersTable.whatsapp, phone as string)));
     return res.json(customer || null);
   } catch (err) {
     req.log.error({ err }, "Error fetching customer by phone");
@@ -924,7 +923,7 @@ router.put("/whatsapp/customers/status", requireAuth, async (req, res) => {
   if (!phone || !status) return res.status(400).json({ error: "validation_error", message: "Phone and status required" });
   
   try {
-    const [customer] = await db.select().from(customersTable).where(or(eq(customersTable.phone, phone), eq(customersTable.whatsapp, phone)));
+    const [customer] = await db.select().from(customersTable).where(or(eq(customersTable.phone, phone as string), eq(customersTable.whatsapp, phone as string)));
     if (!customer) {
       return res.status(404).json({ error: "not_found", message: "Customer not found" });
     }
@@ -1154,9 +1153,9 @@ router.post("/whatsapp/webhook", async (req, res) => {
               
               for (const qr of quickReplies) {
                 if (qr.keywords) {
-                  const keywords = qr.keywords.split(",").map(k => k.trim().toLowerCase()).filter(k => k.length > 0);
+                  const keywords = qr.keywords.split(",").map((k: string) => k.trim().toLowerCase()).filter((k: string) => k.length > 0);
                   const msgLower = messageText.toLowerCase();
-                  const isMatch = keywords.some(k => msgLower.includes(k));
+                  const isMatch = keywords.some((k: string) => msgLower.includes(k));
                   
                   if (isMatch) {
                     try {

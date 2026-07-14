@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload, Send, Clock, Layers, FileText, Play, Users, Filter, Pause, CheckCircle2, AlertTriangle, Trash2, Plus, Smile, Bold, Italic, Code, ChevronLeft, ChevronRight, Smartphone, Settings, Zap, MessageSquare, Activity } from "lucide-react";
@@ -43,6 +44,11 @@ export default function WhatsappControls() {
   // ── Preview states ────────────────────────────────────────────────────────
   const [previewVariantIdx, setPreviewVariantIdx] = useState(0);
   const [activeTextareaIdx, setActiveTextareaIdx] = useState<number>(0);
+
+  // ── Contacts Extract states ───────────────────────────────────────────────
+  const [contactFilter, setContactFilter] = useState("all");
+  const [contactSearchQuery, setContactSearchQuery] = useState("");
+  const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
 
   // ── Fetch Campaigns ────────────────────────────────────────────────────────
   const { data: campaignsData, isLoading: campaignsLoading } = useQuery({
@@ -97,6 +103,20 @@ export default function WhatsappControls() {
     setFilteredNumbers([]);
   };
 
+  // ── Derived Contacts List ──────────────────────────────────────────────────
+  const filteredContactsList = useMemo(() => {
+    if (!contactsData?.contacts) return [];
+    let list = contactsData.contacts;
+    if (contactFilter !== "all") {
+      list = list.filter((c: any) => c.source.toLowerCase().includes(contactFilter));
+    }
+    if (contactSearchQuery.trim()) {
+      const q = contactSearchQuery.toLowerCase();
+      list = list.filter((c: any) => c.phone.includes(q) || (c.name && c.name.toLowerCase().includes(q)));
+    }
+    return list;
+  }, [contactsData?.contacts, contactFilter, contactSearchQuery]);
+
   const handleManualNumbersChange = (val: string) => {
     setManualNumbers(val);
     setFilteredNumbers([]);
@@ -116,7 +136,7 @@ export default function WhatsappControls() {
           timeGapMin,
           timeGapMax,
           batchSize,
-          scheduledAt: scheduledAt || undefined,
+          scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
           maxMessages: Number(maxMessages)
         })
       });
@@ -517,10 +537,10 @@ export default function WhatsappControls() {
                             </span>
                             <Textarea
                               placeholder={language === "ar" ? "أدخل الأرقام هنا (رقم في كل سطر أو مفصولة بفاصلة)، مثال:\n96590000000\n96591111111" : "Type numbers with country code:\n96590000000\n96591111111"}
-                              rows={2}
+                              rows={10}
                               value={manualNumbers}
                               onChange={(e) => handleManualNumbersChange(e.target.value)}
-                              className="bg-card font-mono text-xs resize-none"
+                              className="bg-card font-mono text-sm resize-y"
                               dir="ltr"
                             />
                           </div>
@@ -1208,10 +1228,61 @@ export default function WhatsappControls() {
                         </Button>
                       </div>
                     </div>
+                    {/* Filters & Actions */}
+                    <div className="flex flex-col sm:flex-row gap-3 justify-between items-center bg-muted/10 p-3 rounded-lg border border-border/50">
+                      <div className="flex flex-wrap gap-2 items-center w-full sm:w-auto">
+                        <Input
+                          type="text"
+                          placeholder={language === "ar" ? "ابحث بالاسم أو الرقم..." : "Search name or phone..."}
+                          value={contactSearchQuery}
+                          onChange={(e) => setContactSearchQuery(e.target.value)}
+                          className="h-9 min-w-[200px]"
+                        />
+                        <select
+                          value={contactFilter}
+                          onChange={(e) => setContactFilter(e.target.value)}
+                          className="h-9 px-3 rounded-md border border-input bg-background text-sm"
+                        >
+                          <option value="all">{language === "ar" ? "جميع الأرقام" : "All Numbers"}</option>
+                          <option value="contact">{language === "ar" ? "جهات الاتصال المحفوظة فقط" : "Saved Contacts Only"}</option>
+                          <option value="chat">{language === "ar" ? "الأرقام من المحادثات فقط" : "Chat Numbers Only"}</option>
+                        </select>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        {selectedContacts.length > 0 && (
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              const newNumbers = Array.from(new Set([...manualNumbers.split(/[\s,;\n]+/).filter(Boolean), ...selectedContacts]));
+                              setManualNumbers(newNumbers.join("\n"));
+                              setLocation("/whatsapp-controls/campaigns");
+                              toast({ title: language === "ar" ? "✅ تم النقل" : "✅ Transferred", description: language === "ar" ? `تم نقل ${selectedContacts.length} رقم إلى حملة جديدة` : `Transferred ${selectedContacts.length} numbers to campaigns` });
+                            }}
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground h-9"
+                          >
+                            <Send className="h-4 w-4 me-2" />
+                            {language === "ar" ? `إرسال (${selectedContacts.length}) لحملة` : `Send (${selectedContacts.length}) to Campaign`}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                     <div className="overflow-x-auto rounded-lg border border-border">
                       <Table className="min-w-[700px]">
                         <TableHeader className="bg-muted/30">
                           <TableRow>
+                            <TableHead className="w-[50px]">
+                              <Checkbox 
+                                checked={filteredContactsList.length > 0 && selectedContacts.length === filteredContactsList.length}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedContacts(filteredContactsList.map((c: any) => c.phone));
+                                  } else {
+                                    setSelectedContacts([]);
+                                  }
+                                }}
+                              />
+                            </TableHead>
                             <TableHead className="font-bold">{t("common.name")}</TableHead>
                             <TableHead className="font-bold">{t("common.phone")}</TableHead>
                             <TableHead className="font-bold">{language === "ar" ? "المصدر" : "Source"}</TableHead>
@@ -1219,8 +1290,20 @@ export default function WhatsappControls() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {contactsData?.contacts?.map((contact: any, i: number) => (
+                          {filteredContactsList.map((contact: any, i: number) => (
                             <TableRow key={i} className="hover:bg-muted/10">
+                              <TableCell>
+                                <Checkbox 
+                                  checked={selectedContacts.includes(contact.phone)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedContacts([...selectedContacts, contact.phone]);
+                                    } else {
+                                      setSelectedContacts(selectedContacts.filter(p => p !== contact.phone));
+                                    }
+                                  }}
+                                />
+                              </TableCell>
                               <TableCell className="font-semibold">{contact.name || "-"}</TableCell>
                               <TableCell className="font-mono text-sm">{contact.phone}</TableCell>
                               <TableCell className="capitalize text-xs text-muted-foreground">{contact.source}</TableCell>
@@ -1231,10 +1314,10 @@ export default function WhatsappControls() {
                               </TableCell>
                             </TableRow>
                           ))}
-                          {(!contactsData?.contacts || contactsData.contacts.length === 0) && (
+                          {filteredContactsList.length === 0 && (
                             <TableRow>
-                              <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                                {language === "ar" ? "لم يتم سحب جهات اتصال بعد. تأكد من ربط الواتساب الخاص بك." : "No contacts extracted yet. Ensure your WhatsApp is connected."}
+                              <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                                {language === "ar" ? "لم يتم العثور على جهات اتصال تطابق بحثك." : "No contacts matched your search."}
                               </TableCell>
                             </TableRow>
                           )}

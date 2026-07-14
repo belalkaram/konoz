@@ -88,7 +88,7 @@ function Router() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#011a13" }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#070f2e" }}>
         <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
       </div>
     );

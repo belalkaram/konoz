@@ -587,8 +587,13 @@ export async function triggerCampaign(campaignId: number, employeeId: number) {
           messageToSend = campaign.messageTemplate;
         }
 
-        // Append a unique hashtag at the end of the message (e.g. #a7b2c9) to prevent spam filters
-        const uniqueCode = Math.random().toString(36).substring(2, 8);
+        // Append a short unique hashtag at the end of the message (e.g. #a or #x9) to prevent spam filters
+        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        const len = Math.floor(Math.random() * 2) + 1; // 1 or 2 characters
+        let uniqueCode = '';
+        for (let j = 0; j < len; j++) {
+          uniqueCode += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
         const messageWithHashtag = `${messageToSend}\n\n#${uniqueCode}`;
 
         await WhatsappService.sendTextMessage(instanceName, recipient.phoneNumber, messageWithHashtag);

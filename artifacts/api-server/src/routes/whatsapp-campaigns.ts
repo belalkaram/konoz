@@ -280,6 +280,7 @@ router.get("/whatsapp/campaigns", requireAuth, async (req, res) => {
         id: whatsappCampaignsTable.id,
         name: whatsappCampaignsTable.name,
         status: whatsappCampaignsTable.status,
+        scheduledAt: whatsappCampaignsTable.scheduledAt,
         createdAt: whatsappCampaignsTable.createdAt,
         total: sql<number>`count(${whatsappCampaignRecipientsTable.id})`,
         sent: sql<number>`count(case when ${whatsappCampaignRecipientsTable.status} = 'sent' then 1 end)`,
@@ -293,7 +294,33 @@ router.get("/whatsapp/campaigns", requireAuth, async (req, res) => {
       .groupBy(whatsappCampaignsTable.id)
       .orderBy(desc(whatsappCampaignsTable.createdAt));
 
-    return res.json({ campaigns });
+    const formattedCampaigns = campaigns.map(camp => {
+      const total = Number(camp.total);
+      const sent = Number(camp.sent);
+      const failed = Number(camp.failed);
+      
+      let status = camp.status;
+      if (status === "running" && total > 0 && (sent + failed) >= total) {
+        status = "completed";
+        // Asynchronously update the database to completed status to repair it
+        db.update(whatsappCampaignsTable)
+          .set({ status: "completed", completedAt: new Date() })
+          .where(eq(whatsappCampaignsTable.id, camp.id))
+          .catch(err => logger.error(`Failed to update stuck campaign ${camp.id} to completed:`, err));
+      }
+      
+      return {
+        ...camp,
+        status,
+        total,
+        sent,
+        failed,
+        delivered: Number(camp.delivered),
+        read: Number(camp.read),
+      };
+    });
+
+    return res.json({ campaigns: formattedCampaigns });
   } catch (err) {
     req.log.error({ err }, "Error listing campaigns");
     return res.status(500).json({ error: "server_error", message: "Failed to list campaigns" });

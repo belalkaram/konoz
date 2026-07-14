@@ -190,6 +190,24 @@ export default function WhatsappControls() {
     }
   });
 
+  // ── Stop Campaign Mutation ─────────────────────────────────────────────────
+  const stopCampaignMutation = useMutation({
+    mutationFn: async (campaignId: number) => {
+      const res = await authFetch(`${BASE}/api/whatsapp/campaigns/${campaignId}/stop`, {
+        method: "POST"
+      });
+      if (!res.ok) throw new Error("Failed to stop campaign");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: language === "ar" ? "🛑 تم إيقاف الحملة نهائياً!" : "🛑 Campaign stopped!" });
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-campaigns"] });
+    },
+    onError: (err: any) => {
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
+    }
+  });
+
   // ── File Upload Handler ────────────────────────────────────────────────────
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -942,17 +960,39 @@ export default function WhatsappControls() {
                       <TableBody>
                         {campaignsData?.campaigns.map((camp: any) => (
                           <TableRow key={camp.id} className="hover:bg-muted/10">
-                            <TableCell className="font-semibold">{camp.name}</TableCell>
+                            <TableCell className="font-semibold">
+                              <div>{camp.name}</div>
+                              {camp.scheduledAt && (
+                                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1 font-normal">
+                                  <Clock className="w-3.5 h-3.5 text-primary/70" />
+                                  <span>{language === "ar" ? "مجدولة لـ:" : "Scheduled for:"} {new Date(camp.scheduledAt).toLocaleString(language === "ar" ? "ar-EG" : "en-US", { dateStyle: "short", timeStyle: "short" })}</span>
+                                </div>
+                              )}
+                            </TableCell>
                             <TableCell>
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${camp.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                                  camp.status === 'running' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' :
-                                    'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                                }`}>
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                                camp.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                                camp.status === 'running' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' :
+                                camp.status === 'scheduled' ? 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20' :
+                                camp.status === 'paused' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                                camp.status === 'stopped' ? 'bg-slate-500/10 text-slate-600 border-slate-500/20' :
+                                camp.status === 'failed' ? 'bg-red-500/10 text-red-600 border-red-500/20' :
+                                'bg-slate-500/10 text-slate-600 border-slate-500/20'
+                              }`}>
                                 {camp.status === 'completed' && <CheckCircle2 className="w-3.5 h-3.5" />}
                                 {camp.status === 'running' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                                {camp.status === 'scheduled' && <Clock className="w-3.5 h-3.5" />}
                                 {camp.status === 'paused' && <Pause className="w-3.5 h-3.5" />}
+                                {camp.status === 'stopped' && <AlertTriangle className="w-3.5 h-3.5" />}
+                                {camp.status === 'failed' && <AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
+                                
                                 {camp.status === 'completed' ? (language === "ar" ? "مكتملة" : "Completed") :
-                                  camp.status === 'running' ? (language === "ar" ? "جارية" : "Running") : (language === "ar" ? "متوقفة مؤقتاً" : "Paused")}
+                                 camp.status === 'running' ? (language === "ar" ? "جارية" : "Running") :
+                                 camp.status === 'scheduled' ? (language === "ar" ? "مجدولة" : "Scheduled") :
+                                 camp.status === 'paused' ? (language === "ar" ? "متوقفة مؤقتاً" : "Paused") :
+                                 camp.status === 'stopped' ? (language === "ar" ? "ملغية" : "Stopped") :
+                                 camp.status === 'failed' ? (language === "ar" ? "فشلت" : "Failed") : 
+                                 (language === "ar" ? "قيد الانتظار" : "Pending")}
                               </span>
                             </TableCell>
                             <TableCell className="font-mono text-sm">{camp.total}</TableCell>
@@ -962,7 +1002,8 @@ export default function WhatsappControls() {
                             <TableCell className="text-destructive font-bold font-mono text-sm">{camp.failed}</TableCell>
                             <TableCell className="text-end">
                               <div className="flex justify-end items-center gap-2">
-                                {camp.status === 'paused' && (
+                                {/* Resume / Start Now for paused or scheduled */}
+                                {(camp.status === 'paused' || camp.status === 'scheduled') && (
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -970,9 +1011,11 @@ export default function WhatsappControls() {
                                     onClick={() => resumeCampaignMutation.mutate(camp.id)}
                                     disabled={resumeCampaignMutation.isPending}
                                   >
-                                    <Play className="me-1 h-3.5 w-3.5" /> {language === "ar" ? "استئناف" : "Resume"}
+                                    <Play className="me-1 h-3.5 w-3.5" /> {camp.status === 'scheduled' ? (language === "ar" ? "بدء الآن" : "Start Now") : (language === "ar" ? "استئناف" : "Resume")}
                                   </Button>
                                 )}
+                                
+                                {/* Pause for running */}
                                 {camp.status === 'running' && (
                                   <Button
                                     variant="outline"
@@ -984,13 +1027,30 @@ export default function WhatsappControls() {
                                     <Pause className="me-1 h-3.5 w-3.5" /> {language === "ar" ? "إيقاف مؤقت" : "Pause"}
                                   </Button>
                                 )}
+                                
+                                {/* Stop for running, paused, or scheduled */}
+                                {(camp.status === 'running' || camp.status === 'paused' || camp.status === 'scheduled') && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive/90 hover:bg-destructive/10 border-destructive/20 h-8"
+                                    onClick={() => {
+                                      if (confirm(language === "ar" ? "هل أنت متأكد من إيقاف هذه الحملة نهائياً؟" : "Are you sure you want to stop this campaign permanently?")) {
+                                        stopCampaignMutation.mutate(camp.id);
+                                      }
+                                    }}
+                                    disabled={stopCampaignMutation.isPending}
+                                  >
+                                    <Trash2 className="me-1 h-3.5 w-3.5" /> {language === "ar" ? "إلغاء" : "Stop"}
+                                  </Button>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
                         ))}
                         {campaignsData?.campaigns.length === 0 && (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                            <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                               {language === "ar" ? "لا توجد حملات مرسلة بعد" : "No campaigns yet"}
                             </TableCell>
                           </TableRow>

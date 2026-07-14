@@ -603,7 +603,10 @@ export async function triggerCampaign(campaignId: number, employeeId: number) {
           .where(eq(whatsappCampaignRecipientsTable.id, recipient.id));
           
       } catch (error: any) {
-        const errMsg = error?.response?.data?.response?.message || error.message || "";
+        let errMsg = error?.response?.data?.response?.message || error?.response?.data || error.message || "";
+        if (typeof errMsg === "object") {
+          errMsg = JSON.stringify(errMsg);
+        }
         logger.error(`Failed to send to ${recipient.phoneNumber}:`, errMsg);
         
         await db.update(whatsappCampaignRecipientsTable)

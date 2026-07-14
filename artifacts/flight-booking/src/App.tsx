@@ -1,4 +1,5 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "next-themes";
@@ -77,6 +78,13 @@ function HRRoute({ component: Component }: { component: any }) {
 
 function Router() {
   const { currentEmployee, isLoading } = useEmployee();
+  const [location, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && !currentEmployee && location !== "/") {
+      setLocation("/");
+    }
+  }, [currentEmployee, isLoading, location, setLocation]);
 
   if (isLoading) {
     return (

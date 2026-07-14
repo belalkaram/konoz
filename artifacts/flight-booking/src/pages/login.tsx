@@ -106,7 +106,7 @@ export default function Login() {
       dir={isRtl ? "rtl" : "ltr"}
     >
       {/* Visual Showcase Panel */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-between p-8 lg:p-12 relative overflow-hidden border-b lg:border-b-0 lg:border-e border-white/5">
+      <div className="hidden lg:flex w-full lg:w-1/2 flex-col justify-between p-8 lg:p-12 relative overflow-hidden border-b lg:border-b-0 lg:border-e border-white/5">
         {/* Decorative background blobs */}
         <div className="absolute top-[-10%] start-[-10%] w-[50%] h-[50%] rounded-full filter blur-3xl opacity-20 animate-pulse bg-blue-500" />
         <div className="absolute bottom-[-10%] end-[-10%] w-[50%] h-[50%] rounded-full filter blur-3xl opacity-20 animate-pulse bg-emerald-500" />
@@ -174,7 +174,10 @@ export default function Login() {
       </div>
 
       {/* Login Form Panel */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 lg:p-12 relative">
+      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 lg:p-12 relative overflow-hidden">
+        {/* Decorative background blobs on mobile */}
+        <div className="absolute top-[10%] end-[-10%] w-[60%] h-[40%] rounded-full filter blur-3xl opacity-10 animate-pulse bg-blue-500 lg:hidden pointer-events-none" />
+        <div className="absolute bottom-[10%] start-[-10%] w-[60%] h-[40%] rounded-full filter blur-3xl opacity-10 animate-pulse bg-emerald-500 lg:hidden pointer-events-none" />
         {/* Floating Language Switcher */}
         <div className="absolute top-6 end-6 z-20">
           <button

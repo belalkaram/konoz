@@ -1,16 +1,11 @@
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { config } from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { getDatabaseUrl } from "./src/db-url-resolver";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-config({ path: path.resolve(__dirname, '../../.env') });
-
-const sql = postgres(process.env.DATABASE_URL as string, { max: 1 });
+const sql = postgres(getDatabaseUrl(), { max: 1 });
 const db = drizzle(sql);
+
 
 async function main() {
   console.log("Running manual SQL schema updates...");

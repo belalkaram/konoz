@@ -587,7 +587,11 @@ export async function triggerCampaign(campaignId: number, employeeId: number) {
           messageToSend = campaign.messageTemplate;
         }
 
-        await WhatsappService.sendTextMessage(instanceName, recipient.phoneNumber, messageToSend);
+        // Append a unique hashtag at the end of the message (e.g. #a7b2c9) to prevent spam filters
+        const uniqueCode = Math.random().toString(36).substring(2, 8);
+        const messageWithHashtag = `${messageToSend}\n\n#${uniqueCode}`;
+
+        await WhatsappService.sendTextMessage(instanceName, recipient.phoneNumber, messageWithHashtag);
         
         await db.update(whatsappCampaignRecipientsTable)
           .set({ status: "sent", sentAt: new Date() })

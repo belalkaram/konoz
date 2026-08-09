@@ -1,7 +1,7 @@
 import axios from "axios";
 import { logger } from "./logger";
 
-const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || "http://localhost:8080";
+const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || "http://169.58.1.255:8080";
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || "evol_konooz_super_secret_key";
 
 const apiClient = axios.create({
